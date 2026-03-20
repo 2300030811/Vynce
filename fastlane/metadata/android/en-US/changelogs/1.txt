@@ -1,0 +1,1 @@
+Initial release of Vynce — forked from OuterTune with a premium dark redesign, audio visualizer, rotating vinyl art, dynamic color theming, and Last.fm scrobbling.
