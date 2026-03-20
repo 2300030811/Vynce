@@ -24,22 +24,27 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x ./gradlew
 
-      - name: Build release APK
-        run: ./gradlew assembleCoreRelease
+      - name: Decode keystore
+        run: |
+          echo "${{ secrets.SIGNING_KEY }}" | base64 --decode > vynce-release.jks
 
-      - name: Sign APK
-        uses: r0adkll/sign-android-release@v1
-        with:
-          releaseDirectory: app/build/outputs/apk/core/release
-          signingKeyBase64: ${{ secrets.SIGNING_KEY }}
-          alias: ${{ secrets.KEY_ALIAS }}
-          keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
-          keyPassword: ${{ secrets.KEY_PASSWORD }}
+      - name: Build signed release APK
+        run: ./gradlew assembleCoreRelease
+        env:
+          KEYSTORE_PATH: vynce-release.jks
+          KEY_STORE_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: app/build/outputs/apk/core/release/*.apk
           generate_release_notes: true
+          name: "Vynce ${{ github.ref_name }}"
+          body: |
+            ## Vynce ${{ github.ref_name }}
+            Download the APK below and install it on your Android device (Android 7+).
+            Enable "Install from unknown sources" if prompted.
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

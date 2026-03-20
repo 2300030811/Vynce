@@ -36,21 +36,19 @@ android {
     }
 
     signingConfigs {
-        if (!keystoreProperties.isEmpty) {
-            create("ot_release") {
-                storeFile = file(keystoreProperties["storeFile"] as String)
-                (keystoreProperties["keyAlias"] as? String)?.let {
-                    keyAlias = it
-                }
-                (keystoreProperties["keyPassword"] as? String)?.let {
-                    keyPassword = it
-                }
-                (keystoreProperties["storePassword"] as? String)?.let {
-                    storePassword = it
-                }
+        create("release") {
+            if (keystorePropertiesFile.exists()) {
+                storeFile = rootProject.file(keystoreProperties["storeFile"] as String)
+                storePassword = keystoreProperties["storePassword"] as String
+                keyAlias = keystoreProperties["keyAlias"] as String
+                keyPassword = keystoreProperties["keyPassword"] as String
+            } else {
+                // CI will inject these via environment variables
+                storeFile = rootProject.file(System.getenv("KEYSTORE_PATH") ?: "vynce-release.jks")
+                storePassword = System.getenv("KEY_STORE_PASSWORD") ?: ""
+                keyAlias = System.getenv("KEY_ALIAS") ?: "vynce"
+                keyPassword = System.getenv("KEY_PASSWORD") ?: ""
             }
-        } else {
-            create("ot_release") { }
         }
     }
 
@@ -60,7 +58,7 @@ android {
             isShrinkResources = true
             isCrunchPngs = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-            signingConfig = signingConfigs.getByName("ot_release")
+            signingConfig = signingConfigs.getByName("release")
         }
         debug {
             applicationIdSuffix = ".debug"
