@@ -53,7 +53,7 @@ Vynce is currently in active development. You can find the latest builds below:
 
 | Platform | Link |
 | :--- | :--- |
-| **GitHub Releases** | [Download APK](https://github.com/bhima/Vynce/releases/latest) |
+| **GitHub Releases** | [Download APK](https://github.com/2300030811/Vynce/releases/latest) |
 | **F-Droid** | [Get on F-Droid](https://f-droid.org/en/packages/com.vynce.app/) |
 | **IzzyOnDroid** | [Get on IzzyOnDroid](https://apt.izzysoft.de/fdroid/index/apk/com.vynce.app) |
 
