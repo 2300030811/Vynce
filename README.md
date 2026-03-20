@@ -1,116 +1,96 @@
-# Vynce
+# <img src="./assets/vynce.webp" height="48" alt="Vynce logo"> Vynce
 
-<img src="./assets/Vynce.webp" height="88" alt="Vynce app icon">
+![Vynce Banner](./assets/banner.png)
 
-A Material 3 YouTube Music client & local music player for Android
+### A Premium Material 3 YouTube Music Client & Local Player for Android
 
-[![Latest release](https://img.shields.io/github/v/release/Vynce/Vynce?include_prereleases)](https://github.com/Vynce/Vynce/releases)
-[![License](https://img.shields.io/github/license/Vynce/Vynce)](https://www.gnu.org/licenses/gpl-3.0)
-[![Downloads](https://img.shields.io/github/downloads/Vynce/Vynce/total)](https://github.com/Vynce/Vynce/releases)
+**Vynce** is a supercharged, modern music experience for Android. Built as a feature-rich fork of [InnerTune](https://github.com/z-huang/InnerTune), it combines the power of a YouTube Music client with the flexibility of a high-end local media player, all wrapped in a stunning Material You interface.
 
+---
 
-<!-- use  "⠀⠀" for spacing -->
-[<img src="assets/badge_github.png" alt="Get it on GitHub" height="40">](https://github.com/Vynce/Vynce/releases/latest)⠀⠀
-[<img src="assets/IzzyOnDroidButtonGreyBorder.svg" alt="Get it on IzzyOnDroid" height="40">](https://apt.izzysoft.de/fdroid/index/apk/com.vynce.app)⠀⠀
-[<img src="assets/badge_fdroid.svg" alt="Get it on F-Droid" height="40">](https://f-droid.org/en/packages/com.vynce.app/)⠀⠀
-[<img src="assets/badge_obtainium.png" alt="Get it on Obtainium" height="40">](https://apps.obtainium.imranr.dev/redirect?r=obtainium://app/%7B%22id%22%3A%22com.vynce.app%22%2C%22url%22%3A%22https%3A%2F%2Fgithub.com%2FDD3Boh%2FVynce%22%2C%22author%22%3A%22DD3Boh%22%2C%22name%22%3A%22Vynce%22%2C%22preferredApkIndex%22%3A0%2C%22additionalSettings%22%3A%22%7B%5C%22includePrereleases%5C%22%3Afalse%2C%5C%22fallbackToOlderReleases%5C%22%3Atrue%2C%5C%22filterReleaseTitlesByRegEx%5C%22%3A%5C%22%5C%22%2C%5C%22filterReleaseNotesByRegEx%5C%22%3A%5C%22%5C%22%2C%5C%22verifyLatestTag%5C%22%3Afalse%2C%5C%22dontSortReleasesList%5C%22%3Afalse%2C%5C%22useLatestAssetDateAsReleaseDate%5C%22%3Afalse%2C%5C%22trackOnly%5C%22%3Afalse%2C%5C%22versionExtractionRegEx%5C%22%3A%5C%22%5C%22%2C%5C%22matchGroupToUse%5C%22%3A%5C%22%5C%22%2C%5C%22versionDetection%5C%22%3Atrue%2C%5C%22releaseDateAsVersion%5C%22%3Afalse%2C%5C%22useVersionCodeAsOSVersion%5C%22%3Afalse%2C%5C%22apkFilterRegEx%5C%22%3A%5C%22%5C%22%2C%5C%22invertAPKFilter%5C%22%3Afalse%2C%5C%22autoApkFilterByArch%5C%22%3Atrue%2C%5C%22appName%5C%22%3A%5C%22%5C%22%2C%5C%22shizukuPretendToBeGooglePlay%5C%22%3Afalse%2C%5C%22allowInsecure%5C%22%3Afalse%2C%5C%22exemptFromBackgroundUpdates%5C%22%3Afalse%2C%5C%22skipUpdateNotifications%5C%22%3Afalse%2C%5C%22about%5C%22%3A%5C%22A%20Material%203%20YouTube%20Music%20client%20%26%20local%20music%20player%20for%20Android%5C%22%7D%22%2C%22overrideSource%22%3A%22GitHub%22%7D)
+## ✨ Key Features
 
+Vynce is designed to be the ultimate companion for your music library, whether it's online or offline.
+
+### 🎧 The YouTube Music Experience
+- **Seamless Playback**: No ADs, no interruptions.
+- **Background Play**: Keep the music going while you do other things.
+- **Full Sync**: Personalization that follows you; sync your account with ease.
+- **Offline Mode**: Download your favorites for data-free listening.
+
+### 📁 Advanced Local Player
+- **Format Support**: Plays MP3, OGG, FLAC, and more.
+- **Custom Tagging**: Uses a custom metadata extractor to fix the common "MediaStore" issues.
+- **Unified Library**: Play your local files and YouTube Music tracks side-by-side in one queue.
+
+### 🎨 Stunning Interface & UX
+- **Material 3 (Material You)**: Dynamic colors that adapt to your wallpaper.
+- **Sleek Layouts**: Modern, fluid UI with premium micro-interactions.
+- **Lyrics Support**: Synchronized, word-by-word karaoke-style lyrics (LRC, TTML).
+- **Audio Effects**: Normalization, pitch adjustment, and advanced tempo control.
+
+### 🚗 Modern Connectivity
+- **Android Auto**: Take Vynce on the road with a dedicated interface.
+- **Android Support**: Compatible with Android 8 (Oreo) and above.
+
+---
+
+## 📸 In-App Preview
+
+<p align="center">
+  <img src="./assets/main-interface.jpg" width="30%" alt="Main interface">
+  <img src="./assets/player.jpg" width="30%" alt="Player interface">
+  <img src="./assets/ytm-sync.jpg" width="30%" alt="YouTube Music Sync">
+</p>
+
+*Check out the [full gallery](./assets/gallery) for more views.*
+
+---
+
+## 🚀 Getting Started
+
+Vynce is currently in active development. You can find the latest builds below:
+
+| Platform | Link |
+| :--- | :--- |
+| **GitHub Releases** | [Download APK](https://github.com/bhima/Vynce/releases/latest) |
+| **F-Droid** | [Get on F-Droid](https://f-droid.org/en/packages/com.vynce.app/) |
+| **IzzyOnDroid** | [Get on IzzyOnDroid](https://apt.izzysoft.de/fdroid/index/apk/com.vynce.app) |
 
 > [!WARNING]
-> Vynce is only available on the platforms listed here. This app is not listed on the Play Store or any other fake website that claim to be us. We recommend you to immediately delete any fake versions or clones for your safety.
+> Vynce is only available on the official platforms listed above. Beware of clones or unofficial websites.
 
-> [!NOTE]
-> We are looking for maintainers! For more information and the state of Vynce: https://github.com/Vynce/Vynce/discussions/1116
+---
 
-## Features
+## 🛠️ Building & Contributing
 
-Vynce is a supercharged fork of [InnerTune](https://github.com/z-huang/InnerTune). This app is both a local media player, and a YouTube Music client.
+We welcome contributions of all kinds! Whether you are a developer, a translator, or an enthusiast, we need your help.
 
-- YouTube Music client features
-    - Song downloading (offline playback)
-    - Seamless playback: no ADs & background playback
-    - Account synchronization
-        - Full playlist sync from the app to the remote account is temporally unavailable 
-- Local audio file playback (ex. MP3, OGG, FLAC, etc.)
-    - Play local and Youtube Music songs at the same time
-    - Uses a custom tag extractor instead of MediaStore's broken metadata extractor! (e.g tags delimited with \\ now show up properly)
-- Sleek Material3 design
-- Multiple queues
-- Synchronized lyrics, and support for word by word/Karaoke lyrics formats (e.g LRC, TTML)
-- Audio normalization, tempo/pitch adjustment, and various other audio effects
-- Android Auto support
-- Support for Android 8 (Oreo) and higher
+1.  **Read the [Contributing Guide](./CONTRIBUTING.md)** for details on code standards and setup.
+2.  **Submit Translations** via our [Weblate page](https://hosted.weblate.org/projects/Vynce/).
 
-> [!NOTE]
-> Android 8 (Oreo) and higher is supported. While the app may work on Android 7.x (Nougat), we do not officially support this version
+---
 
-> [!NOTE]
-> Read our FAQ and guides on our [wiki](https://github.com/Vynce/Vynce/wiki/Frequently-Asked-Questions-(FAQ))
+## ❤️ Support Us
 
+If you love what we're building, consider supporting the continuous development of Vynce.
 
-## Screenshots
-
-<img src="./assets/main-interface.jpg" alt="Main player interface" />
-<br/><br/>
-<img src="./assets/player.jpg" alt="Player interface"/>
-<br/><br/>
-<img src="./assets/ytm-sync.jpg" alt="Sync with YouTube Music"/>
-
-[Full image gallery](./assets/gallery)
-
-> [!WARNING]
->
->If you're in a region where YouTube Music is not supported, you won't be able to use this app
-***unless*** you have a proxy or VPN to connect to a YTM supported region.
-
-## Building & Contributing
-
-We are looking for contributors, translators, and maintainers! If you would like to help out, or just wish to build the
-app yourself, please see the [building and contribution notes](./CONTRIBUTING.md).
-
-### Submitting Translations
-
-We use Weblate to translate Vynce. For more details or to submit translations, visit our [Weblate page](https://hosted.weblate.org/projects/Vynce/).
-
-<a href="https://hosted.weblate.org/projects/Vynce/">
-<img src="https://hosted.weblate.org/widget/Vynce/multi-auto.svg" alt="Translation status" />
+<a href="https://paypal.me/DD3Boh">
+  <img src="./assets/paypal.png" alt="Donate with PayPal" height="40">
 </a>
 
-Thank you very much for helping to make Vynce accessible to many people worldwide.
+---
 
-## Support us
+## 📜 Attribution & License
 
-If you like Vynce, you're welcome to send a donation. Donations will support the development,
-including bug fixes and new features.
+- **Base Project**: [z-huang/InnerTune](https://github.com/z-huang/InnerTune)
+- **Inspiration**: [Musicolet](https://play.google.com/store/apps/details?id=in.krosbits.musicolet)
+- **Lyrics Engine**: [Gramophone](https://github.com/FoedusProgramme/Gramophone)
 
-<a href="https://paypal.me/DD3Boh"><img src="./assets/paypal.png" alt="PayPal" height="60" ></a>
+This project is licensed under the **GNU GPL v3.0**.
 
-## Help & Support
-Contact us through GitHub
-- For bug reports and/or feature requests, please create a [GitHub issue](https://github.com/Vynce/Vynce/issues).
-- If you have want help with the app, check out the [Discussion Forum](https://github.com/Vynce/Vynce/discussions).
+---
 
-For all other inquiries NOT related to the app, you can contact us at Vynce@protonmail.com. **This is NOT a support email!**
+## ⚠️ Disclaimer
 
-## Attribution
-
-Thanks to all our contributors! Check them out [here](https://github.com/Vynce/Vynce/graphs/contributors)
-
-[z-huang/InnerTune](https://github.com/z-huang/InnerTune) for providing an awesome base for this fork, none of this
-would have been possible without it.
-
-[Musicolet](https://play.google.com/store/apps/details?id=in.krosbits.musicolet) for inspiration of a local music player
-experience done right.
-
-[Gramophone](https://github.com/FoedusProgramme/Gramophone) for emotional support, and a legendary lyrics parser
-
-[![Star History Chart](https://api.star-history.com/svg?repos=Vynce/Vynce&type=Date)](https://www.star-history.com/#Vynce/Vynce&Date)
-
-## Disclaimer
-
-This project and its contents are not affiliated with, funded, authorized, endorsed by, or in any
-way associated with YouTube, Google LLC or any of its affiliates and subsidiaries.
-
-Any trademark, service mark, trade name, or other intellectual property rights used in this project
-are owned by the respective owners.
-
+Vynce is NOT affiliated with, authorized, or endorsed by YouTube or Google LLC. All trademarks belong to their respective owners.
