@@ -15,7 +15,7 @@ jobs:
 
       - uses: actions/setup-java@v4
         with:
-          java-version: 17
+          java-version: 21
           distribution: temurin
 
       - name: Setup Android SDK
@@ -25,8 +25,10 @@ jobs:
         run: chmod +x ./gradlew
 
       - name: Decode keystore
+        env:
+          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
         run: |
-          echo "${{ secrets.SIGNING_KEY }}" | base64 --decode > vynce-release.jks
+          echo "$SIGNING_KEY" | base64 --decode --ignore-garbage > vynce-release.jks
 
       - name: Build signed release APK
         run: ./gradlew assembleCoreRelease
