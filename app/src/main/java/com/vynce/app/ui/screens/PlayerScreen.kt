@@ -60,7 +60,7 @@ fun PlayerScreen(
         if (darkTheme == DarkMode.AUTO) isSystemInDarkTheme else darkTheme == DarkMode.ON
     }
 
-    val showLyrics by rememberPreference(ShowLyricsKey, defaultValue = false)
+    val showLyrics by rememberPreference<Boolean>(ShowLyricsKey, defaultValue = false)
 
     BoxWithConstraints(
         modifier = Modifier

@@ -4,21 +4,10 @@ import android.content.Context
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.os.PowerManager
-import com.vynce.app.constants.InnerTubeCookieKey
 import com.vynce.app.constants.TabletUiKey
-import com.vynce.app.constants.YtmSyncKey
 import com.vynce.app.utils.dataStore
 import com.vynce.app.utils.get
-import com.zionhuang.innertube.utils.parseCookieString
 
-fun Context.isAutoSyncEnabled(): Boolean {
-    return dataStore.get(YtmSyncKey, true) && isUserLoggedIn()
-}
-
-fun Context.isUserLoggedIn(): Boolean {
-    val cookie = dataStore.get(InnerTubeCookieKey, "")
-    return "SAPISID" in parseCookieString(cookie)
-}
 
 fun Context.isInternetConnected(): Boolean {
     val connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager

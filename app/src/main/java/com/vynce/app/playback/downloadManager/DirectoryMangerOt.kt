@@ -68,6 +68,10 @@ class DownloadDirectoryManagerOt(private var context: Context, private var dir: 
         return file?.delete() == true
     }
 
+    fun saveFile(mediaId: String, data: ByteArray, displayName: String? = null): Uri? {
+        return saveFile(mediaId, data.inputStream(), displayName)
+    }
+
     fun saveFile(mediaId: String, input: InputStream, displayName: String?): Uri? {
         val resolver = context.contentResolver
         val directory = DocumentFile.fromTreeUri(context, dir)

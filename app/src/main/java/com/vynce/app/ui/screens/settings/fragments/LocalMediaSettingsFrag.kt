@@ -322,7 +322,7 @@ fun ColumnScope.LocalScannerFrag() {
                 text = when (scannerState) {
                     1 -> stringResource(R.string.scanner_progress_discovering)
                     3 -> stringResource(R.string.scanner_progress_syncing)
-                    5 -> stringResource(R.string.scanner_ytm_link_start)
+                    4 -> stringResource(R.string.scanner_progress_complete)
                     else -> stringResource(R.string.scanner_progress_processing)
                 },
                 color = MaterialTheme.colorScheme.secondary,

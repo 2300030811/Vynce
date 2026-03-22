@@ -17,7 +17,6 @@ import com.vynce.app.db.entities.PlaylistEntity
 import com.vynce.app.db.entities.PlaylistSong
 import com.vynce.app.db.entities.PlaylistSongMap
 import com.vynce.app.extensions.reversed
-import com.zionhuang.innertube.models.PlaylistItem
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
@@ -158,19 +157,7 @@ interface PlaylistsDao {
     @Update
     fun update(map: PlaylistSongMap)
 
-    @Update
-    fun update(playlistEntity: PlaylistEntity, playlistItem: PlaylistItem) {
-        update(playlistEntity.copy(
-            name = playlistItem.title,
-            browseId = playlistItem.id,
-            isEditable = playlistItem.isEditable,
-            thumbnailUrl = playlistItem.thumbnail,
-            remoteSongCount = playlistItem.songCountText?.let { Regex("""\d+""").find(it)?.value?.toIntOrNull() },
-            playEndpointParams = playlistItem.playEndpoint?.params,
-            shuffleEndpointParams = playlistItem.shuffleEndpoint?.params,
-            radioEndpointParams = playlistItem.radioEndpoint?.params
-        ))
-    }
+
 
     @Transaction
     fun addSongToPlaylist(playlist: Playlist, songIds: List<String>) {

@@ -95,7 +95,6 @@ import com.vynce.app.LocalNetworkConnected
 import com.vynce.app.LocalPlayerAwareWindowInsets
 import com.vynce.app.LocalPlayerConnection
 import com.vynce.app.LocalSnackbarHostState
-import com.vynce.app.LocalSyncUtils
 import com.vynce.app.R
 import com.vynce.app.constants.AlbumCornerRadius
 import com.vynce.app.constants.AlbumThumbnailSize
@@ -108,7 +107,6 @@ import com.vynce.app.constants.PlaylistSongSortType
 import com.vynce.app.constants.PlaylistSongSortTypeKey
 import com.vynce.app.constants.SwipeToQueueKey
 import com.vynce.app.constants.SyncMode
-import com.vynce.app.constants.YtmSyncModeKey
 import com.vynce.app.db.entities.Playlist
 import com.vynce.app.db.entities.PlaylistSong
 import com.vynce.app.extensions.move
@@ -134,9 +132,7 @@ import com.vynce.app.ui.utils.getNSongsString
 import com.vynce.app.utils.makeTimeString
 import com.vynce.app.utils.rememberEnumPreference
 import com.vynce.app.utils.rememberPreference
-import com.vynce.app.utils.syncCoroutine
 import com.vynce.app.viewmodels.LocalPlaylistViewModel
-import com.zionhuang.innertube.YouTube
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.collectLatest
@@ -171,7 +167,7 @@ fun LocalPlaylistScreen(
     val (sortDescending, onSortDescendingChange) = rememberPreference(PlaylistSongSortDescendingKey, true)
     var locked by rememberPreference(PlaylistEditLockKey, defaultValue = false)
     val swipeEnabled by rememberPreference(SwipeToQueueKey, true)
-    val syncMode by rememberEnumPreference(key = YtmSyncModeKey, defaultValue = SyncMode.RW)
+//    val syncMode by rememberEnumPreference(key = YtmSyncModeKey, defaultValue = SyncMode.RW)
 
     var inSelectMode by rememberSaveable { mutableStateOf(false) }
     val selection = rememberSaveable(
@@ -228,8 +224,7 @@ fun LocalPlaylistScreen(
         }
     }
 
-    val editable: Boolean =
-        playlistWithSongs.first?.playlist?.isLocal == true || (playlistWithSongs.first?.playlist?.isEditable == true && syncMode == SyncMode.RW)
+    val editable: Boolean = playlistWithSongs.first?.playlist?.isLocal == true || (playlistWithSongs.first?.playlist?.isEditable == true)
 
     LaunchedEffect(playlistWithSongs.second, isSearching) {
         if (!isSearching) {
@@ -254,10 +249,6 @@ fun LocalPlaylistScreen(
                 onDone = { name ->
                     database.query {
                         update(playlistEntity.copy(name = name))
-                    }
-
-                    viewModel.viewModelScope.launch(syncCoroutine) {
-                        playlistEntity.browseId?.let { YouTube.renamePlaylist(it, name) }
                     }
                 }
             )
@@ -340,10 +331,6 @@ fun LocalPlaylistScreen(
                             playlistWithSongs.first?.let { delete(it.playlist) }
                         }
 
-                        viewModel.viewModelScope.launch(Dispatchers.IO) {
-                            playlistWithSongs.first?.playlist?.browseId?.let { YouTube.deletePlaylist(it) }
-                        }
-
                         navController.popBackStack()
                     }
                 ) {
@@ -379,46 +366,6 @@ fun LocalPlaylistScreen(
             dragInfo?.let { (from, to) ->
                 database.transaction {
                     move(viewModel.playlistId, from, to)
-                }
-                if (playlistWithSongs.first?.playlist?.isLocal == false) {
-                    viewModel.viewModelScope.launch(Dispatchers.IO) {
-                        val from = from
-                        val to = to
-                        val playlistSongMap = database.songMapsToPlaylist(viewModel.playlistId, 0)
-
-                        var fromIndex = from //- headerItems
-                        val toIndex = to //- headerItems
-
-                        var successorIndex = if (fromIndex > toIndex) toIndex else toIndex + 1
-
-                        /*
-                        * Because of how YouTube Music handles playlist changes, you necessarily need to
-                        * have the SetVideoId of the successor when trying to move a song inside of a
-                        * playlist.
-                        * For this reason, if we are trying to move a song to the last element of a playlist,
-                        * we need to first move it as penultimate and then move the last element before it.
-                        */
-                        if (successorIndex >= playlistSongMap.size) {
-                            playlistSongMap[fromIndex].setVideoId?.let { setVideoId ->
-                                playlistSongMap[toIndex].setVideoId?.let { successorSetVideoId ->
-                                    playlistWithSongs.first?.playlist?.browseId?.let { browseId ->
-                                        YouTube.moveSongPlaylist(browseId, setVideoId, successorSetVideoId)
-                                    }
-                                }
-                            }
-
-                            successorIndex = fromIndex
-                            fromIndex = toIndex
-                        }
-
-                        playlistSongMap[fromIndex].setVideoId?.let { setVideoId ->
-                            playlistSongMap[successorIndex].setVideoId?.let { successorSetVideoId ->
-                                playlistWithSongs.first?.playlist?.browseId?.let { browseId ->
-                                    YouTube.moveSongPlaylist(browseId, setVideoId, successorSetVideoId)
-                                }
-                            }
-                        }
-                    }
                 }
                 dragInfo = null
             }
@@ -678,7 +625,6 @@ fun LocalPlaylistHeader(
     val database = LocalDatabase.current
     val isNetworkConnected = LocalNetworkConnected.current
     val scope = rememberCoroutineScope()
-    val syncUtils = LocalSyncUtils.current
 
     val playlistLength = remember(songs) {
         songs.fastSumBy { it.song.song.duration }
@@ -760,25 +706,7 @@ fun LocalPlaylistHeader(
                         )
                     }
 
-                    if (playlist.playlist.browseId != null) {
-                        IconButton(
-                            onClick = {
-                                scope.launch {
-                                    syncUtils.syncPlaylist(playlist.playlist.browseId, playlist.id)
-                                    snackbarHostState.showSnackbar(
-                                        message = context.getString(R.string.playlist_synced),
-                                        withDismissAction = true
-                                    )
-                                }
-                            },
-                            enabled = isNetworkConnected
-                        ) {
-                            Icon(
-                                imageVector = Icons.Rounded.Sync,
-                                contentDescription = null
-                            )
-                        }
-                    }
+
 
                     if (songs.any { !it.song.song.isLocal }) {
                         when (downloadState) {

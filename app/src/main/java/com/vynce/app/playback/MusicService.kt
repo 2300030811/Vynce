@@ -48,7 +48,6 @@ import androidx.media3.datasource.cache.SimpleCache
 import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
-import com.vynce.app.utils.YTPlayerUtils
 import androidx.media3.exoplayer.analytics.AnalyticsListener
 import androidx.media3.exoplayer.analytics.PlaybackStats
 import androidx.media3.exoplayer.analytics.PlaybackStatsListener
@@ -82,7 +81,7 @@ import com.vynce.app.constants.MediaSessionConstants.CommandToggleRepeatMode
 import com.vynce.app.constants.MediaSessionConstants.CommandToggleShuffle
 import com.vynce.app.constants.MediaSessionConstants.CommandToggleStartRadio
 import com.vynce.app.constants.PauseListenHistoryKey
-import com.vynce.app.constants.PauseRemoteListenHistoryKey
+import com.vynce.app.constants.PauseListenHistoryKey
 import com.vynce.app.constants.PersistentQueueKey
 import com.vynce.app.constants.LastFmScrobblingEnabledKey
 import com.vynce.app.constants.PlayerVolumeKey
@@ -238,7 +237,7 @@ class MusicService : MediaLibraryService(),
                 )
             )
         } else {
-            // Regular database lookup for YouTube songs
+            // Regular database lookup for Saavn/Local songs
             database.song(mediaMetadata?.id)
         }
     }.stateIn(offloadScope, SharingStarted.Lazily, null)
@@ -681,23 +680,6 @@ class MusicService : MediaLibraryService(),
                 return@Factory dataSpec.withUri(streamUrl.toUri())
             }
 
-            // YouTube songs: resolve ID to actual stream URL
-            // If the URI is not a full URL and not local, assume it's a YouTube ID
-            if (!uri.contains("://") && !uri.startsWith("content") && !uri.startsWith("file") && uri.length == 11) {
-                val videoId = uri
-                val cachedUrl = streamUrlCache[videoId]
-                if (cachedUrl != null) {
-                    return@Factory dataSpec.withUri(cachedUrl.toUri())
-                }
-
-                val streamUrl = runBlocking(Dispatchers.IO) {
-                    YTPlayerUtils.getStreamUrl(videoId).getOrNull()
-                } ?: throw java.io.IOException("Failed to resolve YouTube stream URL for $videoId")
-
-                streamUrlCache[videoId] = streamUrl
-                return@Factory dataSpec.withUri(streamUrl.toUri())
-            }
-
             // JioSaavn direct CDN URLs pass through immediately
             if (dataSpec.uri.scheme == "https") {
                 return@Factory dataSpec  // already a direct URL, play it
@@ -706,8 +688,10 @@ class MusicService : MediaLibraryService(),
             if (dataSpec.uri.scheme == "content" || dataSpec.uri.scheme == "file") {
                 return@Factory dataSpec
             }
-            // Fallback — return as-is
-            return@Factory dataSpec
+            
+            // Unsupported URI scheme — log and return original
+            android.util.Log.w("MusicService", "Unsupported URI: $uri")
+            dataSpec
         }
     }
 

@@ -122,11 +122,7 @@ fun PlaylistListItem(
     trailingContent: @Composable RowScope.() -> Unit = {},
 ) = ListItem(
     title = playlist.playlist.name,
-    subtitle =
-        if (playlist.songCount == 0 && playlist.playlist.remoteSongCount != null)
-            getNSongsString(playlist.playlist.remoteSongCount)
-        else
-            getNSongsString(playlist.songCount, playlist.downloadCount),
+    subtitle = getNSongsString(playlist.songCount, playlist.downloadCount),
     badges = {
         PlaylistIcon(playlist.playlist) // always show
         if (!showBadges) return@ListItem
@@ -175,11 +171,7 @@ fun PlaylistGridItem(
     fillMaxWidth: Boolean = false,
 ) = GridItem(
     title = playlist.playlist.name,
-    subtitle =
-        if (playlist.songCount == 0 && playlist.playlist.remoteSongCount != null)
-            getNSongsString(playlist.playlist.remoteSongCount)
-        else
-            getNSongsString(playlist.songCount, playlist.downloadCount),
+    subtitle = getNSongsString(playlist.songCount, playlist.downloadCount),
     badges = {
         PlaylistIcon(playlist.playlist)
         if (playlist.downloadCount > 0) {
@@ -245,9 +237,7 @@ fun PlaylistThumbnail(
             if (playlist.isLocal) features += 8
             if (playlist.isEditable) features += 4
             if (playlist.bookmarkedAt != null) features += 2
-            if ((playlist.playEndpointParams ?: playlist.radioEndpointParams
-                ?: playlist.shuffleEndpointParams) != null
-            ) features += 1
+
             Icon(
                 imageVector = when {
                     // TODO: Icons that actually goddamn match with each other wth is this google???

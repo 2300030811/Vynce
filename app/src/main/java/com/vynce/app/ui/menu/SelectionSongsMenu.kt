@@ -36,7 +36,6 @@ import androidx.navigation.NavController
 import com.vynce.app.LocalDatabase
 import com.vynce.app.LocalDownloadUtil
 import com.vynce.app.LocalPlayerConnection
-import com.vynce.app.LocalSyncUtils
 import com.vynce.app.R
 import com.vynce.app.extensions.toMediaItem
 import com.vynce.app.models.MediaMetadata
@@ -64,7 +63,6 @@ fun SelectionMediaMetadataMenu(
     val downloadUtil = LocalDownloadUtil.current
     val playerConnection = LocalPlayerConnection.current ?: return
     val queueBoard by playerConnection.queueBoard.collectAsState()
-    val syncUtils = LocalSyncUtils.current
 
     val allInLibrary by remember(selection) { // exclude local songs
         mutableStateOf(selection.isNotEmpty() && selection.all { !it.isLocal && it.inLibrary != null })
@@ -202,17 +200,11 @@ fun SelectionMediaMetadataMenu(
                     selection.forEach { song ->
                         val s = song.toSongEntity().toggleLike()
                         update(s)
-                        if (!s.isLocal) {
-                            syncUtils.likeSong(s)
-                        }
                     }
                 } else {
                     selection.filter { !it.liked }.forEach { song ->
                         val s = song.toSongEntity().toggleLike()
                         update(s)
-                        if (!s.isLocal) {
-                            syncUtils.likeSong(s)
-                        }
                     }
                 }
             }

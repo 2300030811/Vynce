@@ -28,7 +28,6 @@ import com.vynce.app.models.toMediaMetadata
 import com.vynce.app.playback.queues.ListQueue
 import com.vynce.app.ui.component.button.IconButton
 import com.vynce.app.ui.component.items.ArtistListItem
-import com.zionhuang.innertube.YouTube
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -89,21 +88,17 @@ fun ArtistMenu(
                         .shuffled()
                 }
 
-                val playlistId = withContext(Dispatchers.IO) {
-                    YouTube.artist(artist.id).getOrNull()?.artist?.shuffleEndpoint?.playlistId
-                }
-
                 playerConnection.playQueue(
                     ListQueue(
                         title = artist.artist.name,
                         items = songs,
-                        playlistId = playlistId
+                        playlistId = null
                     )
                 )
             }
             onDismiss()
         }
-        if (artist.artist.isYouTubeArtist) {
+        if (!artist.artist.isLocal) {
             GridMenuItem(
                 icon = Icons.Rounded.Share,
                 title = R.string.share
@@ -112,7 +107,7 @@ fun ArtistMenu(
                 val intent = Intent().apply {
                     action = Intent.ACTION_SEND
                     type = "text/plain"
-                    putExtra(Intent.EXTRA_TEXT, "https://music.youtube.com/channel/${artist.id}")
+                    putExtra(Intent.EXTRA_TEXT, "https://www.jiosaavn.com/artist/${artist.id}")
                 }
                 context.startActivity(Intent.createChooser(intent, null))
             }

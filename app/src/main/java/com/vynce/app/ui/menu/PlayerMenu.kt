@@ -582,10 +582,6 @@ fun PlayerMenu(
                     insert(mediaMetadata)
                 }
 
-                if (!mediaMetadata.id.startsWith("saavn:")) {
-                    playlist.playlist.browseId?.let { com.zionhuang.innertube.YouTube.addToPlaylist(it, mediaMetadata.id) }
-                }
-
                 listOf(mediaMetadata.id)
             },
             onDismiss = {

@@ -24,22 +24,7 @@ import coil3.memory.MemoryCache
 import coil3.request.CachePolicy
 import coil3.request.allowHardware
 import coil3.request.crossfade
-import com.vynce.app.constants.AccountChannelHandleKey
-import com.vynce.app.constants.AccountEmailKey
-import com.vynce.app.constants.AccountNameKey
-import com.vynce.app.constants.ContentCountryKey
-import com.vynce.app.constants.ContentLanguageKey
-import com.vynce.app.constants.CountryCodeToName
-import com.vynce.app.constants.DataSyncIdKey
-import com.vynce.app.constants.InnerTubeCookieKey
-import com.vynce.app.constants.LanguageCodeToName
 import com.vynce.app.constants.MaxImageCacheSizeKey
-import com.vynce.app.constants.ProxyEnabledKey
-import com.vynce.app.constants.ProxyTypeKey
-import com.vynce.app.constants.ProxyUrlKey
-import com.vynce.app.constants.SYSTEM_DEFAULT
-import com.vynce.app.constants.UseLoginForBrowse
-import com.vynce.app.constants.VisitorDataKey
 import com.vynce.app.extensions.toEnum
 import com.vynce.app.extensions.toInetSocketAddress
 import com.vynce.app.utils.CoilBitmapLoader
@@ -124,18 +109,5 @@ class App : Application(), SingletonImageLoader.Factory {
     companion object {
         lateinit var instance: App
             private set
-
-        fun forgetAccount(context: Context) {
-            runBlocking {
-                context.dataStore.edit { settings ->
-                    settings.remove(InnerTubeCookieKey)
-                    settings.remove(VisitorDataKey)
-                    settings.remove(DataSyncIdKey)
-                    settings.remove(AccountNameKey)
-                    settings.remove(AccountEmailKey)
-                    settings.remove(AccountChannelHandleKey)
-                }
-            }
-        }
     }
 }

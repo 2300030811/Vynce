@@ -4,9 +4,7 @@ import androidx.compose.runtime.Immutable
 import com.vynce.app.extensions.decodeHtml
 import com.vynce.app.db.entities.Song
 import com.vynce.app.db.entities.SongEntity
-import com.vynce.app.ui.utils.resize
 import com.vynce.app.utils.LocalArtworkPath
-import com.zionhuang.innertube.models.SongItem
 import java.io.Serializable
 import java.time.LocalDateTime
 import java.time.ZoneOffset
@@ -152,24 +150,4 @@ fun Song.toMediaMetadata() = MediaMetadata(
     localPath = song.localPath
 )
 
-fun SongItem.toMediaMetadata() = MediaMetadata(
-    id = id,
-    title = title.decodeHtml(),
-    artists = artists.map {
-        MediaMetadata.Artist(
-            id = it.id,
-            name = it.name.decodeHtml()
-        )
-    },
-    duration = duration ?: -1,
-    thumbnailUrl = thumbnail.resize(544, 544),
-    album = album?.let {
-        MediaMetadata.Album(
-            id = it.id,
-            title = it.name.decodeHtml()
-        )
-    },
-    genre = null,
-    setVideoId = setVideoId
-)
 

@@ -45,6 +45,8 @@ class AutoPlaylistViewModel @Inject constructor(
         }
     ).asStateFlow()
 
+    val isSyncingRemoteLikedSongs = MutableStateFlow(false)
+
     val songs = context.dataStore.data
         .map {
             it[SongSortTypeKey].toEnum(SongSortType.CREATE_DATE) to (it[SongSortDescendingKey] ?: true)

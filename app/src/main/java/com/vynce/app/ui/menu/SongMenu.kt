@@ -49,12 +49,9 @@ import coil3.compose.AsyncImage
 import com.vynce.app.LocalDatabase
 import com.vynce.app.LocalDownloadUtil
 import com.vynce.app.LocalPlayerConnection
-import com.vynce.app.LocalSyncUtils
 import com.vynce.app.R
 import com.vynce.app.constants.ListThumbnailSize
-import com.vynce.app.constants.SyncMode
 import com.vynce.app.constants.ThumbnailCornerRadius
-import com.vynce.app.constants.YtmSyncModeKey
 import com.vynce.app.db.entities.Event
 import com.vynce.app.db.entities.Playlist
 import com.vynce.app.db.entities.PlaylistSong
@@ -63,7 +60,6 @@ import com.vynce.app.extensions.toMediaItem
 import com.vynce.app.models.toMediaMetadata
 import com.vynce.app.playback.ExoDownloadService
 import com.vynce.app.playback.queues.ListQueue
-import com.vynce.app.playback.queues.YouTubeQueue
 import com.vynce.app.ui.component.button.IconButton
 import com.vynce.app.ui.component.items.ListItem
 import com.vynce.app.ui.dialog.AddToPlaylistDialog
@@ -74,9 +70,8 @@ import com.vynce.app.ui.dialog.TextFieldDialog
 import com.vynce.app.utils.joinByBullet
 import com.vynce.app.utils.makeTimeString
 import com.vynce.app.utils.rememberEnumPreference
-import com.vynce.app.utils.syncCoroutine
-import com.zionhuang.innertube.YouTube
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
@@ -92,18 +87,15 @@ fun SongMenu(
     val context = LocalContext.current
     val database = LocalDatabase.current
     val density = LocalDensity.current
+    val playerConnection = LocalPlayerConnection.current ?: return
     val downloadUtil = LocalDownloadUtil.current
     val clipboardManager = LocalClipboard.current
-    val syncUtils = LocalSyncUtils.current
-    val playerConnection = LocalPlayerConnection.current ?: return
     val queueBoard by playerConnection.queueBoard.collectAsState()
 
-    val syncMode by rememberEnumPreference(key = YtmSyncModeKey, defaultValue = SyncMode.RW)
-
     val song = originalSong
-    val download by LocalDownloadUtil.current.getDownload(originalSong.id).collectAsState(initial = null)
+    val download by downloadUtil.getDownload(originalSong.id).collectAsState(initial = null)
     val coroutineScope =
-        CoroutineScope(syncCoroutine) // rememberCoroutineScope has exception "rememberCoroutineScope left the composition"
+        CoroutineScope(Dispatchers.IO) // rememberCoroutineScope has exception "rememberCoroutineScope left the composition"
 
     val currentFormatState = database.format(originalSong.id).collectAsState(initial = null)
     val currentFormat = currentFormatState.value
@@ -147,10 +139,6 @@ fun SongMenu(
                     database.query {
                         update(s)
                     }
-
-                    if (!s.isLocal) {
-                        syncUtils.likeSong(s)
-                    }
                 }
             ) {
                 Icon(
@@ -172,14 +160,7 @@ fun SongMenu(
             bottom = 8.dp + WindowInsets.systemBars.asPaddingValues().calculateBottomPadding()
         )
     ) {
-        if (!song.song.isLocal)
-            GridMenuItem(
-                icon = Icons.Rounded.Radio,
-                title = R.string.start_radio
-            ) {
-                onDismiss()
-                playerConnection.playQueue(YouTubeQueue.radio(song.toMediaMetadata()), isRadio = true)
-            }
+
 
         GridMenuItem(
             icon = Icons.Rounded.PlayArrow,
@@ -220,7 +201,7 @@ fun SongMenu(
         }
 
         if (playlistSong != null && (playlist?.playlist?.isLocal == true
-                    || (playlistSong.song.song.isLocal || syncMode == SyncMode.RW))
+                    || playlistSong.song.song.isLocal)
         ) {
             GridMenuItem(
                 icon = Icons.Rounded.PlaylistRemove,
@@ -229,16 +210,6 @@ fun SongMenu(
                 database.transaction {
                     move(playlistSong.map.playlistId, playlistSong.map.position, Int.MAX_VALUE)
                     delete(playlistSong.map.copy(position = Int.MAX_VALUE))
-                }
-
-                coroutineScope.launch {
-                    playlist?.playlist?.browseId?.let { playlistId ->
-                        if (playlistSong.map.setVideoId != null) {
-                            YouTube.removeFromPlaylist(
-                                playlistId, playlistSong.map.songId, playlistSong.map.setVideoId
-                            )
-                        }
-                    }
                 }
 
                 onDismiss()
@@ -292,11 +263,8 @@ fun SongMenu(
                 title = R.string.share
             ) {
                 onDismiss()
-                val url = if (song.id.startsWith("saavn:")) {
-                    "https://www.jiosaavn.com/song/${song.id.removePrefix("saavn:")}"
-                } else {
-                    "https://music.youtube.com/watch?v=${song.id}"
-                }
+                val url = "https://www.jiosaavn.com/song/${song.id.removePrefix("saavn:")}"
+
                 val intent = Intent().apply {
                     action = Intent.ACTION_SEND
                     type = "text/plain"
@@ -386,12 +354,7 @@ fun SongMenu(
         AddToPlaylistDialog(
             navController = navController,
             songIds = listOf(song.id),
-            onPreAdd = { playlist ->
-                playlist.playlist.browseId?.let { browseId ->
-                    if (!song.id.startsWith("saavn:")) {
-                        YouTube.addToPlaylist(browseId, song.id)
-                    }
-                }
+            onPreAdd = {
                 listOf(song.id)
             },
             onDismiss = { showChoosePlaylistDialog = false }

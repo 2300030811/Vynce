@@ -98,12 +98,7 @@ import com.vynce.app.utils.getDownloadState
 import com.vynce.app.utils.joinByBullet
 import com.vynce.app.utils.makeTimeString
 import com.vynce.app.utils.reportException
-import com.zionhuang.innertube.YouTube
-import com.zionhuang.innertube.models.AlbumItem
-import com.zionhuang.innertube.models.ArtistItem
-import com.zionhuang.innertube.models.PlaylistItem
-import com.zionhuang.innertube.models.SongItem
-import com.zionhuang.innertube.models.YTItem
+
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -390,187 +385,9 @@ fun QueueListItem(
     modifier = modifier
 )
 
-@Composable
-fun YouTubeListItem(
-    item: YTItem,
-    modifier: Modifier = Modifier,
-    albumIndex: Int? = null,
-    isSelected: Boolean = false,
-    badges: @Composable RowScope.() -> Unit = {
-        val database = LocalDatabase.current
-        val song by database.song(item.id).collectAsState(initial = null)
-        val album by database.album(item.id).collectAsState(initial = null)
-
-        if (item is SongItem && song?.song?.liked == true ||
-            item is AlbumItem && album?.album?.bookmarkedAt != null
-        ) {
-            Icon.Favorite()
-        }
-        if (item.explicit) {
-            Icon.Explicit()
-        }
-        if (item is SongItem && song?.song?.inLibrary != null) {
-            Icon.Library()
-        }
-        if (item is SongItem) {
-            val downloads by LocalDownloadUtil.current.downloads.collectAsState()
-            Icon.Download(downloads[item.id])
-        }
-    },
-    isActive: Boolean = false,
-    isPlaying: Boolean = false,
-    trailingContent: @Composable RowScope.() -> Unit = {},
-) {
-    ListItem(
-        title = item.title,
-        subtitle = when (item) {
-            is SongItem -> joinByBullet(
-                item.artists.joinToString { it.name },
-                makeTimeString(item.duration?.times(1000L))
-            )
-
-            is AlbumItem -> joinByBullet(
-                item.artists?.joinToString { it.name },
-                item.year?.toString()
-            )
-
-            is ArtistItem -> null
-            is PlaylistItem -> joinByBullet(item.author?.name, item.songCountText)
-        },
-        badges = badges,
-        thumbnailContent = {
-            ItemThumbnail(
-                thumbnailUrl = item.thumbnail,
-                albumIndex = albumIndex,
-                isActive = isActive,
-                isPlaying = isPlaying,
-                shape = if (item is ArtistItem) CircleShape else RoundedCornerShape(
-                    ThumbnailCornerRadius
-                ),
-                modifier = Modifier.size(ListThumbnailSize)
-            )
-        },
-        trailingContent = trailingContent,
-        modifier = modifier,
-        isSelected = isSelected,
-        isActive = isActive,
-    )
-}
 
 @Composable
-fun YouTubeGridItem(
-    item: YTItem,
-    modifier: Modifier = Modifier,
-    coroutineScope: CoroutineScope? = null,
-    badges: @Composable RowScope.() -> Unit = {
-        val database = LocalDatabase.current
-        val song by database.song(item.id).collectAsState(initial = null)
-        val album by database.album(item.id).collectAsState(initial = null)
-
-        if (item is SongItem && song?.song?.liked == true ||
-            item is AlbumItem && album?.album?.bookmarkedAt != null
-        ) {
-            Icon.Favorite()
-        }
-        if (item.explicit) {
-            Icon.Explicit()
-        }
-        if (item is SongItem && song?.song?.inLibrary != null) {
-            Icon.Library()
-        }
-        if (item is SongItem) {
-            val downloads by LocalDownloadUtil.current.downloads.collectAsState()
-            Icon.Download(downloads[item.id])
-        }
-    },
-    thumbnailRatio: Float = if (item is SongItem) 16f / 9 else 1f,
-    isActive: Boolean = false,
-    isPlaying: Boolean = false,
-    fillMaxWidth: Boolean = false,
-) = GridItem(
-    title = {
-        Text(
-            text = item.title,
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.Bold,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-            textAlign = if (item is ArtistItem) TextAlign.Center else TextAlign.Start,
-            modifier = Modifier.fillMaxWidth()
-        )
-    },
-    subtitle = {
-        val subtitle = when (item) {
-            is SongItem -> joinByBullet(
-                item.artists.joinToString { it.name },
-                makeTimeString(item.duration?.times(1000L))
-            )
-
-            is AlbumItem -> joinByBullet(item.artists?.joinToString { it.name }, item.year?.toString())
-            is ArtistItem -> null
-            is PlaylistItem -> joinByBullet(item.author?.name, item.songCountText)
-        }
-
-        if (subtitle != null) {
-            Text(
-                text = subtitle,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.secondary,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
-    },
-    badges = badges,
-    thumbnailContent = {
-        val database = LocalDatabase.current
-        val playerConnection = LocalPlayerConnection.current ?: return@GridItem
-
-        ItemThumbnail(
-            thumbnailUrl = item.thumbnail,
-            isActive = isActive,
-            isPlaying = isPlaying,
-            shape = if (item is ArtistItem) CircleShape else RoundedCornerShape(ThumbnailCornerRadius),
-        )
-
-        AlbumPlayButton(
-            visible = item is AlbumItem && !isActive,
-            onClick = {
-                coroutineScope?.launch(Dispatchers.IO) {
-                    var songs = database
-                        .albumWithSongs(item.id)
-                        .first()?.songs?.map { it.toMediaMetadata() }
-                    if (songs == null) {
-                        YouTube.album(item.id).onSuccess { albumPage ->
-                            database.transaction {
-                                insert(albumPage)
-                            }
-                            songs = albumPage.songs.map { it.toMediaMetadata() }
-                        }.onFailure {
-                            reportException(it)
-                        }
-                    }
-                    songs?.let {
-                        withContext(Dispatchers.Main) {
-                            playerConnection.playQueue(
-                                ListQueue(
-                                    title = item.title,
-                                    items = it
-                                )
-                            )
-                        }
-                    }
-                }
-            }
-        )
-    },
-    thumbnailRatio = thumbnailRatio,
-    fillMaxWidth = fillMaxWidth,
-    modifier = modifier
-)
-
-@Composable
-fun YouTubeCardItem(
+fun RecentActivityCardItem(
     item: RecentActivityEntity,
     modifier: Modifier = Modifier,
     isActive: Boolean,
@@ -814,9 +631,6 @@ object Icon {
         if (playlist.isLocal) features += 8
         if (playlist.isEditable) features += 4
         if (playlist.bookmarkedAt != null) features += 2
-        if ((playlist.playEndpointParams ?: playlist.radioEndpointParams
-            ?: playlist.shuffleEndpointParams) != null
-        ) features += 1
         Icon(
             imageVector = when {
                 // TODO: Icons that actually goddamn match with each other wth is this google???

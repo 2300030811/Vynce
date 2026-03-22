@@ -38,15 +38,12 @@ import com.vynce.app.constants.PlaylistFilter
 import com.vynce.app.constants.PlaylistSortDescendingKey
 import com.vynce.app.constants.PlaylistSortType
 import com.vynce.app.constants.PlaylistSortTypeKey
-import com.vynce.app.constants.SyncMode
-import com.vynce.app.constants.YtmSyncModeKey
 import com.vynce.app.db.entities.Playlist
 import com.vynce.app.ui.component.SortHeader
 import com.vynce.app.ui.component.items.ListItem
 import com.vynce.app.ui.component.items.PlaylistListItem
 import com.vynce.app.utils.rememberEnumPreference
 import com.vynce.app.utils.rememberPreference
-import com.zionhuang.innertube.YouTube
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -65,7 +62,6 @@ fun AddToPlaylistDialog(
 
     val (sortType, onSortTypeChange) = rememberEnumPreference(PlaylistSortTypeKey, PlaylistSortType.CREATE_DATE)
     val (sortDescending, onSortDescendingChange) = rememberPreference(PlaylistSortDescendingKey, true)
-    val syncMode by rememberEnumPreference(key = YtmSyncModeKey, defaultValue = SyncMode.RW)
 
     var playlists by remember {
         mutableStateOf(emptyList<Playlist>())
@@ -91,14 +87,8 @@ fun AddToPlaylistDialog(
     }
 
     LaunchedEffect(Unit) {
-        if (syncMode == SyncMode.RO) {
-            database.playlists(PlaylistFilter.LIBRARY, sortType, sortDescending, 1).collect {
-                playlists = it
-            }
-        } else {
-            database.playlists(PlaylistFilter.LIBRARY, sortType, sortDescending, 2).collect {
-                playlists = it
-            }
+        database.playlists(PlaylistFilter.LIBRARY, sortType, sortDescending, 2).collect {
+            playlists = it
         }
     }
 
@@ -130,12 +120,7 @@ fun AddToPlaylistDialog(
             )
         }
 
-        item {
-            InfoLabel(
-                text = stringResource(R.string.playlist_add_local_to_synced_note),
-                modifier = Modifier.padding(horizontal = 20.dp)
-            )
-        }
+
 
         item {
             SortHeader(
@@ -193,39 +178,13 @@ fun AddToPlaylistDialog(
                         } else {
                             onDismiss()
                             database.addSongToPlaylist(playlist, songIds!!)
-
-                            if (!playlist.playlist.isLocal) {
-                                playlist.playlist.browseId?.let { plist ->
-                                    songIds?.forEach {
-                                        if (!it.startsWith("saavn:")) {
-                                            YouTube.addToPlaylist(plist, it)
-                                        }
-                                    }
-                                }
-                            }
                         }
                     }
                 }
             )
         }
 
-        if (syncMode == SyncMode.RO) {
-            item {
-                TextButton(
-                    onClick = {
-                        navController.navigate("settings/account_sync")
-                        onDismiss()
-                    }
-                ) {
-                    Text(
-                        text = stringResource(R.string.playlist_missing_note),
-                        color = MaterialTheme.colorScheme.error,
-                        fontSize = TextUnit(12F, TextUnitType.Sp),
-                        modifier = Modifier.padding(horizontal = 20.dp)
-                    )
-                }
-            }
-        }
+        // Removed SyncMode check
     }
 
     if (showCreatePlaylistDialog) {

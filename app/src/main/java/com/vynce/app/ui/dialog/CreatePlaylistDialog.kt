@@ -33,8 +33,6 @@ import androidx.compose.ui.unit.dp
 import com.vynce.app.LocalDatabase
 import com.vynce.app.R
 import com.vynce.app.db.entities.PlaylistEntity
-import com.vynce.app.extensions.isUserLoggedIn
-import com.zionhuang.innertube.YouTube
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.time.LocalDateTime
@@ -48,7 +46,6 @@ fun CreatePlaylistDialog(
     val context = LocalContext.current
     val database = LocalDatabase.current
     val coroutineScope = rememberCoroutineScope()
-    var syncedPlaylist by remember { mutableStateOf(false) }
 
     TextFieldDialog(
         icon = { Icon(imageVector = Icons.Rounded.Add, contentDescription = null) },
@@ -57,53 +54,19 @@ fun CreatePlaylistDialog(
         onDismiss = onDismiss,
         onDone = { playlistName ->
             coroutineScope.launch(Dispatchers.IO) {
-                val browseId = if (syncedPlaylist)
-                    YouTube.createPlaylist(playlistName)
-                else null
-
                 database.query {
                     insert(
                         PlaylistEntity(
                             name = playlistName,
-                            browseId = browseId,
+                            browseId = null,
                             bookmarkedAt = LocalDateTime.now(),
                             isEditable = true,
-                            isLocal = !syncedPlaylist // && check that all songs are non-local
+                            isLocal = true
                         )
                     )
                 }
             }
         },
-        extraContent = {
-            if (allowSyncing && context.isUserLoggedIn()) {
-                Row(
-                    modifier = Modifier.padding(vertical = 16.dp, horizontal = 40.dp)
-                ) {
-                    Column() {
-                        Text(
-                            text = stringResource(R.string.create_sync_playlist),
-                            style = MaterialTheme.typography.titleLarge,
-                        )
 
-                        Text(
-                            text = stringResource(R.string.create_sync_playlist_description),
-                            style = MaterialTheme.typography.bodySmall,
-                            modifier = Modifier.fillMaxWidth(0.7f)
-                        )
-                    }
-                    Row(
-                        modifier = Modifier.weight(1f),
-                        horizontalArrangement = Arrangement.End
-                    ) {
-                        Switch(
-                            checked = syncedPlaylist,
-                            onCheckedChange = {
-                                syncedPlaylist = !syncedPlaylist
-                            },
-                        )
-                    }
-                }
-            }
-        }
     )
 }

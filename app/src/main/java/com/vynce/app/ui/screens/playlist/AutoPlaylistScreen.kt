@@ -90,7 +90,6 @@ import com.vynce.app.LocalMenuState
 import com.vynce.app.LocalPlayerAwareWindowInsets
 import com.vynce.app.LocalPlayerConnection
 import com.vynce.app.LocalSnackbarHostState
-import com.vynce.app.LocalSyncUtils
 import com.vynce.app.R
 import com.vynce.app.constants.AlbumThumbnailSize
 import com.vynce.app.constants.CONTENT_TYPE_HEADER
@@ -123,7 +122,6 @@ import com.vynce.app.utils.getDownloadState
 import com.vynce.app.utils.makeTimeString
 import com.vynce.app.utils.rememberEnumPreference
 import com.vynce.app.utils.rememberPreference
-import com.vynce.app.utils.syncCoroutine
 import com.vynce.app.viewmodels.AutoPlaylistViewModel
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.collectLatest
@@ -148,16 +146,16 @@ fun AutoPlaylistScreen(
     val density = LocalDensity.current
     val menuState = LocalMenuState.current
     val database = LocalDatabase.current
-    val syncUtils = LocalSyncUtils.current
     val playerConnection = LocalPlayerConnection.current ?: return
 
     val (sortType, onSortTypeChange) = rememberEnumPreference(SongSortTypeKey, SongSortType.CREATE_DATE)
-    val (sortDescending, onSortDescendingChange) = rememberPreference(SongSortDescendingKey, true)
-    val swipeEnabled by rememberPreference(SwipeToQueueKey, true)
+    val (sortDescending, onSortDescendingChange) = rememberPreference<Boolean>(SongSortDescendingKey, true)
+    val swipeEnabled by rememberPreference<Boolean>(SwipeToQueueKey, true)
 
     val isPlaying by playerConnection.isPlaying.collectAsState()
     val mediaMetadata by playerConnection.mediaMetadata.collectAsState()
     val songs by viewModel.songs.collectAsState()
+    val isSyncingRemoteLikedSongs by viewModel.isSyncingRemoteLikedSongs.collectAsState()
 
     // multiselect
     var inSelectMode by rememberSaveable { mutableStateOf(false) }
@@ -230,7 +228,6 @@ fun AutoPlaylistScreen(
         },
     )
 
-    val isSyncingRemoteLikedSongs by syncUtils.isSyncingRemoteLikedSongs.collectAsState()
     val pullRefreshState = rememberPullToRefreshState()
 
     val thumbnail by viewModel.thumbnail.collectAsState()
@@ -263,11 +260,7 @@ fun AutoPlaylistScreen(
         }
     }
 
-    LaunchedEffect(Unit) {
-        withContext(syncCoroutine) {
-            if (playlistType == PlaylistType.LIKE) syncUtils.syncRemoteLikedSongs()
-        }
-    }
+
 
     var showRemoveDownloadDialog by remember {
         mutableStateOf(false)
@@ -324,11 +317,8 @@ fun AutoPlaylistScreen(
             .fillMaxSize()
             .pullToRefresh(
                 state = pullRefreshState,
-                isRefreshing = isSyncingRemoteLikedSongs,
+                isRefreshing = false,
                 onRefresh = {
-                    coroutineScope.launch {
-                        syncUtils.syncRemoteLikedSongs(true)
-                    }
                 }
             ),
     ) {
@@ -674,7 +664,7 @@ fun AutoPlaylistScreen(
         )
 
         Indicator(
-            isRefreshing = isSyncingRemoteLikedSongs,
+            isRefreshing = false,
             state = pullRefreshState,
             modifier = Modifier
                 .align(Alignment.TopCenter)

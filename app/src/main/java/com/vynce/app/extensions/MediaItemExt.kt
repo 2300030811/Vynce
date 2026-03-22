@@ -7,7 +7,7 @@ import com.vynce.app.db.entities.Song
 import com.vynce.app.models.MediaMetadata
 import com.vynce.app.models.toMediaMetadata
 import com.vynce.app.utils.toSaavnMediaMetadata
-import com.zionhuang.innertube.models.SongItem
+
 import com.zionhuang.jiosaavn.SaavnSong
 
 val MediaItem.metadata: MediaMetadata?
@@ -47,22 +47,6 @@ fun Song.toMediaItem() = MediaItem.Builder()
     )
     .build()
 
-fun SongItem.toMediaItem() = MediaItem.Builder()
-    .setMediaId(id)
-    .setUri(id)
-    .setCustomCacheKey(id)
-    .setTag(toMediaMetadata())
-    .setMediaMetadata(
-        androidx.media3.common.MediaMetadata.Builder()
-            .setTitle(title)
-            .setSubtitle(artists.joinToString { it.name })
-            .setArtist(artists.joinToString { it.name })
-            .setArtworkUri(thumbnail.toUri())
-            .setAlbumTitle(album?.name)
-            .setMediaType(MEDIA_TYPE_MUSIC)
-            .build()
-    )
-    .build()
 
 fun MediaMetadata.toMediaItem() = MediaItem.Builder()
     .setMediaId(id)

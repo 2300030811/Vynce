@@ -6,11 +6,6 @@ import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
 import com.vynce.app.utils.LocalArtworkPath
-import com.vynce.app.utils.syncCoroutine
-import com.zionhuang.innertube.YouTube
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.launch
 import org.apache.commons.lang3.RandomStringUtils
 import java.time.LocalDateTime
 import java.time.Month
@@ -59,12 +54,7 @@ data class SongEntity(
         liked = !liked,
         likedDate = if (!liked) LocalDateTime.now() else null,
         inLibrary = if (!liked) inLibrary ?: LocalDateTime.now() else inLibrary
-    ).also {
-        CoroutineScope(syncCoroutine).launch {
-            YouTube.likeVideo(id, !liked)
-            this.cancel()
-        }
-    }
+    )
 
     fun toggleLibrary() = copy(
         inLibrary = if (inLibrary == null) LocalDateTime.now() else null,
@@ -111,7 +101,7 @@ data class SongEntity(
     }
 
     companion object {
-        fun generateSongId() = "LS" + RandomStringUtils.insecure().next(8, true, false)
+        fun generateSongId() = "LS" + RandomStringUtils.randomAlphanumeric(8)
     }
 }
 

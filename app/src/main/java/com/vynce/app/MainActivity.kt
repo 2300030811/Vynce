@@ -138,21 +138,13 @@ import com.vynce.app.ui.component.shimmer.ShimmerTheme
 import com.vynce.app.ui.menu.BottomSheetMenu
 import com.vynce.app.ui.menu.MenuState
 import com.vynce.app.ui.player.BottomSheetPlayer
-import com.vynce.app.ui.screens.AccountScreen
-import com.vynce.app.ui.screens.AlbumScreen
-import com.vynce.app.ui.screens.BrowseScreen
-import com.vynce.app.ui.screens.HistoryScreen
 import com.vynce.app.ui.screens.HomeScreen
-import com.vynce.app.ui.screens.LoginScreen
-import com.vynce.app.ui.screens.MoodAndGenresScreen
+import com.vynce.app.ui.screens.HomeScreen
 import com.vynce.app.ui.screens.PlayerScreen
 import com.vynce.app.ui.screens.Screens
 import com.vynce.app.ui.screens.SetupWizard
 import com.vynce.app.ui.screens.StatsScreen
 import com.vynce.app.ui.screens.artist.ArtistAlbumsScreen
-import com.vynce.app.ui.screens.artist.ArtistItemsScreen
-import com.vynce.app.ui.screens.artist.ArtistScreen
-import com.vynce.app.ui.screens.artist.ArtistSongsScreen
 import com.vynce.app.ui.screens.library.FolderScreen
 import com.vynce.app.ui.screens.library.LibraryAlbumsScreen
 import com.vynce.app.ui.screens.library.LibraryArtistsScreen
@@ -162,7 +154,6 @@ import com.vynce.app.ui.screens.library.LibraryScreen
 import com.vynce.app.ui.screens.library.LibrarySongsScreen
 import com.vynce.app.ui.screens.playlist.AutoPlaylistScreen
 import com.vynce.app.ui.screens.playlist.LocalPlaylistScreen
-import com.vynce.app.ui.screens.playlist.OnlinePlaylistScreen
 import com.vynce.app.ui.screens.search.OnlineSearchResult
 import com.vynce.app.ui.screens.search.SearchBarContainer
 import com.vynce.app.ui.screens.settings.AboutScreen
@@ -183,7 +174,7 @@ import com.vynce.app.ui.theme.VynceTheme
 import com.vynce.app.ui.utils.appBarScrollBehavior
 import com.vynce.app.utils.ActivityLauncherHelper
 import com.vynce.app.utils.NetworkConnectivityObserver
-import com.vynce.app.utils.SyncUtils
+
 import com.vynce.app.utils.lmScannerCoroutine
 import com.vynce.app.utils.rememberEnumPreference
 import com.vynce.app.utils.rememberPreference
@@ -202,8 +193,7 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var downloadUtil: DownloadUtil
 
-    @Inject
-    lateinit var syncUtils: SyncUtils
+
 
     lateinit var activityLauncher: ActivityLauncherHelper
     lateinit var connectivityObserver: NetworkConnectivityObserver
@@ -410,24 +400,6 @@ class MainActivity : ComponentActivity() {
                     )
 
 
-                    DisposableEffect(Unit) {
-                        val listener = Consumer<Intent> { intent ->
-                            val uri =
-                                intent.data ?: intent.extras?.getString(Intent.EXTRA_TEXT)?.toUri()
-                                ?: return@Consumer
-                            youtubeNavigator(
-                                this@MainActivity,
-                                navController,
-                                coroutineScope,
-                                playerConnection,
-                                snackbarHostState,
-                                uri
-                            )
-                        }
-
-                        addOnNewIntentListener(listener)
-                        onDispose { removeOnNewIntentListener(listener) }
-                    }
 
                     CompositionLocalProvider(
                         LocalDatabase provides database,
@@ -437,7 +409,7 @@ class MainActivity : ComponentActivity() {
                         LocalPlayerAwareWindowInsets provides playerAwareWindowInsets,
                         LocalDownloadUtil provides downloadUtil,
                         LocalShimmerTheme provides ShimmerTheme,
-                        LocalSyncUtils provides syncUtils,
+
                         LocalNetworkConnected provides isNetworkConnected,
                         LocalSnackbarHostState provides snackbarHostState,
                     ) {
@@ -543,17 +515,8 @@ class MainActivity : ComponentActivity() {
                                     composable(Screens.Player.route) {
                                         PlayerScreen(navController, bottomPadding = getNavPadding())
                                     }
-                                    composable("history") {
-                                        HistoryScreen(navController)
-                                    }
                                     composable(Screens.Stats.route) {
                                         StatsScreen(navController)
-                                    }
-                                    composable("mood_and_genres") {
-                                        MoodAndGenresScreen(navController, scrollBehavior)
-                                    }
-                                    composable("account") {
-                                        AccountScreen(navController, scrollBehavior)
                                     }
 
                                     composable(
@@ -943,7 +906,6 @@ val LocalMenuState = staticCompositionLocalOf<MenuState> { error("No menu state 
 val LocalPlayerConnection = staticCompositionLocalOf<PlayerConnection?> { error("No PlayerConnection provided") }
 val LocalPlayerAwareWindowInsets = compositionLocalOf<WindowInsets> { error("No player WindowInsets provided") }
 val LocalDownloadUtil = staticCompositionLocalOf<DownloadUtil> { error("No DownloadUtil provided") }
-val LocalSyncUtils = staticCompositionLocalOf<SyncUtils> { error("No SyncUtils provided") }
 val LocalNetworkConnected = staticCompositionLocalOf<Boolean> { error("No Network Status provided") }
 val LocalSnackbarHostState = staticCompositionLocalOf<SnackbarHostState> { error("No SnackbarHostState provided") }
 

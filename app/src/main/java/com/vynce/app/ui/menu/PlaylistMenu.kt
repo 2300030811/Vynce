@@ -58,7 +58,6 @@ import com.vynce.app.extensions.toMediaItem
 import com.vynce.app.models.toMediaMetadata
 import com.vynce.app.playback.ExoDownloadService
 import com.vynce.app.playback.queues.ListQueue
-import com.vynce.app.playback.queues.YouTubeQueue
 import com.vynce.app.ui.component.button.IconButton
 import com.vynce.app.ui.component.items.PlaylistListItem
 import com.vynce.app.ui.dialog.AddToPlaylistDialog
@@ -68,9 +67,6 @@ import com.vynce.app.ui.dialog.TextFieldDialog
 import com.vynce.app.utils.getDownloadState
 import com.vynce.app.utils.lmScannerCoroutine
 import com.vynce.app.utils.reportException
-import com.vynce.app.utils.syncCoroutine
-import com.zionhuang.innertube.YouTube
-import com.zionhuang.innertube.models.WatchEndpoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import java.io.IOException
@@ -103,7 +99,7 @@ fun PlaylistMenu(
                     songs.forEach { s ->
                         val se = s.song
                         result += "#EXTINF:${se.duration},${s.artists.joinToString(";") { it.name }} - ${s.title}\n"
-                        result += if (se.isLocal) "${se.id}, ${se.localPath}" else "https://youtube.com/watch?v=${se.id}"
+                        result += if (se.isLocal) "${se.id}, ${se.localPath}" else "https://www.jiosaavn.com/song/${se.id.removePrefix("saavn:")}"
                         result += "\n"
                     }
                     context.contentResolver.openOutputStream(uri)?.use { outputStream ->
@@ -214,26 +210,7 @@ fun PlaylistMenu(
             )
         }
 
-        if (isNetworkConnected) {
-            playlist.playlist.browseId?.let { browseId ->
-                playlist.playlist.radioEndpointParams?.let { radioEndpointParams ->
-                    GridMenuItem(
-                        icon = Icons.Rounded.Radio,
-                        title = R.string.start_radio
-                    ) {
-                        playerConnection.playQueue(
-                            YouTubeQueue(
-                                WatchEndpoint(
-                                    playlistId = "RDAMPL$browseId",
-                                    params = radioEndpointParams,
-                                )
-                            ), isRadio = true
-                        )
-                        onDismiss()
-                    }
-                }
-            }
-        }
+
 
         GridMenuItem(
             icon = Icons.AutoMirrored.Rounded.PlaylistPlay,
@@ -323,10 +300,6 @@ fun PlaylistMenu(
                 database.query {
                     update(playlist.playlist.copy(name = name))
                 }
-
-                coroutineScope.launch(syncCoroutine) {
-                    playlist.playlist.browseId?.let { YouTube.renamePlaylist(it, name) }
-                }
             }
         )
     }
@@ -401,12 +374,6 @@ fun PlaylistMenu(
                         database.query {
                             delete(playlist.playlist)
                         }
-
-                        if (!playlist.playlist.isLocal) {
-                            coroutineScope.launch(syncCoroutine) {
-                                playlist.playlist.browseId?.let { YouTube.deletePlaylist(it) }
-                            }
-                        }
                     }
                 ) {
                     Text(text = stringResource(android.R.string.ok))
@@ -438,12 +405,6 @@ fun PlaylistMenu(
             navController = navController,
             songIds = songs.map { it.id },
             onPreAdd = { playlist ->
-                // add songs to playlist and push to ytm
-                songs.let { playlist.playlist.browseId?.let { YouTube.addPlaylistToPlaylist(it, playlist.id) } }
-
-                playlist.playlist.browseId?.let { playlistId ->
-                    YouTube.addPlaylistToPlaylist(playlistId, playlist.id)
-                }
                 songs.map { it.id }
             },
             onDismiss = { showChoosePlaylistDialog = false }

@@ -71,7 +71,6 @@ import com.vynce.app.constants.MaxQueuesKey
 import com.vynce.app.constants.OobeStatusKey
 import com.vynce.app.constants.TabletUiKey
 import com.vynce.app.constants.TopBarInsets
-import com.vynce.app.constants.VisitorDataKey
 import com.vynce.app.ui.component.ColumnWithContentPadding
 import com.vynce.app.ui.component.PreferenceEntry
 import com.vynce.app.ui.component.PreferenceGroupTitle
@@ -211,16 +210,7 @@ fun ExperimentalSettings(
 
             Spacer(Modifier.height(20.dp))
 
-            PreferenceEntry(
-                title = { Text("Delete VisitorData: This may (or may not) help resolve \"Sign in to confirm you're not a bot\" issues. Not recommended for logged in users.") },
-                onClick = {
-                    runBlocking {
-                        context.dataStore.edit { settings ->
-                            settings.remove(VisitorDataKey)
-                        }
-                    }
-                }
-            )
+
 
 
             PreferenceEntry(

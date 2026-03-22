@@ -69,7 +69,7 @@ import com.vynce.app.utils.get
 import com.vynce.app.utils.rememberEnumPreference
 import com.vynce.app.utils.rememberPreference
 import com.vynce.app.utils.urlEncode
-import com.vynce.app.youtubeNavigator
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -77,7 +77,6 @@ fun SearchBarContainer(
     navController: NavController,
     scrollBehavior: TopAppBarScrollBehavior,
 ) {
-    Log.v("SearchBarContainer", "SB-1")
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     val database = LocalDatabase.current
@@ -117,24 +116,12 @@ fun SearchBarContainer(
                 focusManager.clearFocus(true)
             } else {
                 onSearchActiveChange(false)
-                if (youtubeNavigator(
-                        context,
-                        navController,
-                        coroutineScope,
-                        playerConnection,
-                        snackbarHostState,
-                        it.toUri()
-                    )
-                ) {
-                    // don't do anything
-                } else {
                     navController.navigate("search/${it.urlEncode()}")
                     if (context.dataStore[PauseSearchHistoryKey] != true) {
                         database.query {
                             insert(SearchHistory(query = it))
                         }
                     }
-                }
             }
         }
     }
@@ -175,7 +162,7 @@ fun SearchBarContainer(
                         if (!searchActive) R.string.search
                         else when (searchSource) {
                             SearchSource.LOCAL -> R.string.search_library
-                            SearchSource.ONLINE -> R.string.search_yt_music
+                            SearchSource.ONLINE -> R.string.search
                         }
                     )
                 )
@@ -273,22 +260,10 @@ fun SearchBarContainer(
                         onQueryChange = onQueryChange,
                         navController = navController,
                         onSearch = {
-                            if (youtubeNavigator(
-                                    context,
-                                    navController,
-                                    coroutineScope,
-                                    playerConnection,
-                                    snackbarHostState,
-                                    it.toUri()
-                                )
-                            ) {
-                                return@OnlineSearchScreen
-                            } else {
-                                navController.navigate("search/${it.urlEncode()}")
-                                if (context.dataStore[PauseSearchHistoryKey] != true) {
-                                    database.query {
-                                        insert(SearchHistory(query = it))
-                                    }
+                            navController.navigate("search/${it.urlEncode()}")
+                            if (context.dataStore[PauseSearchHistoryKey] != true) {
+                                database.query {
+                                    insert(SearchHistory(query = it))
                                 }
                             }
                         },

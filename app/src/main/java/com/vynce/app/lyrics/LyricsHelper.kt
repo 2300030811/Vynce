@@ -24,7 +24,7 @@ class LyricsHelper @Inject constructor(
     val database: MusicDatabase
 ) {
     private val lyricsProviders =
-        listOf(YouTubeSubtitleLyricsProvider, LrcLibLyricsProvider, KuGouLyricsProvider, YouTubeLyricsProvider)
+        listOf(LrcLibLyricsProvider, KuGouLyricsProvider)
     private val cache = LruCache<String, List<LyricsResult>>(MAX_CACHE_SIZE)
 
     /**

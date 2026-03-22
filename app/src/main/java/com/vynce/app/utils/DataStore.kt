@@ -70,8 +70,8 @@ fun <T> rememberPreference(
                     }
                 }
 
-            override fun component1() = value
-            override fun component2(): (T) -> Unit = { value = it }
+            override operator fun component1(): T = value
+            override operator fun component2(): (T) -> Unit = { value = it }
         }
     }
 }
@@ -103,8 +103,8 @@ inline fun <reified T : Enum<T>> rememberEnumPreference(
                     }
                 }
 
-            override fun component1() = value
-            override fun component2(): (T) -> Unit = { value = it }
+            override operator fun component1(): T = value
+            override operator fun component2(): (T) -> Unit = { value = it }
         }
     }
 }

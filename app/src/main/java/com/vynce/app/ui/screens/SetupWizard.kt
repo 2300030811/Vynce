@@ -107,10 +107,8 @@ import com.vynce.app.constants.DEFAULT_ENABLED_TABS
 import com.vynce.app.constants.DownloadPathKey
 import com.vynce.app.constants.EnabledFiltersKey
 import com.vynce.app.constants.EnabledTabsKey
-import com.vynce.app.constants.InnerTubeCookieKey
 import com.vynce.app.constants.LibraryFilterKey
 import com.vynce.app.constants.LocalLibraryEnableKey
-import com.vynce.app.constants.LyricTrimKey
 import com.vynce.app.constants.MaxSongCacheSizeKey
 import com.vynce.app.constants.NavigationBarHeight
 import com.vynce.app.constants.OOBE_VERSION
@@ -125,7 +123,6 @@ import com.vynce.app.ui.component.button.IconLabelButton
 import com.vynce.app.ui.dialog.ActionPromptDialog
 import com.vynce.app.ui.dialog.InfoLabel
 import com.vynce.app.ui.screens.Screens.LibraryFilter
-import com.vynce.app.ui.screens.settings.fragments.AccountFrag
 import com.vynce.app.ui.screens.settings.fragments.LocalScannerFrag
 import com.vynce.app.ui.screens.settings.fragments.LocalizationFrag
 import com.vynce.app.ui.screens.settings.fragments.ThemeAppFrag
@@ -135,7 +132,6 @@ import com.vynce.app.utils.rememberEnumPreference
 import com.vynce.app.utils.rememberPreference
 import com.vynce.app.utils.scanners.stringFromUriList
 import com.vynce.app.utils.scanners.uriListFromString
-import com.zionhuang.innertube.utils.parseCookieString
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -154,13 +150,6 @@ fun SetupWizard(
 
     // content prefs
     var filter by rememberEnumPreference(LibraryFilterKey, LibraryFilter.ALL)
-
-
-    val innerTubeCookie by rememberPreference(InnerTubeCookieKey, "")
-    val isLoggedIn = remember(innerTubeCookie) {
-        "SAPISID" in parseCookieString(innerTubeCookie)
-    }
-    val (ytmSync, onYtmSyncChange) = rememberPreference(LyricTrimKey, defaultValue = true)
 
     // local media prefs
     val (localLibEnable, onLocalLibEnableChange) = rememberPreference(LocalLibraryEnableKey, defaultValue = true)
@@ -340,12 +329,6 @@ fun SetupWizard(
                                 Color.Red
                             )
                             OobeFeatureRow(
-                                title = stringResource(R.string.oobe_cross_platform_sync),
-                                description = stringResource(R.string.oobe_cross_platform_sync_description),
-                                icon = Icons.Rounded.Sync,
-                                MaterialTheme.colorScheme.tertiary
-                            )
-                            OobeFeatureRow(
                                 title = stringResource(R.string.oobe_local_music_support),
                                 description = stringResource(R.string.oobe_local_music_support_description),
                                 icon = Icons.Rounded.SdCard,
@@ -435,57 +418,8 @@ fun SetupWizard(
                         }
                     }
 
-                    // account
-                    2 -> {
-                        Icon(
-                            imageVector = Icons.Rounded.AccountCircle,
-                            contentDescription = null,
-                            modifier = Modifier
-                                .size(80.dp)
-                                .padding(16.dp),
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-
-                        Text(
-                            text = stringResource(R.string.oobe_ytm_logon_title),
-                            style = MaterialTheme.typography.headlineMedium,
-                            fontWeight = FontWeight.Bold,
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)
-                        )
-
-                        Text(
-                            text = stringResource(R.string.oobe_ytm_logon_subtitle),
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier.padding(start = 24.dp, end = 24.dp, bottom = 32.dp)
-                        )
-
-
-                        ElevatedCard(
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            AccountFrag(navController)
-                        }
-
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        ElevatedCard(
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            SwitchPreference(
-                                title = { Text(stringResource(R.string.ytm_sync)) },
-                                icon = { Icon(Icons.Rounded.Lyrics, null) },
-                                checked = ytmSync,
-                                onCheckedChange = onYtmSyncChange,
-                                isEnabled = isLoggedIn
-                            )
-                        }
-                    }
-
                     // local media
-                    3 -> {
+                    2 -> {
                         Icon(
                             imageVector = Icons.Rounded.LibraryMusic,
                             contentDescription = null,
@@ -554,7 +488,7 @@ fun SetupWizard(
                     }
 
                     // downloads
-                    4 -> {
+                    3 -> {
                         val downloadUtil = LocalDownloadUtil.current
                         val (downloadPath, onDownloadPathChange) = rememberPreference(DownloadPathKey, "")
                         val (maxSongCacheSize, onMaxSongCacheSizeChange) = rememberPreference(
@@ -772,7 +706,7 @@ fun SetupWizard(
                     }
 
                     // exit page
-                    5 -> {
+                    4 -> {
                         Column(
                             modifier = Modifier.fillMaxSize(),
                             horizontalAlignment = Alignment.CenterHorizontally,

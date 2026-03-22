@@ -25,6 +25,6 @@ class GenreEntity(
 ) {
 
     companion object {
-        fun generateGenreId() = "LG" + RandomStringUtils.insecure().next(8, true, false)
+        fun generateGenreId() = "LG" + RandomStringUtils.randomAlphanumeric(8)
     }
 }

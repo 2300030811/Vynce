@@ -29,21 +29,21 @@ We recycle translations from upstream, they are pulled periodically. -->
     <string name="your_youtube_playlists">JioSaavn Playlists</string>
     <string name="similar_to">Similar to</string>
     <string name="new_release_albums">New release albums</string>
-
-    <!-- History -->
-    <string name="today">Today</string>
-    <string name="yesterday">Yesterday</string>
-    <string name="this_week">This week</string>
-    <string name="last_week">Last week</string>
-
-    <!-- Stats -->
-    <string name="most_played_songs">Most played songs</string>
-    <string name="most_played_artists">Most played artists</string>
-    <string name="most_played_albums">Most played albums</string>
-
-    <!-- Search -->
-    <string name="search">Search</string>
-    <string name="search_yt_music">Search…</string>
+ 
+     <!-- History -->
+     <string name="today">Today</string>
+     <string name="yesterday">Yesterday</string>
+     <string name="this_week">This week</string>
+     <string name="last_week">Last week</string>
+ 
+     <!-- Stats -->
+     <string name="most_played_songs">Most played songs</string>
+     <string name="most_played_artists">Most played artists</string>
+     <string name="most_played_albums">Most played albums</string>
+ 
+     <!-- Search -->
+     <string name="search">Search</string>
+     <string name="search_yt_music">Search…</string>
     <string name="search_library">Search library…</string>
     <string name="filter_library">Library</string>
     <string name="filter_liked">Liked</string>

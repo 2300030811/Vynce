@@ -54,7 +54,6 @@ import com.vynce.app.ui.dialog.AddToPlaylistDialog
 import com.vynce.app.ui.dialog.AddToQueueDialog
 import com.vynce.app.ui.dialog.ArtistDialog
 import com.vynce.app.utils.getDownloadState
-import com.zionhuang.innertube.YouTube
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.time.LocalDateTime
@@ -232,26 +231,7 @@ fun AlbumMenu(
                 showSelectArtistDialog = true
             }
         }
-        GridMenuItem(
-            icon = {
-                Icon(
-                    imageVector = Icons.Rounded.Sync,
-                    contentDescription = null,
-                    modifier = Modifier.graphicsLayer(rotationZ = rotationAnimation)
-                )
-            },
-            title = R.string.refetch,
-            enabled = isNetworkConnected
-        ) {
-            refetchIconDegree -= 360
-            scope.launch(Dispatchers.IO) {
-                YouTube.album(album.id).onSuccess {
-                    database.transaction {
-                        update(album.album, it)
-                    }
-                }
-            }
-        }
+
         GridMenuItem(
             icon = Icons.Rounded.Share,
             title = R.string.share
@@ -260,7 +240,7 @@ fun AlbumMenu(
             val intent = Intent().apply {
                 action = Intent.ACTION_SEND
                 type = "text/plain"
-                putExtra(Intent.EXTRA_TEXT, "https://music.youtube.com/browse/${album.album.id}")
+                putExtra(Intent.EXTRA_TEXT, "https://www.jiosaavn.com/album/${album.album.id.removePrefix("saavn:")}")
             }
             context.startActivity(Intent.createChooser(intent, null))
         }
@@ -295,11 +275,6 @@ fun AlbumMenu(
             navController = navController,
             songIds = songs.map { it.id },
             onPreAdd = { playlist ->
-                playlist.playlist.browseId?.let { playlistId ->
-                    album.album.playlistId?.let { addPlaylistId ->
-                        YouTube.addPlaylistToPlaylist(playlistId, addPlaylistId)
-                    }
-                }
                 songs.map { it.id }
             },
             onDismiss = {

@@ -28,10 +28,6 @@ val SlimNavBarKey = booleanPreferencesKey("slimNavBar")
  * Content
  */
 const val SYSTEM_DEFAULT = "SYSTEM_DEFAULT"
-val YtmSyncKey = booleanPreferencesKey("ytmSync")
-val YtmSyncContentKey = stringPreferencesKey("ytmSyncContent")
-val YtmSyncModeKey = stringPreferencesKey("ytmSyncMode")
-val YtmSyncConflictKey = stringPreferencesKey("ytmSyncConflict")
 //val LikedAutoDownloadKey = stringPreferencesKey("likedAutoDownloadKey")
 val ContentLanguageKey = stringPreferencesKey("contentLanguage")
 val ContentCountryKey = stringPreferencesKey("contentCountry")
@@ -101,11 +97,9 @@ val MaxSongCacheSizeKey = intPreferencesKey("maxSongCacheSize")
  * Privacy
  */
 val PauseListenHistoryKey = booleanPreferencesKey("pauseListenHistory")
-val PauseRemoteListenHistoryKey = booleanPreferencesKey("pauseRemoteListenHistory")
 val PauseSearchHistoryKey = booleanPreferencesKey("pauseSearchHistory")
 val EnableKugouKey = booleanPreferencesKey("enableKugou")
 val EnableLrcLibKey = booleanPreferencesKey("enableLrcLib")
-val UseLoginForBrowse = booleanPreferencesKey("useLoginForBrowse")
 
 
 /**
@@ -171,12 +165,6 @@ val PlaylistEditLockKey = booleanPreferencesKey("playlistEditLock")
 
 val SearchSourceKey = stringPreferencesKey("searchSource")
 
-val VisitorDataKey = stringPreferencesKey("visitorData")
-val DataSyncIdKey = stringPreferencesKey("dataSyncId")
-val InnerTubeCookieKey = stringPreferencesKey("innerTubeCookie")
-val AccountNameKey = stringPreferencesKey("accountName")
-val AccountEmailKey = stringPreferencesKey("accountEmail")
-val AccountChannelHandleKey = stringPreferencesKey("accountChannelHandle")
 
 val LastFmScrobblingEnabledKey = booleanPreferencesKey("lastfmScrobblingEnabled")
 val LastFmSessionKey = stringPreferencesKey("lastfmSessionKey")

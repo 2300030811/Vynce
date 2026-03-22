@@ -21,7 +21,6 @@ import com.vynce.app.db.entities.ArtistEntity
 import com.vynce.app.db.entities.Song
 import com.vynce.app.db.entities.SongAlbumMap
 import com.vynce.app.extensions.reversed
-import com.zionhuang.innertube.models.AlbumItem
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
@@ -229,35 +228,7 @@ interface AlbumsDao : ArtistsDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     fun insert(map: AlbumArtistMap)
 
-    @Transaction
-    fun insert(albumItem: AlbumItem) {
-        if (insert(AlbumEntity(
-                id = albumItem.browseId,
-                playlistId = albumItem.playlistId,
-                title = albumItem.title,
-                year = albumItem.year,
-                thumbnailUrl = albumItem.thumbnail,
-                songCount = 0,
-                duration = 0
-            )) == -1L
-        ) return
-        albumItem.artists
-            ?.map { artist ->
-                ArtistEntity(
-                    id = artist.id ?: artistByName(artist.name)?.id ?: ArtistEntity.generateArtistId(),
-                    name = artist.name
-                )
-            }
-            ?.onEach(::insert)
-            ?.mapIndexed { index, artist ->
-                AlbumArtistMap(
-                    albumId = albumItem.browseId,
-                    artistId = artist.id,
-                    order = index
-                )
-            }
-            ?.forEach(::insert)
-    }
+
     // endregion
 
     // region Updates

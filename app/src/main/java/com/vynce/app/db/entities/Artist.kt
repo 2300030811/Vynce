@@ -7,7 +7,9 @@ import androidx.room.Embedded
 @Immutable
 data class Artist(
     @Embedded
-    val artist: ArtistEntity
+    val artist: ArtistEntity,
+    val songCount: Int = 0,
+    val downloadCount: Int = 0
 ) : LocalItem() {
     override val id: String
         get() = artist.id

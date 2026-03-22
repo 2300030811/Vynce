@@ -43,12 +43,6 @@ import com.vynce.app.ui.component.PreferenceEntry
 import com.vynce.app.ui.component.PreferenceGroupTitle
 import com.vynce.app.ui.component.SwitchPreference
 import com.vynce.app.ui.component.button.IconButton
-import com.vynce.app.ui.screens.settings.fragments.AccountExtrasFrag
-import com.vynce.app.ui.screens.settings.fragments.AccountFrag
-import com.vynce.app.ui.screens.settings.fragments.SyncAutoFrag
-import com.vynce.app.ui.screens.settings.fragments.SyncExtrasFrag
-import com.vynce.app.ui.screens.settings.fragments.SyncManualFrag
-import com.vynce.app.ui.screens.settings.fragments.SyncParamsFrag
 import com.vynce.app.ui.utils.backToMain
 
 @SuppressLint("PrivateResource")

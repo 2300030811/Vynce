@@ -139,7 +139,7 @@ while also allowing users to translate our app as well. New, specific strings to
 
 <!-- Content settings -->
     <string name="like_autodownload">Automatically download your liked songs</string>
-    <string name="action_logout_tooltip">To fully log out, please sign out of your YouTube account in the web portal before using this logout button</string>
+    <string name="action_logout_tooltip">To fully log out, please sign out of your JioSaavn account in their web portal before using this logout button</string>
     <string name="token_adv_login_description">This is an ADVANCED login method. As an alternative to the web portal, you may directly enter or update your login token here. For example, this can speed up logging in on multiple devices. Please note that any invalid token formats the app fails to parse will not be accepted</string>
     <string name="token_hidden">Tap to show token</string>
     <string name="token_shown">Tap again to copy or edit</string>
@@ -222,8 +222,6 @@ while also allowing users to translate our app as well. New, specific strings to
     <string name="scanner_progress_syncing">Syncing…</string>
 	<string name="scanner_scan_fail">Scanner failed</string>
 
-	<string name="scanner_ytm_link_fail">JioSaavn artist linking job failed</string>
-	<string name="scanner_ytm_link_start">Starting JioSaavn artist linking…</string>
 	<string name="scanner_ytm_link_success">JioSaavn artist linking job complete</string>
 
     <plurals name="scanner_n_song_processed">
@@ -241,7 +239,7 @@ while also allowing users to translate our app as well. New, specific strings to
     <string name="scanner_strict_file_paths_title">Match file paths instead of metadata</string>
     <string name="scanner_strict_file_paths_description">Disables all smart matching of metadata. This can cause issues if files are moved in your local storage, but allows for the same song in different folders</string>
     <string name="scanner_sensitivity_title">Configure scanner sensitivity</string>
-    <string name="scanner_sensitivity_L0">Take first result provided by YouTube when searching on YouTube is enabled, otherwise match title</string>
+    <string name="scanner_sensitivity_L0">Take first result provided by JioSaavn when searching on JioSaavn is enabled, otherwise match title</string>
     <string name="scanner_sensitivity_L1">Match title</string>
     <string name="scanner_sensitivity_L2">Match title and artists</string>
     <string name="scanner_sensitivity_L3">Match title, artists, albums</string>
@@ -302,7 +300,7 @@ while also allowing users to translate our app as well. New, specific strings to
 
 <!-- Setup wizard -->
     <string name="oobe_welcome_message">Welcome to Vynce</string>
-    <string name="oobe_welcome_tip">For the best experience, we recommend completing a quick setup to personalize key settings like theme, YouTube account, local media, and downloads.</string>
+    <string name="oobe_welcome_tip">For the best experience, we recommend completing a quick setup to personalize key settings like theme, JioSaavn account, local media, and downloads.</string>
 
     <!-- Landing -->
     <string name="oobe_ytm_integration">JioSaavn Integration</string>
@@ -328,7 +326,7 @@ while also allowing users to translate our app as well. New, specific strings to
 
     <!-- Downloads -->
     <string name="oobe_cache_title">Song cache</string>
-    <string name="oobe_cache_subtitle">Choose a song cache size. This can help reduce internet or YouTube API playback issues</string>
+    <string name="oobe_cache_subtitle">Choose a song cache size. This can help reduce internet playback issues</string>
     <string name="oobe_downloads_title">Song downloads</string>
     <string name="oobe_downloads_subtitle">Choose a folder where downloaded songs will be saved.</string>
 

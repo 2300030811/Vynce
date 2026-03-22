@@ -20,33 +20,21 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.vynce.app.LocalDatabase
 import com.vynce.app.R
-import com.vynce.app.constants.InnerTubeCookieKey
 import com.vynce.app.constants.PauseListenHistoryKey
-import com.vynce.app.constants.PauseRemoteListenHistoryKey
 import com.vynce.app.constants.PauseSearchHistoryKey
 import com.vynce.app.ui.component.PreferenceEntry
 import com.vynce.app.ui.component.SwitchPreference
 import com.vynce.app.ui.dialog.DefaultDialog
 import com.vynce.app.utils.rememberPreference
-import com.zionhuang.innertube.utils.parseCookieString
 
 @Composable
 fun ColumnScope.ListenHistoryFrag() {
     val database = LocalDatabase.current
 
-    val (pauseListenHistory, onPauseListenHistoryChange) = rememberPreference(
+    val (pauseListenHistory, onPauseListenHistoryChange) = rememberPreference<Boolean>(
         key = PauseListenHistoryKey,
         defaultValue = false
     )
-    val (pauseRemoteListenHistory, onPauseRemoteListenHistoryChange) = rememberPreference(
-        key = PauseRemoteListenHistoryKey,
-        defaultValue = false
-    )
-
-    val innerTubeCookie by rememberPreference(InnerTubeCookieKey, "")
-    val isLoggedIn = remember(innerTubeCookie) {
-        "SAPISID" in parseCookieString(innerTubeCookie)
-    }
 
     var showClearListenHistoryDialog by remember {
         mutableStateOf(false)
@@ -57,13 +45,6 @@ fun ColumnScope.ListenHistoryFrag() {
         icon = { Icon(Icons.Rounded.History, null) },
         checked = pauseListenHistory,
         onCheckedChange = onPauseListenHistoryChange
-    )
-    SwitchPreference(
-        title = { Text(stringResource(R.string.pause_remote_listen_history)) },
-        icon = { Icon(Icons.Rounded.History, null) },
-        checked = pauseRemoteListenHistory,
-        onCheckedChange = onPauseRemoteListenHistoryChange,
-        isEnabled = !pauseListenHistory && isLoggedIn
     )
     PreferenceEntry(
         title = { Text(stringResource(R.string.clear_listen_history)) },
@@ -112,7 +93,7 @@ fun ColumnScope.ListenHistoryFrag() {
 fun ColumnScope.SearchHistoryFrag() {
     val database = LocalDatabase.current
 
-    val (pauseSearchHistory, onPauseSearchHistoryChange) = rememberPreference(
+    val (pauseSearchHistory, onPauseSearchHistoryChange) = rememberPreference<Boolean>(
         key = PauseSearchHistoryKey,
         defaultValue = false
     )

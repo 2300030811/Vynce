@@ -14,7 +14,7 @@ dependencyResolutionManagement {
 
 rootProject.name = "Vynce"
 include(":app")
-include(":innertube")
+
 include(":kugou")
 include(":lrclib")
 include(":material-color-utilities")

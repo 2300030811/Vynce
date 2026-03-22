@@ -39,7 +39,6 @@ import coil3.compose.AsyncImage
 import com.vynce.app.LocalDatabase
 import com.vynce.app.LocalDownloadUtil
 import com.vynce.app.LocalPlayerConnection
-import com.vynce.app.LocalSyncUtils
 import com.vynce.app.R
 import com.vynce.app.constants.ListThumbnailSize
 import com.vynce.app.constants.ThumbnailCornerRadius
@@ -72,8 +71,6 @@ fun SaavnSongMenu(
     val database = LocalDatabase.current
     val playerConnection = LocalPlayerConnection.current ?: return
     val queueBoard by playerConnection.queueBoard.collectAsState()
-    val syncUtils = LocalSyncUtils.current
-
     val mediaMetadata = remember(song) { song.toSaavnMediaMetadata() }
     val librarySong by database.song(mediaMetadata.id).collectAsState(initial = null)
     val download by LocalDownloadUtil.current.getDownload(mediaMetadata.id).collectAsState(initial = null)
@@ -121,8 +118,6 @@ fun SaavnSongMenu(
                                     s = librarySong.song.toggleLike()
                                     update(s)
                                 }
-
-                                syncUtils.likeSong(s)
                             }
                         }
                     }

@@ -23,13 +23,6 @@ const val MAX_DL_JOBS = 5
 // maximum concurrent scanner jobs allowed
 const val MAX_LM_SCANNER_JOBS = 7 // 1 dispatcher + 6 workers
 
-// maximum concurrent scanner jobs allowed
-const val MAX_YTM_SYNC_JOBS = 3
-
-// maximum concurrent scanner jobs allowed
-const val MAX_YTM_CONTENT_JOBS = 16
-
-
 /**
  * Constants
  */
@@ -51,13 +44,11 @@ const val SNACKBAR_VERY_SHORT = 2000L
  * 5: pre 0.10.0-rc1
  * 6: 0.10.0-rc1 +
  */
-const val OOBE_VERSION = 6
+const val OOBE_VERSION = 7
 
 const val SCANNER_OWNER_DL = 32
 const val SCANNER_OWNER_LM = 1
 const val SCANNER_OWNER_M3U = 2
-
-const val SYNC_CD = 60000 * 30
 
 const val MAX_PLAYER_CONSECUTIVE_ERR = 3
 

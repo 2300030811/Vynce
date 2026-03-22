@@ -87,7 +87,6 @@ fun ImportM3uDialog(
         mutableStateOf(ScannerM3uMatchCriteria.LEVEL_1)
     }
 
-    var remoteLookup by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(false) }
     var showChoosePlaylistDialog by rememberSaveable {
         mutableStateOf(false)
@@ -106,8 +105,7 @@ fun ImportM3uDialog(
                         database = database,
                         snackbarHostState = snackbarHostState,
                         uri = uri,
-                        matchStrength = scannerSensitivity,
-                        searchOnline = remoteLookup
+                        matchStrength = scannerSensitivity
                     )
                     importedSongs.clear()
                     importedSongs.addAll(result.first)
@@ -144,18 +142,7 @@ fun ImportM3uDialog(
             }
         )
 
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Checkbox(
-                checked = remoteLookup,
-                onCheckedChange = { remoteLookup = it }
-            )
-            Text(
-                stringResource(R.string.m3u_ytm_lookup), color = MaterialTheme.colorScheme.secondary,
-                fontSize = 14.sp
-            )
-        }
+
 
         Row(
             horizontalArrangement = Arrangement.End,
@@ -320,7 +307,6 @@ suspend fun loadM3u(
     snackbarHostState: SnackbarHostState,
     uri: Uri,
     matchStrength: ScannerM3uMatchCriteria = ScannerM3uMatchCriteria.LEVEL_1,
-    searchOnline: Boolean = false
 ): Triple<ArrayList<Song>, ArrayList<String>, String> {
     val songs = ArrayList<Song>()
     val rejectedSongs = ArrayList<String>()
@@ -362,28 +348,12 @@ suspend fun loadM3u(
                             dbResult.addAll(database.searchSongsInDb(title).first())
                             dbResult.filterNotNull().toMutableList()
                         }
-                        // do not search for local songs
-                        if (searchOnline && matches.isEmpty() && source?.contains(',') == false) {
-                            val onlineResult =
-                                LocalMediaScanner.youtubeSongLookup("$title ${artists.joinToString(" ")}", source)
-                            onlineResult.forEach { result ->
-                                val result = Song(
-                                    song = result.toSongEntity(),
-                                    artists = result.artists.map {
-                                        ArtistEntity(
-                                            id = it.id ?: ArtistEntity.generateArtistId(),
-                                            name = it.name
-                                        )
-                                    }
-                                )
-                                matches.add(result)
-                            }
-                        }
+
                         val oldSize = songs.size
                         var foundOne = false // TODO: Eventually the user can pick from matches... eventually...
 
                         // take first song when searching on YTM
-                        if (matchStrength == ScannerM3uMatchCriteria.LEVEL_0 && searchOnline && matches.isNotEmpty()) {
+                        if (matchStrength == ScannerM3uMatchCriteria.LEVEL_0 && matches.isNotEmpty()) {
                             songs.add(matches.first())
                         } else {
                             for (s in matches) {

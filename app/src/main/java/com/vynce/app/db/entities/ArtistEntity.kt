@@ -4,11 +4,6 @@ import androidx.compose.runtime.Immutable
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
-import com.vynce.app.utils.syncCoroutine
-import com.zionhuang.innertube.YouTube
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.launch
 import org.apache.commons.lang3.RandomStringUtils
 import java.time.LocalDateTime
 
@@ -24,25 +19,15 @@ data class ArtistEntity(
     @ColumnInfo(name = "isLocal", defaultValue = false.toString())
     val isLocal: Boolean = false
 ) {
-    val isYouTubeArtist: Boolean
-        get() = id.startsWith("UC") || id.startsWith("FEmusic_library_privately_owned_artist")
 
     fun localToggleLike() = copy(
         bookmarkedAt = if (bookmarkedAt != null) null else LocalDateTime.now(),
     )
 
-    fun toggleLike() = localToggleLike().also {
-        CoroutineScope(syncCoroutine).launch {
-            if (channelId == null)
-                YouTube.subscribeChannel(YouTube.getChannelId(id), bookmarkedAt == null)
-            else
-                YouTube.subscribeChannel(channelId, bookmarkedAt == null)
-            this.cancel()
-        }
-    }
+    fun toggleLike() = localToggleLike()
 
     companion object {
-        fun generateArtistId() = "LA" + RandomStringUtils.insecure().next(8, true, false)
+        fun generateArtistId() = "LA" + RandomStringUtils.randomAlphanumeric(8)
     }
 }
 

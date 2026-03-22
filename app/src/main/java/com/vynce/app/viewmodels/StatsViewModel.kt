@@ -5,7 +5,6 @@ import androidx.lifecycle.viewModelScope
 import com.vynce.app.constants.StatPeriod
 import com.vynce.app.db.MusicDatabase
 import com.vynce.app.utils.reportException
-import com.zionhuang.innertube.YouTube
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -33,7 +32,7 @@ class StatsViewModel @Inject constructor(
     val mostPlayedArtists = statPeriod.flatMapLatest { period ->
         val time = period.toLocalDateTime()
         database.mostPlayedArtists(time.year, time.month.value).map { artists ->
-            artists.filter { it.artist.artist.isYouTubeArtist }
+            artists
         }
     }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
@@ -43,44 +42,6 @@ class StatsViewModel @Inject constructor(
     }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
     init {
-        // fetch missing artist metadata
-        viewModelScope.launch {
-            mostPlayedArtists.collect { artists ->
-                artists
-                    .map { it.artist.artist }
-                    .filter {
-                        it.thumbnailUrl == null || Duration.between(it.lastUpdateTime, LocalDateTime.now()) > Duration.ofDays(10)
-                    }
-                    .forEach { artist ->
-                        YouTube.artist(artist.id).onSuccess { artistPage ->
-                            database.query {
-                                update(artist, artistPage)
-                            }
-                        }
-                    }
-            }
-        }
-        // fetch missing album metadata
-        viewModelScope.launch {
-            mostPlayedAlbums.collect { albums ->
-                albums.filter {
-                    it.album.songCount == 0
-                }.forEach { album ->
-                    YouTube.album(album.id).onSuccess { albumPage ->
-                        database.query {
-                            update(album.album, albumPage)
-                        }
-                    }.onFailure {
-                        reportException(it)
-                        if (it.message?.contains("NOT_FOUND") == true) {
-                            database.query {
-                                delete(album.album)
-                            }
-                        }
-                    }
-                }
-            }
-        }
     }
 }
 

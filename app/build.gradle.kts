@@ -13,6 +13,7 @@ plugins {
     alias(libs.plugins.kotlin.ksp)
     alias(libs.plugins.compose.compiler)
     alias(libs.plugins.aboutlibraries)
+    alias(libs.plugins.kotlin.serialization)
 }
 
 val keystorePropertiesFile = rootProject.file("keystore.properties")
@@ -249,18 +250,15 @@ dependencies {
     coreLibraryDesugaring(libs.desugaring)
 
     implementation(libs.ktor.client.core)
+    implementation(libs.ktor.client.okhttp)
     implementation(libs.ktor.client.content.negotiation)
     implementation(libs.ktor.serialization.json)
 
     // modules
-    implementation(project(":innertube"))
     implementation(project(":kugou"))
     implementation(project(":lrclib"))
     implementation(project(":material-color-utilities"))
     // implementation(project(":taglib"))
-
-    // newpipe for direct access to YoutubeJavaScriptPlayerManager
-    implementation(libs.newpipe.extractor)
 
     // misc
     implementation(libs.aboutlibraries.compose.m3)

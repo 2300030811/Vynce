@@ -682,6 +682,10 @@ class Migration17To18 : AutoMigrationSpec
 
 @DeleteColumn.Entries(
     DeleteColumn(tableName = "song", columnName = "totalPlayTime"),
+    DeleteColumn(tableName = "playlist", columnName = "remoteSongCount"),
+    DeleteColumn(tableName = "playlist", columnName = "playEndpointParams"),
+    DeleteColumn(tableName = "playlist", columnName = "shuffleEndpointParams"),
+    DeleteColumn(tableName = "playlist", columnName = "radioEndpointParams"),
 )
 class Migration19To20 : AutoMigrationSpec
 

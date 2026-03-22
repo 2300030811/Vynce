@@ -64,7 +64,6 @@ import com.vynce.app.ui.dialog.InfoLabel
 import com.vynce.app.ui.screens.Screens
 import com.vynce.app.ui.screens.Screens.LibraryFilter
 import com.vynce.app.utils.rememberPreference
-import com.zionhuang.innertube.YouTube
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
 import java.util.Locale
@@ -431,16 +430,6 @@ fun ColumnScope.LocalizationFrag() {
             }
         },
         onValueSelected = { newValue ->
-            val locale = Locale.getDefault()
-            val languageTag = locale.toLanguageTag().replace("-Hant", "")
-
-            YouTube.locale = YouTube.locale.copy(
-                hl = newValue.takeIf { it != SYSTEM_DEFAULT }
-                    ?: locale.language.takeIf { it in LanguageCodeToName }
-                    ?: languageTag.takeIf { it in LanguageCodeToName }
-                    ?: "en"
-            )
-
             onContentLanguageChange(newValue)
         }
     )
@@ -455,14 +444,6 @@ fun ColumnScope.LocalizationFrag() {
             }
         },
         onValueSelected = { newValue ->
-            val locale = Locale.getDefault()
-
-            YouTube.locale = YouTube.locale.copy(
-                gl = newValue.takeIf { it != SYSTEM_DEFAULT }
-                    ?: locale.country.takeIf { it in CountryCodeToName }
-                    ?: "US"
-            )
-
             onContentCountryChange(newValue)
         }
     )

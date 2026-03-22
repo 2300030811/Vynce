@@ -8,6 +8,7 @@ import android.widget.Toast.LENGTH_SHORT
 import androidx.core.content.getSystemService
 import androidx.core.net.toUri
 import androidx.media3.database.DatabaseProvider
+import androidx.media3.datasource.DataSpec
 import androidx.media3.datasource.ResolvingDataSource
 import androidx.media3.datasource.cache.CacheDataSource
 import androidx.media3.datasource.cache.CacheSpan
@@ -30,11 +31,12 @@ import com.vynce.app.db.entities.SongEntity
 import com.vynce.app.di.AppModule.PlayerCache
 import com.vynce.app.di.DownloadCache
 import com.vynce.app.models.MediaMetadata
+import com.zionhuang.jiosaavn.JioSaavn
+import com.zionhuang.jiosaavn.SaavnSong
 import com.vynce.app.playback.DownloadUtil.Companion.STATE_DOWNLOADING
 import com.vynce.app.playback.DownloadUtil.Companion.STATE_INVALID
 import com.vynce.app.playback.downloadManager.DownloadDirectoryManagerOt
 import com.vynce.app.playback.downloadManager.DownloadManagerOt
-import com.vynce.app.utils.YTPlayerUtils
 import com.vynce.app.utils.dataStore
 import com.vynce.app.utils.dlCoroutine
 import com.vynce.app.utils.enumPreference
@@ -43,8 +45,6 @@ import com.vynce.app.utils.reportException
 import com.vynce.app.utils.scanners.InvalidAudioFileException
 import com.vynce.app.utils.scanners.fileFromUri
 import com.vynce.app.utils.scanners.uriListFromString
-import com.zionhuang.innertube.YouTube
-import com.zionhuang.innertube.models.SongItem
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -87,13 +87,6 @@ class DownloadUtil @Inject constructor(
             .setUpstreamDataSourceFactory(
                 OkHttpDataSource.Factory(
                     OkHttpClient.Builder()
-                        .proxy(YouTube.proxy)
-                        .addInterceptor { chain ->
-                            val request = chain.request().newBuilder()
-                                .header("User-Agent", com.zionhuang.innertube.models.YouTubeClient.Companion.ANDROID_MUSIC.userAgent)
-                                .build()
-                            chain.proceed(request)
-                        }
                         .build()
                 )
             )
@@ -110,48 +103,17 @@ class DownloadUtil @Inject constructor(
 
         if (mediaId.startsWith("saavn:")) {
             val saavnId = mediaId.removePrefix("saavn:")
-            val song = runBlocking(Dispatchers.IO) {
-                com.zionhuang.jiosaavn.JioSaavn.getSong(saavnId)
+            val song: SaavnSong? = runBlocking(Dispatchers.IO) {
+                JioSaavn.getSong(saavnId)
             }
-            val streamUrl = with(com.zionhuang.jiosaavn.JioSaavn) { song?.streamUrl() }
+            val streamUrl = with(JioSaavn) { song?.streamUrl() }
                 ?: throw java.io.IOException("Failed to resolve Saavn stream URL for $saavnId")
             
             songUrlCache[mediaId] = streamUrl to System.currentTimeMillis() + (24 * 60 * 60 * 1000L) // Cache for 24h
             return@Factory dataSpec.withUri(streamUrl.toUri())
         }
 
-        val playbackData = runBlocking(Dispatchers.IO) {
-            YTPlayerUtils.playerResponseForPlayback(
-                mediaId,
-                audioQuality = audioQuality,
-                connectivityManager = connectivityManager,
-            )
-        }.getOrThrow()
-        val format = playbackData.format
-
-        database.query {
-            upsert(
-                FormatEntity(
-                    id = mediaId,
-                    itag = format.itag,
-                    mimeType = format.mimeType.split(";")[0],
-                    codecs = format.mimeType.split("codecs=")[1].removeSurrounding("\""),
-                    bitrate = format.bitrate,
-                    sampleRate = format.audioSampleRate,
-                    contentLength = format.contentLength!!,
-                    loudnessDb = playbackData.audioConfig?.loudnessDb,
-                    playbackTrackingUrl = playbackData.playbackTracking?.videostatsPlaybackUrl?.baseUrl
-                )
-            )
-        }
-
-        val streamUrl = playbackData.streamUrl.let {
-            // Specify range to avoid YouTube's throttling
-            "${it}&range=0-${format.contentLength ?: 10000000}"
-        }
-
-        songUrlCache[mediaId] = streamUrl to System.currentTimeMillis() + (playbackData.streamExpiresInSeconds * 1000L)
-        dataSpec.withUri(streamUrl.toUri())
+        throw java.io.IOException("Unsupported URI scheme for ${mediaId}")
     }
     val downloadNotificationHelper = DownloadNotificationHelper(context, ExoDownloadService.CHANNEL_ID)
     val downloadManager: DownloadManager =
@@ -216,7 +178,6 @@ class DownloadUtil @Inject constructor(
 
     fun delete(song: PlaylistSong) = deleteSong(song.song.id)
 
-    fun delete(song: SongItem) = deleteSong(song.id)
 
     fun delete(song: Song) = deleteSong(song.song.id)
 
@@ -268,77 +229,19 @@ class DownloadUtil @Inject constructor(
      * Migrated existing downloads from the download cache to the new system in external storage
      */
     suspend fun migrateDownloads() {
-        if (isProcessingDownloads.value) return
+        Log.i(TAG, "+migrateDownloads()")
         isProcessingDownloads.value = true
-
-        var runs = 0
-        try {
-            // "skeleton" of old download manager to access old download data
-            val dataSourceFactory = ResolvingDataSource.Factory(
-                CacheDataSource.Factory()
-                    .setCache(playerCache)
-                    .setUpstreamDataSourceFactory(
-                        OkHttpDataSource.Factory(
-                            OkHttpClient.Builder()
-                                .proxy(YouTube.proxy)
-                                .addInterceptor { chain ->
-                                    val request = chain.request().newBuilder()
-                                        .header("User-Agent", com.zionhuang.innertube.models.YouTubeClient.Companion.ANDROID_MUSIC.userAgent)
-                                        .build()
-                                    chain.proceed(request)
-                                }
-                                .build()
-                        )
-                    )
-            ) { dataSpec ->
-                return@Factory dataSpec
-            }
-
-            val downloadManager: DownloadManager = DownloadManager(
-                context,
-                databaseProvider,
-                downloadCache,
-                dataSourceFactory,
-                Executor(Runnable::run)
-            ).apply {
-                maxParallelDownloads = 3
-            }
-
-            // actual migration code
-            val downloadedSongs = mutableMapOf<String, Download>()
-            val cursor = downloadManager.downloadIndex.getDownloads()
-            while (cursor.moveToNext()) {
-                downloadedSongs[cursor.download.request.id] = cursor.download
-            }
-
-            // copy all completed downloads
-            val toMigrate = downloadedSongs.filter { it.value.state == Download.STATE_COMPLETED }
-            toMigrate.forEach { s ->
-                if (runs++ % 10 == 0) {
-                    Log.d(TAG, "Migrating download: $runs/${toMigrate.size}")
-                    if (runs % 20 == 0) {
-                        withContext(Dispatchers.Main) {
-                            Toast.makeText(context, "$runs/${toMigrate.size}", LENGTH_SHORT).show()
-                        }
-                    }
-                }
-                val songFromCache = getFromCache(downloadCache, s.key)
-                if (songFromCache != null) {
-                    downloadCache.removeResource(s.key)
-                    downloadMgr.enqueue(
-                        mediaId = s.key,
-                        data = songFromCache,
-                        displayName = runBlocking { database.song(s.key).first()?.title ?: "" })
-                }
-            }
-            scanDownloads()
-        } catch (e: Exception) {
-            reportException(e)
-        } finally {
-            isProcessingDownloads.value = false
+        val dbDownloads = database.downloadedOrQueuedSongs().first()
+        dbDownloads.forEach { s ->
+            val mediaId = s.song.id
+            if (s.song.localPath != null) return@forEach
+            val bytes = getFromCache(downloadCache, mediaId) ?: return@forEach
+            localMgr.saveFile(mediaId, bytes)
+            database.updateDownloadStatus(mediaId, s.song.dateDownload)
         }
+        isProcessingDownloads.value = false
+        Log.i(TAG, "-migrateDownloads()")
     }
-
 
     fun cd() {
         localMgr.doInit(
@@ -419,7 +322,7 @@ class DownloadUtil @Inject constructor(
 //                        if (format != null) {
 //                            database.upsert(format)
 //                        }
-                    registerDownloadSong(f.key, timeNow, file.absolutePath)
+                    database.registerDownloadSong(f.key, timeNow, file.absolutePath)
 
                 } catch (e: InvalidAudioFileException) {
                     reportException(e)
@@ -434,7 +337,7 @@ class DownloadUtil @Inject constructor(
         var count = 0
         database.transaction {
             while (cursor.moveToNext()) {
-                updateDownloadStatus(cursor.download.request.id, stateToLocalDateTime(cursor.download))
+                database.updateDownloadStatus(cursor.download.request.id, stateToLocalDateTime(cursor.download))
                 count ++
             }
         }

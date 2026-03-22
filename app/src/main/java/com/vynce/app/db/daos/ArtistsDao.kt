@@ -18,8 +18,7 @@ import com.vynce.app.db.entities.ArtistEntity
 import com.vynce.app.db.entities.Song
 import com.vynce.app.db.entities.SongArtistMap
 import com.vynce.app.extensions.reversed
-import com.vynce.app.ui.utils.resize
-import com.zionhuang.innertube.pages.ArtistPage
+
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import java.time.LocalDateTime
@@ -106,7 +105,11 @@ interface ArtistsDao {
 
     @Transaction
     @Query("""
-        SELECT artist.*, IFNULL(SUM(playCount.count), 0) as playCount
+        SELECT 
+            artist.*, 
+            IFNULL(SUM(playCount.count), 0) as playCount,
+            COUNT(song.id) AS songCount,
+            SUM(CASE WHEN song.dateDownload IS NOT NULL THEN 1 ELSE 0 END) AS downloadCount
         FROM artist
         LEFT JOIN song_artist_map sam ON artist.id = sam.artistId
         LEFT JOIN playCount ON sam.songId = playCount.song
@@ -120,7 +123,11 @@ interface ArtistsDao {
 
     @Transaction
     @Query("""
-        SELECT artist.*, IFNULL(SUM(playCount.count), 0) as playCount
+        SELECT 
+            artist.*, 
+            IFNULL(SUM(playCount.count), 0) as playCount,
+            COUNT(song.id) AS songCount,
+            SUM(CASE WHEN song.dateDownload IS NOT NULL THEN 1 ELSE 0 END) AS downloadCount
         FROM artist
         LEFT JOIN song_artist_map sam ON artist.id = sam.artistId
         LEFT JOIN playCount ON sam.songId = playCount.song
@@ -175,7 +182,7 @@ interface ArtistsDao {
 
         return _getArtists(query).map { artists ->
             artists
-                .filter { it.artist.isYouTubeArtist || it.artist.isLocal } // TODO: add ui to filter by local or remote or something idk
+                .filter { !it.artist.isLocal || it.artist.isLocal } // effectively all, keeping for now
                 .reversed(descending)
         }
     }
@@ -229,16 +236,7 @@ interface ArtistsDao {
     @Update
     fun update(artist: ArtistEntity)
 
-    @Transaction
-    fun update(artist: ArtistEntity, artistPage: ArtistPage) {
-        update(
-            artist.copy(
-                name = artistPage.artist.title,
-                thumbnailUrl = artistPage.artist.thumbnail?.resize(544, 544),
-                lastUpdateTime = LocalDateTime.now()
-            )
-        )
-    }
+
 
     @Transaction
     @Query("UPDATE song_artist_map SET artistId = :newId WHERE artistId = :oldId")
