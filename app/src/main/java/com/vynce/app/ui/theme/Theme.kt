@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Copyright (C) 2024 z-huang/InnerTune
  * Copyright (C) 2025 OuterTune Project
  *
@@ -12,7 +12,6 @@ import android.content.Context
 import android.graphics.Bitmap
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -42,25 +41,7 @@ import com.google.material.color.score.Score
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
-import com.vynce.app.ui.theme.VynceAccent
-import com.vynce.app.ui.theme.VynceOnSurface
-import com.vynce.app.ui.theme.VyncePurple
-import com.vynce.app.ui.theme.VynceSurface
-import com.vynce.app.ui.theme.VynceSurfaceHigh
-import com.vynce.app.ui.theme.VynceWhite
-
 val DefaultThemeColor = VyncePurple
-
-private val VynceDarkColors = darkColorScheme(
-    primary = VyncePurple,
-    secondary = VynceAccent,
-    background = VynceSurface,
-    surface = VynceSurfaceHigh,
-    onSurface = VynceOnSurface,
-    onPrimary = VynceWhite,
-    onSecondary = VynceWhite,
-    onBackground = VynceOnSurface
-)
 
 @Composable
 fun VynceTheme(
@@ -111,8 +92,31 @@ fun VynceTheme(
         }
     }
 
+    val colorScheme = remember(darkTheme, pureBlack, themeColor) {
+        if (themeColor == DefaultThemeColor && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+            val systemTheme = if (darkTheme) {
+                androidx.compose.material3.dynamicDarkColorScheme(context).pureBlack(pureBlack)
+            } else {
+                androidx.compose.material3.dynamicLightColorScheme(context)
+            }
+
+            if (highContrastCompat) {
+                systemTheme.copy(
+                    secondaryContainer = systemTheme.surfaceContainerHigh,
+                    onSecondaryContainer = systemTheme.secondary,
+                )
+            } else {
+                systemTheme
+            }
+        } else {
+            SchemeTonalSpot(Hct.fromInt(themeColor.toArgb()), darkTheme, 0.0)
+                .toColorScheme()
+                .pureBlack(darkTheme && pureBlack)
+        }
+    }
+
     MaterialTheme(
-        colorScheme = VynceDarkColors,
+        colorScheme = colorScheme,
         typography = MaterialTheme.typography,
         content = content
     )

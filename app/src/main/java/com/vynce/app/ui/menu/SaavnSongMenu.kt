@@ -46,10 +46,8 @@ import com.vynce.app.constants.ThumbnailCornerRadius
 import com.vynce.app.db.entities.SongEntity
 import com.vynce.app.extensions.toMediaItem
 import com.vynce.app.models.MediaMetadata
-import com.vynce.app.models.toMediaMetadata
 import com.vynce.app.playback.ExoDownloadService
 import com.vynce.app.playback.queues.ListQueue
-import com.vynce.app.playback.queues.YouTubeQueue
 import com.vynce.app.ui.component.button.IconButton
 import com.vynce.app.ui.component.items.ListItem
 import com.vynce.app.ui.dialog.AddToPlaylistDialog
@@ -57,14 +55,14 @@ import com.vynce.app.ui.dialog.AddToQueueDialog
 import com.vynce.app.ui.dialog.ArtistDialog
 import com.vynce.app.utils.joinByBullet
 import com.vynce.app.utils.makeTimeString
-import com.vynce.app.utils.syncCoroutine
-import com.zionhuang.innertube.YouTube
-import com.zionhuang.innertube.models.SongItem
+import com.vynce.app.utils.toSaavnMediaMetadata
+import com.zionhuang.jiosaavn.JioSaavn
+import com.zionhuang.jiosaavn.SaavnSong
 import kotlinx.coroutines.launch
 
 @Composable
-fun YouTubeSongMenu(
-    song: SongItem,
+fun SaavnSongMenu(
+    song: SaavnSong,
     navController: NavController,
     onDismiss: () -> Unit,
 ) {
@@ -76,14 +74,12 @@ fun YouTubeSongMenu(
     val queueBoard by playerConnection.queueBoard.collectAsState()
     val syncUtils = LocalSyncUtils.current
 
-    val librarySong by database.song(song.id).collectAsState(initial = null)
-    val download by LocalDownloadUtil.current.getDownload(song.id).collectAsState(initial = null)
-    val artists = remember {
-        song.artists.mapNotNull {
-            it.id?.let { artistId ->
-                MediaMetadata.Artist(id = artistId, name = it.name)
-            }
-        }
+    val mediaMetadata = remember(song) { song.toSaavnMediaMetadata() }
+    val librarySong by database.song(mediaMetadata.id).collectAsState(initial = null)
+    val download by LocalDownloadUtil.current.getDownload(mediaMetadata.id).collectAsState(initial = null)
+    
+    val artists = remember(song) {
+        mediaMetadata.artists
     }
 
     var showChooseQueueDialog by rememberSaveable {
@@ -96,49 +92,50 @@ fun YouTubeSongMenu(
         mutableStateOf(false)
     }
 
+    with(JioSaavn) {
+        ListItem(
+            title = song.name,
+            subtitle = joinByBullet(
+                song.artistNames(),
+                song.duration.let { makeTimeString(it.toLong() * 1000L) }
+            ),
+            thumbnailContent = {
+                AsyncImage(
+                    model = song.thumbnailUrl()?.replace("http://", "https://"),
+                    contentDescription = null,
+                    modifier = Modifier
+                        .size(ListThumbnailSize)
+                        .clip(RoundedCornerShape(ThumbnailCornerRadius))
+                )
+            },
+            trailingContent = {
+                IconButton(
+                    onClick = {
+                        database.transaction {
+                            librarySong.let { librarySong ->
+                                val s: SongEntity
+                                if (librarySong == null) {
+                                    insert(mediaMetadata, SongEntity::toggleLike)
+                                    s = mediaMetadata.toSongEntity().let(SongEntity::toggleLike)
+                                } else {
+                                    s = librarySong.song.toggleLike()
+                                    update(s)
+                                }
 
-    ListItem(
-        title = song.title,
-        subtitle = joinByBullet(
-            song.artists.joinToString { it.name },
-            song.duration?.let { makeTimeString(it * 1000L) }
-        ),
-        thumbnailContent = {
-            AsyncImage(
-                model = song.thumbnail,
-                contentDescription = null,
-                modifier = Modifier
-                    .size(ListThumbnailSize)
-                    .clip(RoundedCornerShape(ThumbnailCornerRadius))
-            )
-        },
-        trailingContent = {
-            IconButton(
-                onClick = {
-                    database.transaction {
-                        librarySong.let { librarySong ->
-                            val s: SongEntity
-                            if (librarySong == null) {
-                                insert(song.toMediaMetadata(), SongEntity::toggleLike)
-                                s = song.toMediaMetadata().toSongEntity().let(SongEntity::toggleLike)
-                            } else {
-                                s = librarySong.song.toggleLike()
-                                update(s)
+                                syncUtils.likeSong(s)
                             }
-
-                            syncUtils.likeSong(s)
                         }
                     }
+                ) {
+                    Icon(
+                        painter = painterResource(if (librarySong?.song?.liked == true) R.drawable.favorite else R.drawable.favorite_border),
+                        tint = if (librarySong?.song?.liked == true) MaterialTheme.colorScheme.error else LocalContentColor.current,
+                        contentDescription = null
+                    )
                 }
-            ) {
-                Icon(
-                    painter = painterResource(if (librarySong?.song?.liked == true) R.drawable.favorite else R.drawable.favorite_border),
-                    tint = if (librarySong?.song?.liked == true) MaterialTheme.colorScheme.error else LocalContentColor.current,
-                    contentDescription = null
-                )
             }
-        }
-    )
+        )
+    }
 
     HorizontalDivider()
 
@@ -150,21 +147,24 @@ fun YouTubeSongMenu(
             bottom = 8.dp + WindowInsets.systemBars.asPaddingValues().calculateBottomPadding()
         )
     ) {
+        // Radio is not supported for Saavn yet, might add later if possible
+        /*
         GridMenuItem(
             icon = Icons.Rounded.Radio,
             title = R.string.start_radio
         ) {
-            playerConnection.playQueue(YouTubeQueue.radio(song.toMediaMetadata()), isRadio = true)
+            // Radio logic for Saavn?
             onDismiss()
         }
+        */
         GridMenuItem(
             icon = Icons.Rounded.PlayArrow,
             title = R.string.play
         ) {
             playerConnection.playQueue(
                 queue = ListQueue(
-                    title = song.title,
-                    items = listOf(song.toMediaMetadata())
+                    title = song.name,
+                    items = listOf(mediaMetadata)
                 )
             )
             onDismiss()
@@ -173,7 +173,7 @@ fun YouTubeSongMenu(
             icon = Icons.AutoMirrored.Rounded.PlaylistPlay,
             title = R.string.play_next
         ) {
-            playerConnection.enqueueNext(song.toMediaItem())
+            playerConnection.enqueueNext(mediaMetadata.toMediaItem())
             onDismiss()
         }
         GridMenuItem(
@@ -192,15 +192,15 @@ fun YouTubeSongMenu(
             localDateTime = download,
             onDownload = {
                 database.transaction {
-                    insert(song.toMediaMetadata())
+                    insert(mediaMetadata)
                 }
-                downloadUtil.download(song.toMediaMetadata())
+                downloadUtil.download(mediaMetadata)
             },
             onRemoveDownload = {
                 DownloadService.sendRemoveDownload(
                     context,
                     ExoDownloadService::class.java,
-                    song.id,
+                    mediaMetadata.id,
                     false
                 )
             }
@@ -211,6 +211,8 @@ fun YouTubeSongMenu(
                 title = R.string.view_artist
             ) {
                 if (artists.size == 1) {
+                    // Artist view might not be fully supported for Saavn yet depending on how it's implemented
+                    // But if it's there, we navigate
                     navController.navigate("artist/${artists[0].id}")
                     onDismiss()
                 } else {
@@ -218,7 +220,7 @@ fun YouTubeSongMenu(
                 }
             }
         }
-        song.album?.let { album ->
+        mediaMetadata.album?.let { album ->
             GridMenuItem(
                 icon = Icons.Rounded.Album,
                 title = R.string.view_album
@@ -234,7 +236,7 @@ fun YouTubeSongMenu(
             val intent = Intent().apply {
                 action = Intent.ACTION_SEND
                 type = "text/plain"
-                putExtra(Intent.EXTRA_TEXT, song.shareLink)
+                putExtra(Intent.EXTRA_TEXT, "https://www.jiosaavn.com/song/${song.id}")
             }
             context.startActivity(Intent.createChooser(intent, null))
             onDismiss()
@@ -251,7 +253,7 @@ fun YouTubeSongMenu(
         AddToQueueDialog(
             onAdd = { queueName ->
                 val q = queueBoard.addQueue(
-                    queueName, listOf(song.toMediaMetadata()),
+                    queueName, listOf(mediaMetadata),
                     forceInsert = true, delta = false
                 )
                 q?.let {
@@ -270,18 +272,12 @@ fun YouTubeSongMenu(
             songIds = null,
             onPreAdd = { playlist ->
                 database.transaction {
-                    insert(song.toMediaMetadata())
+                    insert(mediaMetadata)
                 }
-
-                coroutineScope.launch(syncCoroutine) {
-                    playlist.playlist.browseId?.let { browseId ->
-                        if (!song.id.startsWith("saavn:")) {
-                            YouTube.addToPlaylist(browseId, song.id)
-                        }
-                    }
-                }
-
-                listOf(song.id)
+                
+                // YouTube sync doesn't apply to Saavn songs
+                
+                listOf(mediaMetadata.id)
             },
             onDismiss = { showChoosePlaylistDialog = false }
         )
@@ -295,4 +291,3 @@ fun YouTubeSongMenu(
         )
     }
 }
-

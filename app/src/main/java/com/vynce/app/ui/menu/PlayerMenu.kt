@@ -89,7 +89,6 @@ import com.vynce.app.R
 import com.vynce.app.constants.ShowLyricsKey
 import com.vynce.app.models.MediaMetadata
 import com.vynce.app.playback.ExoDownloadService
-import com.vynce.app.playback.queues.YouTubeQueue
 import com.vynce.app.ui.component.BigSeekBar
 import com.vynce.app.ui.component.BottomSheetState
 import com.vynce.app.ui.component.button.IconButton
@@ -98,7 +97,6 @@ import com.vynce.app.ui.dialog.AddToQueueDialog
 import com.vynce.app.ui.dialog.ArtistDialog
 import com.vynce.app.ui.dialog.DetailsDialog
 import com.vynce.app.utils.rememberPreference
-import com.zionhuang.innertube.YouTube
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -129,7 +127,7 @@ fun PlayerMenu(
     val downloadUtil = LocalDownloadUtil.current
     val clipboardManager = LocalClipboard.current
 
-    var showLyrics by rememberPreference(ShowLyricsKey, defaultValue = false)
+    var showLyrics by rememberPreference<Boolean>(ShowLyricsKey, defaultValue = false)
 
     val playerConnection = LocalPlayerConnection.current ?: return
     val playerVolume = playerConnection.service.playerVolume.collectAsState()
@@ -417,14 +415,6 @@ fun PlayerMenu(
             bottom = 8.dp + WindowInsets.systemBars.asPaddingValues().calculateBottomPadding()
         )
     ) {
-        if (!mediaMetadata.isLocal)
-            GridMenuItem(
-                icon = Icons.Rounded.Radio,
-                title = R.string.start_radio
-            ) {
-                playerConnection.playQueue(YouTubeQueue.radio(mediaMetadata), isRadio = true)
-                onDismiss()
-            }
         GridMenuItem(
             icon = Icons.AutoMirrored.Rounded.QueueMusic,
             title = R.string.add_to_queue
@@ -498,19 +488,23 @@ fun PlayerMenu(
             }
         }
 
-        if (!mediaMetadata.isLocal)
-            GridMenuItem(
-                icon = Icons.Rounded.Share,
-                title = R.string.share
-            ) {
-                val intent = Intent().apply {
-                    action = Intent.ACTION_SEND
-                    type = "text/plain"
-                    putExtra(Intent.EXTRA_TEXT, "https://music.youtube.com/watch?v=${mediaMetadata.id}")
+        GridMenuItem(
+            icon = Icons.Rounded.Share,
+            title = R.string.share
+        ) {
+            val intent = Intent().apply {
+                action = Intent.ACTION_SEND
+                type = "text/plain"
+                val shareUrl = if (mediaMetadata.id.startsWith("saavn:")) {
+                    "https://www.jiosaavn.com/song/${mediaMetadata.id.substringAfter("saavn:")}"
+                } else {
+                    "Music shared via Vynce"
                 }
-                context.startActivity(Intent.createChooser(intent, null))
-                onDismiss()
+                putExtra(Intent.EXTRA_TEXT, shareUrl)
             }
+            context.startActivity(Intent.createChooser(intent, null))
+            onDismiss()
+        }
         GridMenuItem(
             icon = Icons.Rounded.Lyrics,
             title = R.string.toggle_lyrics
@@ -588,7 +582,9 @@ fun PlayerMenu(
                     insert(mediaMetadata)
                 }
 
-                playlist.playlist.browseId?.let { YouTube.addToPlaylist(it, mediaMetadata.id) }
+                if (!mediaMetadata.id.startsWith("saavn:")) {
+                    playlist.playlist.browseId?.let { com.zionhuang.innertube.YouTube.addToPlaylist(it, mediaMetadata.id) }
+                }
 
                 listOf(mediaMetadata.id)
             },

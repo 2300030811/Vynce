@@ -14,6 +14,7 @@ import com.zionhuang.innertube.models.SongItem
 import com.zionhuang.innertube.models.WatchEndpoint
 import com.zionhuang.innertube.models.WatchEndpoint.WatchEndpointMusicSupportedConfigs.WatchEndpointMusicConfig.Companion.MUSIC_VIDEO_TYPE_ATV
 import com.zionhuang.innertube.models.YouTubeClient
+import com.zionhuang.innertube.models.YouTubeClient.Companion.ANDROID_MUSIC
 import com.zionhuang.innertube.models.YouTubeClient.Companion.WEB
 import com.zionhuang.innertube.models.YouTubeClient.Companion.WEB_REMIX
 import com.zionhuang.innertube.models.YouTubeLocale
@@ -67,17 +68,23 @@ import kotlin.random.Random
  * Modified from [ViMusic](https://github.com/vfsfitvnm/ViMusic)
  */
 object YouTube {
+    var poToken: String?
+        get() = innerTube.poToken
+        set(value) {
+            innerTube.poToken = value
+        }
+    var visitorData: String?
+        get() = innerTube.visitorData
+        set(value) {
+            innerTube.visitorData = value
+        }
+
     private val innerTube = InnerTube()
 
     var locale: YouTubeLocale
         get() = innerTube.locale
         set(value) {
             innerTube.locale = value
-        }
-    var visitorData: String?
-        get() = innerTube.visitorData
-        set(value) {
-            innerTube.visitorData = value
         }
     var dataSyncId: String?
         get() = innerTube.dataSyncId
@@ -100,7 +107,7 @@ object YouTube {
             innerTube.useLoginForBrowse = value
         }
 
-    var poToken: String? = null
+
 
     suspend fun searchSuggestions(query: String): Result<SearchSuggestions> = runCatching {
         val response = innerTube.getSearchSuggestions(WEB_REMIX, query).body<GetSearchSuggestionsResponse>()
@@ -664,7 +671,7 @@ object YouTube {
         innerTube.deletePlaylist(WEB_REMIX, playlistId)
     }
 
-    suspend fun player(videoId: String, playlistId: String? = null, client: YouTubeClient, signatureTimestamp: Int? = null, webPlayerPot: String? = null): Result<PlayerResponse> = runCatching {
+    suspend fun player(videoId: String, playlistId: String? = null, client: YouTubeClient = ANDROID_MUSIC, signatureTimestamp: Int? = null, webPlayerPot: String? = null): Result<PlayerResponse> = runCatching {
         innerTube.player(client, videoId, playlistId, signatureTimestamp, webPlayerPot).body<PlayerResponse>()
     }
 

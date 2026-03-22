@@ -292,10 +292,15 @@ fun SongMenu(
                 title = R.string.share
             ) {
                 onDismiss()
+                val url = if (song.id.startsWith("saavn:")) {
+                    "https://www.jiosaavn.com/song/${song.id.removePrefix("saavn:")}"
+                } else {
+                    "https://music.youtube.com/watch?v=${song.id}"
+                }
                 val intent = Intent().apply {
                     action = Intent.ACTION_SEND
                     type = "text/plain"
-                    putExtra(Intent.EXTRA_TEXT, "https://music.youtube.com/watch?v=${song.id}")
+                    putExtra(Intent.EXTRA_TEXT, url)
                 }
                 context.startActivity(Intent.createChooser(intent, null))
             }
@@ -383,7 +388,9 @@ fun SongMenu(
             songIds = listOf(song.id),
             onPreAdd = { playlist ->
                 playlist.playlist.browseId?.let { browseId ->
-                    YouTube.addToPlaylist(browseId, song.id)
+                    if (!song.id.startsWith("saavn:")) {
+                        YouTube.addToPlaylist(browseId, song.id)
+                    }
                 }
                 listOf(song.id)
             },

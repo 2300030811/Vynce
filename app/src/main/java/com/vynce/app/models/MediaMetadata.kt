@@ -1,6 +1,7 @@
 package com.vynce.app.models
 
 import androidx.compose.runtime.Immutable
+import com.vynce.app.extensions.decodeHtml
 import com.vynce.app.db.entities.Song
 import com.vynce.app.db.entities.SongEntity
 import com.vynce.app.ui.utils.resize
@@ -30,7 +31,7 @@ data class MediaMetadata(
     val localPath: String? = null,
     val liked: Boolean = false,
     val composeUidWorkaround: Double = Math.random(), // compose will crash without this hax
-
+    
     var shuffleIndex: Int = -1
 ) : Serializable {
     data class Artist(
@@ -110,11 +111,11 @@ data class MediaMetadata(
 
 fun Song.toMediaMetadata() = MediaMetadata(
     id = song.id,
-    title = song.title,
+    title = song.title.decodeHtml(),
     artists = artists.map {
         MediaMetadata.Artist(
             id = it.id,
-            name = it.name,
+            name = it.name.decodeHtml(),
             isLocal = it.isLocal
         )
     },
@@ -125,20 +126,20 @@ fun Song.toMediaMetadata() = MediaMetadata(
     album = album?.let {
         MediaMetadata.Album(
             id = it.id,
-            title = it.title,
+            title = it.title.decodeHtml(),
             isLocal = it.isLocal
         )
     } ?: song.albumId?.let { albumId ->
         MediaMetadata.Album(
             id = albumId,
-            title = song.albumName.orEmpty(),
+            title = song.albumName.orEmpty().decodeHtml(),
             // no possible local albums somehow
         )
     },
     genre = genre?.map {
         MediaMetadata.Genre(
             id = it.id,
-            title = it.title,
+            title = it.title.decodeHtml(),
             isLocal = it.isLocal
         )
     },
@@ -153,11 +154,11 @@ fun Song.toMediaMetadata() = MediaMetadata(
 
 fun SongItem.toMediaMetadata() = MediaMetadata(
     id = id,
-    title = title,
+    title = title.decodeHtml(),
     artists = artists.map {
         MediaMetadata.Artist(
             id = it.id,
-            name = it.name
+            name = it.name.decodeHtml()
         )
     },
     duration = duration ?: -1,
@@ -165,7 +166,7 @@ fun SongItem.toMediaMetadata() = MediaMetadata(
     album = album?.let {
         MediaMetadata.Album(
             id = it.id,
-            title = it.name
+            title = it.name.decodeHtml()
         )
     },
     genre = null,

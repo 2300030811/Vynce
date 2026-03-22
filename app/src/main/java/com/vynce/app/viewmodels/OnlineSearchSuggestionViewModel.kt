@@ -4,8 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vynce.app.db.MusicDatabase
 import com.vynce.app.db.entities.SearchHistory
-import com.zionhuang.innertube.YouTube
-import com.zionhuang.innertube.models.YTItem
+import com.zionhuang.jiosaavn.JioSaavn
+import com.zionhuang.jiosaavn.SaavnSong
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -34,16 +34,15 @@ class OnlineSearchSuggestionViewModel @Inject constructor(
                         )
                     }
                 } else {
-                    val result = YouTube.searchSuggestions(query).getOrNull()
+                    // Use JioSaavn search for suggestions
+                    val results = JioSaavn.searchSongs(query)
                     database.searchHistory(query)
                         .map { it.take(3) }
                         .map { history ->
                             SearchSuggestionViewState(
                                 history = history,
-                                suggestions = result?.queries?.filter { query ->
-                                    history.none { it.query == query }
-                                }.orEmpty(),
-                                items = result?.recommendedItems.orEmpty().distinctBy { it.id }
+                                suggestions = results.map { it.name }.distinct().take(5),
+                                items = results.take(10)
                             )
                         }
                 }
@@ -57,6 +56,6 @@ class OnlineSearchSuggestionViewModel @Inject constructor(
 data class SearchSuggestionViewState(
     val history: List<SearchHistory> = emptyList(),
     val suggestions: List<String> = emptyList(),
-    val items: List<YTItem> = emptyList(),
+    val items: List<SaavnSong> = emptyList(),
 )
 

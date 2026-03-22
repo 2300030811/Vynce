@@ -44,7 +44,7 @@ while also allowing users to translate our app as well. New, specific strings to
     <string name="tap_show_more">Tap to show more information</string>
 
 <!-- Player -->
-    <string name="err_invalid_ytm_song">Failed to play song. Only content accessible on YouTube Music can be played</string>
+    <string name="err_invalid_ytm_song">Failed to play song. Only content accessible on JioSaavn can be played</string>
     <string name="err_play_next_on_error">Error occurred. Playing next</string>
     <string name="err_stop_on_error">Error occurred. Playback stopped</string>
     <string name="err_stop_on_too_many_errors">Too many errors. Playback stopped</string>
@@ -60,7 +60,7 @@ while also allowing users to translate our app as well. New, specific strings to
 <!-- Dialog -->
     <string name="bits_per_sample">Bits per sample</string>
     <string name="create_sync_playlist">Sync Playlist</string>
-    <string name="create_sync_playlist_description">Note: This allows for syncing with YouTube Music. This is NOT changeable later. You cannot add local songs to synced playlists.</string>
+    <string name="create_sync_playlist_description">Note: This allows for syncing with your online account. This is NOT changeable later. You cannot add local songs to synced playlists.</string>
     <string name="disc_number">Disc number</string>
     <string name="extra_details">Extra details</string>
     <string name="file_path">File path</string>
@@ -71,7 +71,7 @@ while also allowing users to translate our app as well. New, specific strings to
     <string name="toggle_lyrics">Toggle lyrics</string>
 
 <!-- Sync-->
-    <string name="sync_progress_active">Syncing with YouTube account…</string>
+    <string name="sync_progress_active">Syncing with JioSaavn account…</string>
     <string name="sync_progress_success">Sync complete</string>
 
 <!-- Settings -->
@@ -149,7 +149,7 @@ while also allowing users to translate our app as well. New, specific strings to
     <string name="sync_mode">Sync mode</string>
     <string name="sync_mode_ro">Read only (View remote content)</string>
     <string name="sync_mode_rw">Read write (Also allow changes to remote content)</string>
-    <string name="ytm_sync">Automatically sync with your YouTube Music account</string>
+    <string name="ytm_sync">Automatically sync with your JioSaavn account</string>
     <string name="wifi_only">Wi-Fi only</string>
 
 <!-- Player settings -->
@@ -222,9 +222,9 @@ while also allowing users to translate our app as well. New, specific strings to
     <string name="scanner_progress_syncing">Syncing…</string>
 	<string name="scanner_scan_fail">Scanner failed</string>
 
-	<string name="scanner_ytm_link_fail">YouTube artist linking job failed</string>
-	<string name="scanner_ytm_link_start">Starting YouTube artist linking…</string>
-	<string name="scanner_ytm_link_success">YouTube artist linking job complete</string>
+	<string name="scanner_ytm_link_fail">JioSaavn artist linking job failed</string>
+	<string name="scanner_ytm_link_start">Starting JioSaavn artist linking…</string>
+	<string name="scanner_ytm_link_success">JioSaavn artist linking job complete</string>
 
     <plurals name="scanner_n_song_processed">
         <item quantity="one">%d song processed</item>
@@ -253,7 +253,7 @@ while also allowing users to translate our app as well. New, specific strings to
     <string name="scanner_type_ffmpeg_ext">Use FFmpeg metadata extractor. Please only use the "full" variant of the app. The "core" variant could cause issues with song tracking</string>
 
     <string name="scanner_variant_rescan">Rescan the entire library and reload all songs\' metadata</string>
-    <string name="scanner_online_artist_linking">Try to link local files\' artists with ones on YouTube Music</string>
+    <string name="scanner_online_artist_linking">Try to link local files\' artists with ones on JioSaavn</string>
 
 <!-- Storage setting -->
     <string name="clear_downloads_confirm">Are you sure you want to remove all downloads? Only downloads in the main download folder will be removed.</string>
@@ -283,7 +283,7 @@ while also allowing users to translate our app as well. New, specific strings to
     <string name="restart_to_apply_changes">An app restart is required for changes to take effect</string>
 
 <!-- Privacy settings -->
-    <string name="pause_remote_listen_history">Pause sharing listen history with YouTube Music</string>
+    <string name="pause_remote_listen_history">Pause sharing listen history with JioSaavn</string>
 
 <!-- Backup and restore settings -->
     <string name="err_restore_incompatible_database">Could not restore incompatible database</string>
@@ -305,9 +305,9 @@ while also allowing users to translate our app as well. New, specific strings to
     <string name="oobe_welcome_tip">For the best experience, we recommend completing a quick setup to personalize key settings like theme, YouTube account, local media, and downloads.</string>
 
     <!-- Landing -->
-    <string name="oobe_ytm_integration">YouTube Music Integration</string>
+    <string name="oobe_ytm_integration">JioSaavn Integration</string>
     <string name="oobe_ytm_integration_description">Access your favorite tracks seamlessly</string>
-    <string name="oobe_ad_free_exp">No YouTube ADs</string>
+    <string name="oobe_ad_free_exp">No ADs</string>
     <string name="oobe_ad_free_exp_description">Enjoy uninterrupted music playback</string>
     <string name="oobe_local_music_support">Extensive Local Music Support</string>
     <string name="oobe_local_music_support_description">Play your music files (ex. MP3, OGG, FLAC, etc.)</string>
@@ -320,7 +320,7 @@ while also allowing users to translate our app as well. New, specific strings to
 
     <!-- Account setup page -->
     <string name="oobe_ytm_logon_title">Account</string>
-    <string name="oobe_ytm_logon_subtitle">Sign in to your YouTube Music account to sync and access private account content. This is optional.</string>
+    <string name="oobe_ytm_logon_subtitle">Sign in to your JioSaavn account to sync and access private account content. This is optional.</string>
 
     <!-- Local media setup -->
     <string name="oobe_local_media_title">Local media</string>
@@ -343,7 +343,7 @@ while also allowing users to translate our app as well. New, specific strings to
     <string name="m3u_import_failed"> "No songs found. Invalid M3U file, or no song matches were found"</string>
     <string name="m3u_import_playlist">Import a playlist (m3u)</string>
     <string name="m3u_import_playlist_failed">Failed to import</string>
-    <string name="m3u_ytm_lookup">Search on YouTube Music for songs not found in the app database</string>
+    <string name="m3u_ytm_lookup">Search on JioSaavn for songs not found in the app database</string>
 
 <!-- Misc -->
     <string name="action_back">Back</string>

@@ -6,7 +6,7 @@ import kotlinx.serialization.Serializable
 data class YouTubeClient(
     val clientName: String,
     val clientVersion: String,
-    val clientId: String,
+    val clientId: String? = null,
     val userAgent: String,
     val osVersion: String? = null,
     val loginSupported: Boolean = false,
@@ -14,8 +14,7 @@ data class YouTubeClient(
     val useSignatureTimestamp: Boolean = false,
     val useWebPoTokens: Boolean = false,
     val isEmbedded: Boolean = false,
-    // val origin: String? = null,
-    // val referer: String? = null,
+    val referer: String? = null,
 ) {
     fun toContext(locale: YouTubeLocale, visitorData: String?, dataSyncId: String?) = Context(
         client = Context.Client(
@@ -83,8 +82,8 @@ data class YouTubeClient(
             clientVersion = "2.0",
             clientId = "85",
             userAgent = "Mozilla/5.0 (PlayStation; PlayStation 4/12.02) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.4 Safari/605.1.15",
-            loginSupported = true,
-            loginRequired = true,
+            loginSupported = false,   // ← change from true
+            loginRequired = false,    // ← change from true
             useSignatureTimestamp = true,
             isEmbedded = true,
         )
@@ -109,10 +108,9 @@ data class YouTubeClient(
         val ANDROID_MUSIC = YouTubeClient(
             clientName = "ANDROID_MUSIC",
             clientVersion = "6.42.52",
-            clientId = "71",
-            userAgent = "com.google.android.apps.youtube.music/6.42.52 (Linux; U; Android 11) Cronet/119.0.6045.163",
-            loginSupported = true,
-            useSignatureTimestamp = true
+            osVersion = "11",
+            userAgent = "com.google.android.apps.youtube.music/6.42.52 (Linux; U; Android 11) gzip",
+            referer = "https://music.youtube.com"
         )
 
         val ANDROID_VR_NO_AUTH = YouTubeClient(

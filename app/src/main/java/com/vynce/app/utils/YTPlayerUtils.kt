@@ -18,10 +18,12 @@ import com.vynce.app.utils.YTPlayerUtils.validateStatus
 import com.vynce.app.utils.potoken.PoTokenGenerator
 import com.vynce.app.utils.potoken.PoTokenResult
 import com.zionhuang.innertube.NewPipeUtils
+import org.schabi.newpipe.extractor.services.youtube.YoutubeJavaScriptPlayerManager
 import com.zionhuang.innertube.YouTube
 import com.zionhuang.innertube.models.YouTubeClient
 import com.zionhuang.innertube.models.YouTubeClient.Companion.ANDROID_VR_NO_AUTH
 import com.zionhuang.innertube.models.YouTubeClient.Companion.IOS
+import com.zionhuang.innertube.models.YouTubeClient.Companion.TVHTML5_SIMPLY_EMBEDDED_PLAYER
 import com.zionhuang.innertube.models.YouTubeClient.Companion.WEB_REMIX
 import com.zionhuang.innertube.models.response.PlayerResponse
 import okhttp3.OkHttpClient
@@ -60,8 +62,49 @@ object YTPlayerUtils {
         val playbackTracking: PlayerResponse.PlaybackTracking?,
         val format: PlayerResponse.StreamingData.Format,
         val streamUrl: String,
-        val streamExpiresInSeconds: Int,
+        val streamExpiresInSeconds: Long,
     )
+
+    private val PlayerResponse.streamUrl: String?
+        get() = streamingData?.adaptiveFormats
+            ?.filter { it.isAudio }
+            ?.maxByOrNull { it.bitrate ?: 0 }
+            ?.let { format ->
+                // Use direct URL first (works for IOS/ANDROID_MUSIC clients)
+                format.url?.takeIf { it.startsWith("https://") }
+                    ?: NewPipeUtils.getStreamUrl(format, videoDetails?.videoId ?: "")
+                        .getOrNull()
+                        ?.takeIf { it.startsWith("https://") }
+            }
+
+    suspend fun getStreamUrl(videoId: String, poToken: String? = null, visitorData: String? = null): Result<String> {
+        val clients = listOf(
+            YouTubeClient.TVHTML5_SIMPLY_EMBEDDED_PLAYER,
+            YouTubeClient.ANDROID_MUSIC,
+            YouTubeClient.ANDROID,
+            YouTubeClient.WEB_REMIX
+        )
+        if (visitorData != null) {
+            YouTube.visitorData = visitorData
+        }
+        if (poToken != null) {
+            YouTube.poToken = poToken
+        }
+
+        var lastError: Exception? = null
+        for (client in clients) {
+            try {
+                val result = YouTube.player(videoId, client = client, webPlayerPot = poToken)
+                    .getOrThrow()
+                val url = result.streamUrl ?: continue
+                return Result.success(url)
+            } catch (e: Exception) {
+                lastError = e
+                android.util.Log.w("YTPlayerUtils", "Client ${client.clientName} failed: ${e.message}")
+            }
+        }
+        return Result.failure(lastError ?: Exception("All clients failed for $videoId"))
+    }
 
     /**
      * Custom player response intended to use for playback.
@@ -75,149 +118,170 @@ object YTPlayerUtils {
         connectivityManager: ConnectivityManager,
         poToken: String? = null,
         visitorData: String? = null,
-    ): Result<PlaybackData> = runCatching {
-        Log.d(TAG, "Playback info requested: $videoId")
+    ): Result<PlaybackData> {
+        return try {
+            Log.d(TAG, "Playback info requested: $videoId")
 
-        /**
-         * This is required for some clients to get working streams however
-         * it should not be forced for the [MAIN_CLIENT] because the response of the [MAIN_CLIENT]
-         * is required even if the streams won't work from this client.
-         * This is why it is allowed to be null.
-         */
-        val signatureTimestamp = getSignatureTimestampOrNull(videoId)
+            /**
+             * This is required for some clients to get working streams however
+             * it should not be forced for the [MAIN_CLIENT] because the response of the [MAIN_CLIENT]
+             * is required even if the streams won't work from this client.
+             * This is why it is allowed to be null.
+             */
+            val signatureTimestamp = getSignatureTimestampOrNull(videoId)
 
-        val isLoggedIn = YouTube.cookie != null
-        val sessionId = visitorData ?: if (isLoggedIn) {
-            YouTube.dataSyncId
-        } else {
-            YouTube.visitorData
-        }
-
-        if (visitorData != null) {
-            YouTube.visitorData = visitorData
-        }
-        if (poToken != null) {
-            YouTube.poToken = poToken
-        }
-
-        Log.d(TAG, "[$videoId] signatureTimestamp: $signatureTimestamp, isLoggedIn: $isLoggedIn")
-
-        val (webPlayerPot, webStreamingPot) = if (poToken != null) {
-            Pair(poToken, null)
-        } else {
-            getWebClientPoTokenOrNull(videoId, sessionId)?.let {
-                Pair(it.playerRequestPoToken, it.streamingDataPoToken)
-            } ?: Pair(null, null).also {
-                Log.w(TAG, "[$videoId] No po token")
-            }
-        }
-
-        val mainPlayerResponse =
-            YouTube.player(videoId, playlistId, MAIN_CLIENT, signatureTimestamp, webPlayerPot)
-                .getOrThrow()
-
-        val audioConfig = mainPlayerResponse.playerConfig?.audioConfig
-        val videoDetails = mainPlayerResponse.videoDetails
-        val playbackTracking = mainPlayerResponse.playbackTracking
-
-        var format: PlayerResponse.StreamingData.Format? = null
-        var streamUrl: String? = null
-        var streamExpiresInSeconds: Int? = null
-
-        var streamPlayerResponse: PlayerResponse? = null
-        for (clientIndex in (-1 until STREAM_FALLBACK_CLIENTS.size)) {
-            // reset for each client
-            format = null
-            streamUrl = null
-            streamExpiresInSeconds = null
-
-            // decide which client to use for streams and load its player response
-            val client: YouTubeClient
-            if (clientIndex == -1) {
-                Log.d(TAG, "Trying client: ${MAIN_CLIENT.clientName}")
-                // try with streams from main client first
-                client = MAIN_CLIENT
-                streamPlayerResponse = mainPlayerResponse
+            val isLoggedIn = YouTube.cookie != null
+            val sessionId = visitorData ?: if (isLoggedIn) {
+                YouTube.dataSyncId
             } else {
-                Log.d(TAG, "Trying fallback client: ${STREAM_FALLBACK_CLIENTS[clientIndex].clientName}")
-                // after main client use fallback clients
-                client = STREAM_FALLBACK_CLIENTS[clientIndex]
-
-                if (client.loginRequired && !isLoggedIn) {
-                    // skip client if it requires login but user is not logged in
-                    continue
-                }
-
-                streamPlayerResponse =
-                    YouTube.player(videoId, playlistId, client, signatureTimestamp, webPlayerPot)
-                        .getOrNull()
+                YouTube.visitorData
             }
 
-            Log.d(TAG, "[$videoId] stream client: ${client.clientName}, " +
-                    "playabilityStatus: ${streamPlayerResponse?.playabilityStatus?.let {
-                        it.status + (it.reason?.let { " - $it" } ?: "")
-                    }}")
+            if (visitorData != null) {
+                YouTube.visitorData = visitorData
+            }
+            if (poToken != null) {
+                YouTube.poToken = poToken
+            }
 
-            // process current client response
-            if (streamPlayerResponse?.playabilityStatus?.status == "OK") {
-                format =
-                    findFormat(
-                        streamPlayerResponse,
-                        audioQuality,
-                        connectivityManager,
-                    ) ?: continue
-                streamUrl = findUrlOrNull(format, videoId) ?: continue
-                streamExpiresInSeconds =
-                    streamPlayerResponse.streamingData?.expiresInSeconds ?: continue
+            Log.d(TAG, "[$videoId] signatureTimestamp: $signatureTimestamp, isLoggedIn: $isLoggedIn")
 
-                if (client.useWebPoTokens && webStreamingPot != null) {
-                    streamUrl += "&pot=$webStreamingPot";
+            val (webPlayerPot, webStreamingPot) = if (poToken != null) {
+                Pair(poToken, null)
+            } else {
+                getWebClientPoTokenOrNull(videoId, sessionId)?.let {
+                    Pair(it.playerRequestPoToken, it.streamingDataPoToken)
+                } ?: Pair(null, null).also {
+                    Log.w(TAG, "[$videoId] No po token")
                 }
+            }
 
-                if (clientIndex == STREAM_FALLBACK_CLIENTS.size - 1) {
-                    /** skip [validateStatus] for last client */
-                    break
-                }
-                if (validateStatus(streamUrl)) {
-                    // working stream found
-                    Log.i(TAG, "[$videoId] [${client.clientName}] found working stream")
-                    break
+            val mainPlayerResponse =
+                YouTube.player(videoId, playlistId, MAIN_CLIENT, signatureTimestamp, webPlayerPot)
+                    .getOrThrow()
+
+            val audioConfig = mainPlayerResponse.playerConfig?.audioConfig
+            val videoDetails = mainPlayerResponse.videoDetails
+            val playbackTracking = mainPlayerResponse.playbackTracking
+
+            var format: PlayerResponse.StreamingData.Format? = null
+            var streamUrl: String? = null
+            var streamExpiresInSeconds: Int? = null
+
+            var streamPlayerResponse: PlayerResponse? = null
+            var finalClientIndex = -1
+            var finalClient: YouTubeClient? = null
+            for (clientIndex in (-1 until STREAM_FALLBACK_CLIENTS.size)) {
+                // reset for each client
+                format = null
+                streamUrl = null
+                streamExpiresInSeconds = null
+
+                // decide which client to use for streams and load its player response
+                val client: YouTubeClient
+                if (clientIndex == -1) {
+                    Log.d(TAG, "Trying client: ${MAIN_CLIENT.clientName}")
+                    // try with streams from main client first
+                    client = MAIN_CLIENT
+                    streamPlayerResponse = mainPlayerResponse
+                    finalClientIndex = clientIndex
+                    finalClient = client
                 } else {
-                    Log.w(TAG, "[$videoId] [${client.clientName}] got bad http status code")
+                    Log.d(TAG, "Trying fallback client: ${STREAM_FALLBACK_CLIENTS[clientIndex].clientName}")
+                    // after main client use fallback clients
+                    client = STREAM_FALLBACK_CLIENTS[clientIndex]
+
+                    if (client.loginRequired && !isLoggedIn) {
+                        // skip client if it requires login but user is not logged in
+                        continue
+                    }
+
+                    streamPlayerResponse =
+                        YouTube.player(videoId, playlistId, client, signatureTimestamp, webPlayerPot)
+                            .getOrNull()
+                    finalClientIndex = clientIndex
+                    finalClient = client
+                }
+
+                Log.d(TAG, "[$videoId] stream client: ${client.clientName}, " +
+                        "playabilityStatus: ${streamPlayerResponse?.playabilityStatus?.let {
+                            it.status + (it.reason?.let { " - $it" } ?: "")
+                        }}")
+
+                // process current client response
+                if (streamPlayerResponse?.playabilityStatus?.status == "OK") {
+                    format =
+                        findFormat(
+                            streamPlayerResponse,
+                            audioQuality,
+                            connectivityManager,
+                        ) ?: continue
+                    streamUrl = findUrlOrNull(format, videoId) ?: continue
+                    streamExpiresInSeconds =
+                        streamPlayerResponse.streamingData?.expiresInSeconds
+
+                    if (client.useWebPoTokens && webStreamingPot != null) {
+                        streamUrl += "&pot=$webStreamingPot";
+                    }
+
+                    if (clientIndex == STREAM_FALLBACK_CLIENTS.size - 1) {
+                        /** skip [validateStatus] for last client */
+                        break
+                    }
+                    if (validateStatus(streamUrl!!)) {
+                        // working stream found
+                        Log.i(TAG, "[$videoId] [${client.clientName}] found working stream")
+                        break
+                    } else {
+                        Log.w(TAG, "[$videoId] [${client.clientName}] got bad http status code")
+                    }
                 }
             }
-        }
 
-        if (streamPlayerResponse == null) {
-            throw Exception("Bad stream player response")
-        }
-        if (streamPlayerResponse.playabilityStatus.status != "OK") {
-            throw PlaybackException(
-                streamPlayerResponse.playabilityStatus.reason,
-                null,
-                PlaybackException.ERROR_CODE_REMOTE_ERROR
+            if (streamPlayerResponse == null) {
+                return Result.failure(Exception("Bad stream player response"))
+            }
+            if (streamPlayerResponse.playabilityStatus.status != "OK") {
+                throw PlaybackException(
+                    streamPlayerResponse.playabilityStatus.reason,
+                    null,
+                    PlaybackException.ERROR_CODE_REMOTE_ERROR
+                )
+            }
+            val finalFormat = format ?: return Result.failure(Exception("Could not find format"))
+            val finalStreamUrl = streamUrl ?: return Result.failure(Exception("Could not find stream url"))
+
+            // After the client loop, add:
+            Log.d(TAG, "[$videoId] clientIndex=$finalClientIndex client=${finalClient?.clientName}")
+            Log.d(TAG, "[$videoId] playabilityStatus=${streamPlayerResponse?.playabilityStatus?.status}")
+            Log.d(TAG, "[$videoId] format.url=${finalFormat.url?.take(100)}")
+            Log.d(TAG, "[$videoId] finalStreamUrl=${finalStreamUrl.take(100)}")
+
+            val expireTime: Long = try {
+                streamExpiresInSeconds?.toLong()
+                    ?: finalStreamUrl
+                        .let { Regex("expire=(\\d+)").find(it)?.groupValues?.get(1)?.toLongOrNull() }
+                        ?.let { it - System.currentTimeMillis() / 1000 }
+                    ?: 21600L
+            } catch (e: Exception) {
+                21600L
+            }
+
+            Log.d(TAG, "[$videoId] stream url: $finalStreamUrl")
+
+            Result.success(
+                PlaybackData(
+                    audioConfig,
+                    videoDetails,
+                    playbackTracking,
+                    finalFormat,
+                    finalStreamUrl,
+                    expireTime,
+                )
             )
+        } catch (e: Exception) {
+            Result.failure(e)
         }
-        if (streamExpiresInSeconds == null) {
-            throw Exception("Missing stream expire time")
-        }
-        if (format == null) {
-            throw Exception("Could not find format")
-        }
-        if (streamUrl == null) {
-            throw Exception("Could not find stream url")
-        }
-
-        Log.d(TAG, "[$videoId] stream url: $streamUrl")
-
-        PlaybackData(
-            audioConfig,
-            videoDetails,
-            playbackTracking,
-            format,
-            streamUrl,
-            streamExpiresInSeconds,
-        )
     }
 
     /**
@@ -234,16 +298,18 @@ object YTPlayerUtils {
         playerResponse: PlayerResponse,
         audioQuality: AudioQuality,
         connectivityManager: ConnectivityManager,
-    ): PlayerResponse.StreamingData.Format? =
-        playerResponse.streamingData?.adaptiveFormats
-            ?.filter { it.isAudio }
-            ?.maxByOrNull {
-                it.bitrate * when (audioQuality) {
+    ): PlayerResponse.StreamingData.Format? {
+        val formats = playerResponse.streamingData?.adaptiveFormats ?: return null
+        return formats
+            .filter { it.isAudio }
+            .maxByOrNull {
+                (it.bitrate ?: 0) * when (audioQuality) {
                     AudioQuality.AUTO -> if (connectivityManager.isActiveNetworkMetered) -1 else 1
                     AudioQuality.HIGH -> 1
                     AudioQuality.LOW -> -1
                 } + (if (it.mimeType.startsWith("audio/webm")) 10240 else 0) // prefer opus stream
-            }
+            } ?: formats.firstOrNull() // fallback to any format
+    }
 
     /**
      * Checks if the stream url returns a successful status.
@@ -251,16 +317,9 @@ object YTPlayerUtils {
      * If this returns false the url might cause an error during playback.
      */
     private fun validateStatus(url: String): Boolean {
-        try {
-            val requestBuilder = okhttp3.Request.Builder()
-                .head()
-                .url(url)
-            val response = httpClient.newCall(requestBuilder.build()).execute()
-            return response.isSuccessful
-        } catch (e: Exception) {
-            reportException(e)
-        }
-        return false
+        // Skip HTTP validation — causes blocking and false negatives
+        // ExoPlayer will handle actual playback errors via retry
+        return url.startsWith("https://")
     }
 
     /**
@@ -283,11 +342,41 @@ object YTPlayerUtils {
         format: PlayerResponse.StreamingData.Format,
         videoId: String
     ): String? {
-        return NewPipeUtils.getStreamUrl(format, videoId)
-            .onFailure {
-                reportException(it)
-            }
-            .getOrNull()
+        // WEB/WEB_REMIX clients use signatureCipher — NewPipe decodes it
+        // IOS/ANDROID clients use format.url directly
+        if (format.url == null && format.signatureCipher != null) {
+            // Cipher-based URL — must use NewPipe
+            return NewPipeUtils.getStreamUrl(format, videoId)
+                .onFailure { Log.e(TAG, "[$videoId] NewPipe cipher decode failed: ${it.message}") }
+                .getOrNull()
+                ?.takeIf { it.startsWith("https://") }
+        }
+
+        // Direct URL — try NewPipe throttle decode first, fall back to direct
+        val directUrl = format.url?.takeIf { it.startsWith("https://") } ?: return null
+
+        // Append ipbits=0 to disable IP binding — critical for IOS client URLs
+        val urlWithIpBits = if (directUrl.contains("googlevideo.com") && !directUrl.contains("ipbits=")) {
+            "$directUrl&ipbits=0"
+        } else {
+            directUrl
+        }
+
+        Log.d(TAG, "[$videoId] URL with ipbits=0: ${urlWithIpBits.take(80)}")
+
+        return try {
+            YoutubeJavaScriptPlayerManager.getSignatureTimestamp(videoId)
+            YoutubeJavaScriptPlayerManager
+                .getUrlWithThrottlingParameterDeobfuscated(videoId, urlWithIpBits)
+                .takeIf { it.startsWith("https://") } ?: urlWithIpBits
+        } catch (e: Exception) {
+            Log.w(TAG, "[$videoId] throttle decode failed: ${e.message}")
+            urlWithIpBits
+        }
+    }
+
+    private fun extractN(url: String): String {
+        return Regex("[?&]n=([^&]+)").find(url)?.groupValues?.get(1) ?: "not_found"
     }
 
     /**

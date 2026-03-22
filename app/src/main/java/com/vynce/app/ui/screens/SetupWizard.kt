@@ -302,16 +302,11 @@ fun SetupWizard(
                 when (oobeStatus) {
                     0 -> { // landing page
                         Image(
-                            painter = painterResource(R.drawable.launcher_monochrome),
+                            painter = painterResource(R.drawable.vynce_logo),
                             contentDescription = null,
-                            colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.primary, BlendMode.SrcIn),
                             modifier = Modifier
+                                .size(128.dp) // Maintain size
                                 .clip(CircleShape)
-                                .background(
-                                    MaterialTheme.colorScheme.surfaceColorAtElevation(
-                                        NavigationBarDefaults.Elevation
-                                    )
-                                )
                                 .clickable {
                                     haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
                                 }
@@ -885,11 +880,11 @@ private fun OobeFeatureRow(title: String, description: String?, icon: ImageVecto
                     .padding(4.dp),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(32.dp)
+                Image(
+            painter = painterResource(R.drawable.vynce_logo),
+            contentDescription = null,
+            modifier = Modifier
+.size(32.dp)
                 )
             }
 

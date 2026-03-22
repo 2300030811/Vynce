@@ -17,9 +17,12 @@ import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.lifecycle.ViewModelProvider
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.activity.viewModels
+import androidx.media3.common.MediaItem
+import androidx.media3.common.MediaMetadata
+import androidx.media3.common.Player
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -146,7 +149,6 @@ import com.vynce.app.ui.screens.PlayerScreen
 import com.vynce.app.ui.screens.Screens
 import com.vynce.app.ui.screens.SetupWizard
 import com.vynce.app.ui.screens.StatsScreen
-import com.vynce.app.ui.screens.YouTubeBrowseScreen
 import com.vynce.app.ui.screens.artist.ArtistAlbumsScreen
 import com.vynce.app.ui.screens.artist.ArtistItemsScreen
 import com.vynce.app.ui.screens.artist.ArtistScreen
@@ -208,7 +210,7 @@ class MainActivity : ComponentActivity() {
 
     private var playerConnection by mutableStateOf<PlayerConnection?>(null)
 
-    val controllerViewModel: MediaControllerViewModel by viewModels()
+    lateinit var controllerViewModel: MediaControllerViewModel
 
     // storage permission helpers
     val permissionLauncher =
@@ -242,6 +244,7 @@ class MainActivity : ComponentActivity() {
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        controllerViewModel = ViewModelProvider(this)[MediaControllerViewModel::class.java]
         lifecycle.addObserver(controllerViewModel)
         controllerViewModel.addControllerCallback(lifecycle) { controller, _ ->
             playerConnection = PlayerConnection(controllerViewModel, database)
@@ -554,20 +557,6 @@ class MainActivity : ComponentActivity() {
                                     }
 
                                     composable(
-                                        route = "browse/{browseId}",
-                                        arguments = listOf(
-                                            navArgument("browseId") {
-                                                type = NavType.StringType
-                                            }
-                                        )
-                                    ) {
-                                        BrowseScreen(
-                                            navController,
-                                            scrollBehavior,
-                                            it.arguments?.getString("browseId")
-                                        )
-                                    }
-                                    composable(
                                         route = "search",
                                     ) {
                                         SearchBarContainer(navController, scrollBehavior)
@@ -581,74 +570,6 @@ class MainActivity : ComponentActivity() {
                                         )
                                     ) {
                                         OnlineSearchResult(navController)
-                                    }
-                                    composable(
-                                        route = "album/{albumId}",
-                                        arguments = listOf(
-                                            navArgument("albumId") {
-                                                type = NavType.StringType
-                                            },
-                                        )
-                                    ) {
-                                        AlbumScreen(navController, scrollBehavior)
-                                    }
-                                    composable(
-                                        route = "artist/{artistId}",
-                                        arguments = listOf(
-                                            navArgument("artistId") {
-                                                type = NavType.StringType
-                                            }
-                                        )
-                                    ) {
-                                        ArtistScreen(navController, scrollBehavior)
-                                    }
-                                    composable(
-                                        route = "artist/{artistId}/songs",
-                                        arguments = listOf(
-                                            navArgument("artistId") {
-                                                type = NavType.StringType
-                                            }
-                                        )
-                                    ) {
-                                        ArtistSongsScreen(navController, scrollBehavior)
-                                    }
-                                    composable(
-                                        route = "artist/{artistId}/albums",
-                                        arguments = listOf(
-                                            navArgument("artistId") {
-                                                type = NavType.StringType
-                                            }
-                                        )
-                                    ) {
-                                        ArtistAlbumsScreen(navController, scrollBehavior)
-                                    }
-                                    composable(
-                                        route = "artist/{artistId}/items?browseId={browseId}?params={params}",
-                                        arguments = listOf(
-                                            navArgument("artistId") {
-                                                type = NavType.StringType
-                                            },
-                                            navArgument("browseId") {
-                                                type = NavType.StringType
-                                                nullable = true
-                                            },
-                                            navArgument("params") {
-                                                type = NavType.StringType
-                                                nullable = true
-                                            }
-                                        )
-                                    ) {
-                                        ArtistItemsScreen(navController, scrollBehavior)
-                                    }
-                                    composable(
-                                        route = "online_playlist/{playlistId}",
-                                        arguments = listOf(
-                                            navArgument("playlistId") {
-                                                type = NavType.StringType
-                                            }
-                                        )
-                                    ) {
-                                        OnlinePlaylistScreen(navController, scrollBehavior)
                                     }
                                     composable(
                                         route = "local_playlist/{playlistId}",
@@ -669,21 +590,6 @@ class MainActivity : ComponentActivity() {
                                         )
                                     ) {
                                         AutoPlaylistScreen(navController, scrollBehavior)
-                                    }
-                                    composable(
-                                        route = "youtube_browse/{browseId}?params={params}",
-                                        arguments = listOf(
-                                            navArgument("browseId") {
-                                                type = NavType.StringType
-                                                nullable = true
-                                            },
-                                            navArgument("params") {
-                                                type = NavType.StringType
-                                                nullable = true
-                                            }
-                                        )
-                                    ) {
-                                        YouTubeBrowseScreen(navController, scrollBehavior)
                                     }
                                     composable("settings") {
                                         SettingsScreen(navController, scrollBehavior)
@@ -726,9 +632,6 @@ class MainActivity : ComponentActivity() {
                                     }
                                     composable("settings/about/oss_licenses") {
                                         LibrariesScreen(navController, scrollBehavior)
-                                    }
-                                    composable("login") {
-                                        LoginScreen(navController)
                                     }
 
                                     composable("setup_wizard") {
@@ -935,10 +838,14 @@ class MainActivity : ComponentActivity() {
 
                                 if (oobeStatus >= OOBE_VERSION) {
                                     if (!navigationItems.contains(Screens.Player)) {
-                                        BottomSheetPlayer(
-                                            state = playerBottomSheetState,
-                                            navController = navController
-                                        )
+                                        val playbackState by playerConnection?.playbackState?.collectAsState() ?: remember { mutableStateOf(Player.STATE_IDLE) }
+                                        val mediaItemCount = playerConnection?.player?.mediaItemCount ?: 0
+                                        if (playbackState != Player.STATE_IDLE && mediaItemCount > 0) {
+                                            BottomSheetPlayer(
+                                                state = playerBottomSheetState,
+                                                navController = navController
+                                            )
+                                        }
                                     }
 
                                     if (!useNavRail) {
@@ -1004,33 +911,6 @@ class MainActivity : ComponentActivity() {
                                 }
                             }
 
-                            if (BuildConfig.DEBUG) {
-                                val debugColour = Color.Red
-                                Column(
-                                    modifier = Modifier.padding(start = 50.dp, top = 100.dp)
-                                ) {
-                                    Text(
-                                        text = "${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE}) | ${BuildConfig.FLAVOR}",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = debugColour
-                                    )
-                                    Text(
-                                        text = "${BuildConfig.APPLICATION_ID} | ${BuildConfig.BUILD_TYPE}",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = debugColour
-                                    )
-                                    Text(
-                                        text = "${Build.BRAND} ${Build.DEVICE} (${Build.MODEL})",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = debugColour
-                                    )
-                                    Text(
-                                        text = "${Build.VERSION.SDK_INT} (${Build.ID})",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = debugColour
-                                    )
-                                }
-                            }
                         }
                     }
                 }

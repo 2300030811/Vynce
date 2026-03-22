@@ -85,9 +85,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
+
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -112,9 +110,7 @@ import androidx.media3.common.Player.REPEAT_MODE_ONE
 import androidx.media3.common.Player.STATE_ENDED
 import androidx.media3.common.Player.STATE_READY
 import androidx.navigation.NavController
-import android.graphics.drawable.BitmapDrawable
-import androidx.palette.graphics.Palette
-import coil3.ImageLoader
+
 import coil3.compose.AsyncImage
 import coil3.imageLoader
 import coil3.request.ImageRequest
@@ -144,7 +140,7 @@ import com.vynce.app.playback.PlayerConnection
 import com.vynce.app.playback.QueueBoard
 import com.vynce.app.ui.component.BottomSheet
 import com.vynce.app.ui.component.BottomSheetState
-import com.vynce.app.ui.component.AudioVisualizer
+
 import com.vynce.app.ui.component.PlayerSliderTrack
 import com.vynce.app.ui.component.button.IconButton
 import com.vynce.app.ui.component.button.ResizableIconButton
@@ -158,43 +154,13 @@ import com.vynce.app.utils.coilCoroutine
 import com.vynce.app.utils.makeTimeString
 import com.vynce.app.utils.rememberEnumPreference
 import com.vynce.app.utils.rememberPreference
-import kotlinx.coroutines.Dispatchers
+
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
 import kotlin.math.max
 
-@Composable
-fun rememberDominantColor(imageUrl: String?): Color {
-    var dominantColor by remember { mutableStateOf(Color(0xFF9B72F8)) }
-    val context = LocalContext.current
 
-    LaunchedEffect(imageUrl) {
-        if (imageUrl == null) return@LaunchedEffect
-
-        withContext(Dispatchers.IO) {
-            try {
-                val loader = ImageLoader(context)
-                val request = ImageRequest.Builder(context)
-                    .data(imageUrl)
-                    .allowHardware(false)
-                    .build()
-                val result = loader.execute(request)
-                val bitmap = result.image?.toBitmap()
-                if (bitmap != null) {
-                    Palette.from(bitmap).generate { palette ->
-                        palette?.dominantSwatch?.rgb?.let {
-                            dominantColor = Color(it).copy(alpha = 1f)
-                        }
-                    }
-                }
-            } catch (_: Exception) {
-            }
-        }
-    }
-
-    return dominantColor
-}
 
 @SuppressLint("UnusedBoxWithConstraintsScope")
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
@@ -695,7 +661,7 @@ fun ControlsContent(
         defaultValue = DEFAULT_PLAYER_BACKGROUND
     )
 
-    val dominantColor = rememberDominantColor(mediaMetadata?.getThumbnailModel(100, 100)?.toString())
+
 
     val onBackgroundColor = when (playerBackground) {
         PlayerBackgroundStyle.FOLLOW_THEME -> MaterialTheme.colorScheme.secondary
@@ -819,12 +785,7 @@ fun ControlsContent(
                 }
             }
 
-            AudioVisualizer(
-                isPlaying = isPlaying,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(32.dp)
-            )
+            Spacer(Modifier.height(8.dp))
 
             Slider(
                 value = (sliderPosition ?: position).toFloat(),
@@ -846,12 +807,7 @@ fun ControlsContent(
                 track = { sliderState ->
                     PlayerSliderTrack(
                         sliderState = sliderState,
-                        colors = SliderDefaults.colors(
-                            activeTrackColor = dominantColor,
-                            inactiveTrackColor = onBackgroundColor.copy(alpha = 0.35f),
-                            thumbColor = dominantColor,
-                            activeTickColor = dominantColor,
-                        )
+                        colors = SliderDefaults.colors()
                     )
                 },
                 modifier = Modifier.padding(horizontal = PlayerHorizontalPadding)
@@ -943,19 +899,14 @@ fun ControlsContent(
 
                 Spacer(Modifier.width(8.dp))
 
-                val playPauseScale by animateFloatAsState(
-                    targetValue = if (isPlaying) 0.92f else 1f,
-                    animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
-                    label = "playPauseScale"
-                )
+
 
                 Box(
                     modifier = Modifier
                         .size(if (maxW >= 320.dp) if (showLyrics) 56.dp else 72.dp else 42.dp)
-                        .graphicsLayer { scaleX = playPauseScale; scaleY = playPauseScale }
                         .animateContentSize()
                         .clip(RoundedCornerShape(playPauseRoundness))
-                        .background(dominantColor)
+                        .background(MaterialTheme.colorScheme.primary)
                         .clickable {
                             if (playerConnection.player.currentMediaItem == null) {
                                 queueBoard.setCurrQueue()
@@ -966,7 +917,7 @@ fun ControlsContent(
                             } else {
                                 playerConnection.player.togglePlayPause()
                             }
-                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            haptic.performHapticFeedback(HapticFeedbackType.Confirm)
                         }
                 ) {
                     Image(

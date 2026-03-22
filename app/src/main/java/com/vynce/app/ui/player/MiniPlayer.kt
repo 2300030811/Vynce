@@ -51,18 +51,19 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.Player.STATE_READY
+import coil3.request.ImageRequest
 import coil3.compose.AsyncImage
 import com.vynce.app.LocalPlayerAwareWindowInsets
 import com.vynce.app.LocalPlayerConnection
@@ -100,7 +101,7 @@ fun MiniPlayer(
         mutableLongStateOf(playerConnection.player.duration)
     }
 
-    val dominantColor = rememberDominantColor(mediaMetadata?.getThumbnailModel(100, 100)?.toString())
+
 
     LaunchedEffect(playbackState) {
         if (playbackState == STATE_READY) {
@@ -113,14 +114,13 @@ fun MiniPlayer(
     }
 
     Card(
-        colors = CardDefaults.cardColors(containerColor = VynceSurfaceCard.copy(alpha = 0.85f)),
+        colors = CardDefaults.cardColors(containerColor = VynceSurfaceCard.copy(alpha = 0.92f)),
         elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
         shape = RoundedCornerShape(14.dp),
         modifier = modifier
             .fillMaxWidth()
             .height(MiniPlayerHeight)
             .windowInsetsPadding(LocalPlayerAwareWindowInsets.current.only(WindowInsetsSides.Horizontal))
-            .blur(20.dp)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
             Row(
@@ -130,7 +130,9 @@ fun MiniPlayer(
                     .padding(horizontal = 8.dp, vertical = 4.dp)
             ) {
                 AsyncImage(
-                    model = mediaMetadata?.getThumbnailModel(48, 48),
+                    model = ImageRequest.Builder(LocalContext.current)
+                        .data((mediaMetadata?.getThumbnailModel(48, 48) as? String)?.replace("http://", "https://"))
+                        .build(),
                     contentDescription = null,
                     modifier = Modifier
                         .size(48.dp)
@@ -145,14 +147,14 @@ fun MiniPlayer(
                     Text(
                         text = mediaMetadata?.title ?: "",
                         color = MaterialTheme.colorScheme.onSurface,
-                        fontWeight = FontWeight.SemiBold,
+                        fontWeight = FontWeight.Bold,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         fontSize = 14.sp,
                     )
                     Text(
                         text = mediaMetadata?.artists?.joinToString { it.name } ?: "",
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f),
+                        color = MaterialTheme.colorScheme.secondary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         fontSize = 12.sp,
@@ -174,7 +176,7 @@ fun MiniPlayer(
                 ) {
                     Icon(
                         imageVector = if (playbackState == Player.STATE_ENDED) Icons.Rounded.Replay else if (isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
-                        tint = dominantColor,
+                        tint = MaterialTheme.colorScheme.primary,
                         contentDescription = null
                     )
                 }
@@ -186,7 +188,7 @@ fun MiniPlayer(
                 ) {
                     Icon(
                         imageVector = Icons.Rounded.Close,
-                        tint = VyncePurple,
+                        tint = MaterialTheme.colorScheme.onSurface,
                         contentDescription = null
                     )
                 }
@@ -194,7 +196,7 @@ fun MiniPlayer(
 
             LinearProgressIndicator(
                 progress = if (duration > 0) (position.toFloat() / duration).coerceIn(0f, 1f) else 0f,
-                color = dominantColor,
+                color = MaterialTheme.colorScheme.primary,
                 trackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f),
                 modifier = Modifier
                     .fillMaxWidth()

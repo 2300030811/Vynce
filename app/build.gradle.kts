@@ -29,8 +29,8 @@ android {
         applicationId = "com.vynce.app"
         minSdk = 24
         targetSdk = 36
-        versionCode = 71
-        versionName = "0.10.2-b1"
+        versionCode = 72
+        versionName = "1.1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         manifestPlaceholders["appAuthRedirectScheme"] = "com.vynce.app"
     }
@@ -249,6 +249,7 @@ dependencies {
     coreLibraryDesugaring(libs.desugaring)
 
     implementation(libs.ktor.client.core)
+    implementation(libs.ktor.client.content.negotiation)
     implementation(libs.ktor.serialization.json)
 
     // modules
@@ -257,6 +258,9 @@ dependencies {
     implementation(project(":lrclib"))
     implementation(project(":material-color-utilities"))
     // implementation(project(":taglib"))
+
+    // newpipe for direct access to YoutubeJavaScriptPlayerManager
+    implementation(libs.newpipe.extractor)
 
     // misc
     implementation(libs.aboutlibraries.compose.m3)

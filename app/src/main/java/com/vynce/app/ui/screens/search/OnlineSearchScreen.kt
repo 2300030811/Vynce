@@ -1,5 +1,7 @@
 package com.vynce.app.ui.screens.search
 
+import com.vynce.app.extensions.decodeHtml
+
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -51,7 +53,7 @@ import com.vynce.app.constants.SuggestionItemHeight
 import com.vynce.app.constants.SwipeToQueueKey
 import com.vynce.app.extensions.toMediaItem
 import com.vynce.app.extensions.togglePlayPause
-import com.vynce.app.models.toMediaMetadata
+import com.vynce.app.utils.toSaavnMediaMetadata
 import com.vynce.app.playback.queues.ListQueue
 import com.vynce.app.ui.component.LazyColumnScrollbar
 import com.vynce.app.ui.component.SearchBarIconOffsetX
@@ -67,7 +69,8 @@ import com.vynce.app.viewmodels.OnlineSearchSuggestionViewModel
 import com.zionhuang.innertube.models.AlbumItem
 import com.zionhuang.innertube.models.ArtistItem
 import com.zionhuang.innertube.models.PlaylistItem
-import com.zionhuang.innertube.models.SongItem
+import com.zionhuang.jiosaavn.SaavnSong
+import com.vynce.app.ui.component.items.SaavnSongListItem
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.debounce
@@ -150,18 +153,19 @@ fun OnlineSearchScreen(
             items = viewState.suggestions,
             key = { it }
         ) { query ->
+            val decodedQuery = query.decodeHtml()
             SuggestionItem(
-                query = query,
+                query = decodedQuery,
                 online = true,
                 onClick = {
-                    onSearch(query)
+                    onSearch(decodedQuery)
                     onDismiss()
                 },
                 onFillTextField = {
                     onQueryChange(
                         TextFieldValue(
-                            text = query,
-                            selection = TextRange(query.length)
+                            text = decodedQuery,
+                            selection = TextRange(decodedQuery.length)
                         )
                     )
                 },
@@ -180,105 +184,35 @@ fun OnlineSearchScreen(
             key = { it.id }
         ) { item ->
             val content: @Composable () -> Unit = {
-                YouTubeListItem(
-                    item = item,
-                    isActive = when (item) {
-                        is SongItem -> mediaMetadata?.id == item.id
-                        is AlbumItem -> mediaMetadata?.album?.id == item.id
-                        else -> false
-                    },
-                    isPlaying = isPlaying,
-                    trailingContent = {
-                        IconButton(
-                            onClick = {
-                                menuState.show {
-                                    when (item) {
-                                        is SongItem ->
-                                            YouTubeSongMenu(
-                                                song = item,
-                                                navController = navController,
-                                                onDismiss = menuState::dismiss,
-                                            )
-
-                                        is AlbumItem ->
-                                            YouTubeAlbumMenu(
-                                                albumItem = item,
-                                                navController = navController,
-                                                onDismiss = menuState::dismiss,
-                                            )
-
-                                        is ArtistItem ->
-                                            YouTubeArtistMenu(
-                                                artist = item,
-                                                onDismiss = menuState::dismiss,
-                                            )
-
-                                        is PlaylistItem ->
-                                            YouTubePlaylistMenu(
-                                                navController = navController,
-                                                playlist = item,
-                                                coroutineScope = scope,
-                                                onDismiss = menuState::dismiss,
-                                            )
-                                    }
-                                }
-                            }
-                        ) {
-                            Icon(
-                                imageVector = Icons.Rounded.MoreVert,
-                                contentDescription = null
+                SaavnSongListItem(
+                    song = item,
+                    navController = navController,
+                    onPlay = {
+                        if (item.id == mediaMetadata?.id?.removePrefix("saavn:")) {
+                            playerConnection.player.togglePlayPause()
+                        } else {
+                            val saavnSongs = viewState.items
+                            playerConnection.playQueue(
+                                ListQueue(
+                                    title = context.getString(R.string.queue_searched_songs),
+                                    items = saavnSongs.map { it.toSaavnMediaMetadata() },
+                                    startIndex = saavnSongs.indexOf(item)
+                                ),
+                                replace = true,
                             )
+                            onDismiss()
                         }
                     },
-                    modifier = Modifier
-                        .clickable {
-                            when (item) {
-                                is SongItem -> {
-                                    if (item.id == mediaMetadata?.id) {
-                                        playerConnection.player.togglePlayPause()
-                                    } else {
-                                        val songSuggestions = viewState.items.filter { it is SongItem }
-                                        playerConnection.playQueue(
-                                            ListQueue(
-                                                title = "${context.getString(R.string.queue_searched_songs_ot)} $query",
-                                                items = songSuggestions.map { (it as SongItem).toMediaMetadata() },
-                                                startIndex = songSuggestions.indexOf(item)
-                                            ),
-                                            replace = true,
-                                        )
-                                        onDismiss()
-                                    }
-                                }
-
-                                is AlbumItem -> {
-                                    navController.navigate("album/${item.id}")
-                                    onDismiss()
-                                }
-
-                                is ArtistItem -> {
-                                    navController.navigate("artist/${item.id}")
-                                    onDismiss()
-                                }
-
-                                is PlaylistItem -> {
-                                    navController.navigate("online_playlist/${item.id}")
-                                    onDismiss()
-                                }
-                            }
-                        }
-                        .animateItem()
+                    modifier = Modifier.animateItem()
                 )
             }
 
-            if (item !is SongItem) content()
-            else {
-                SwipeToQueueBox(
-                    item = item.toMediaItem(),
-                    swipeEnabled = swipeEnabled,
-                    snackbarHostState = snackbarHostState,
-                    content = { content() },
-                )
-            }
+            SwipeToQueueBox(
+                item = item.toMediaItem(),
+                swipeEnabled = swipeEnabled,
+                snackbarHostState = snackbarHostState,
+                content = { content() },
+            )
         }
     }
     LazyColumnScrollbar(

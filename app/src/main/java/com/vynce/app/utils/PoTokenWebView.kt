@@ -4,7 +4,9 @@ import android.content.Context
 import android.webkit.JavascriptInterface
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withContext
 import kotlin.coroutines.resume
 
 class PoTokenExtractor(private val context: Context) {
@@ -22,44 +24,49 @@ class PoTokenExtractor(private val context: Context) {
         return extractFromWebView()
     }
 
-    private suspend fun extractFromWebView(): Pair<String, String>? =
-        suspendCancellableCoroutine { cont ->
-            val webView = WebView(context)
-            webView.settings.apply {
-                javaScriptEnabled = true
-                domStorageEnabled = true
-                userAgentString = "Mozilla/5.0 (Linux; Android 11) AppleWebKit/537.36"
-            }
-
-            webView.addJavascriptInterface(object {
-                @JavascriptInterface
-                fun onTokenExtracted(visitorData: String, poToken: String) {
-                    cachedToken = poToken
-                    cachedVisitorData = visitorData
-                    lastRefresh = System.currentTimeMillis()
-                    if (cont.isActive) {
-                        cont.resume(Pair(poToken, visitorData))
+    private suspend fun extractFromWebView(): Pair<String, String>? {
+        return withContext(Dispatchers.Main) {
+            suspendCancellableCoroutine { cont ->
+                try {
+                    val webView = WebView(context)
+                    webView.settings.apply {
+                        javaScriptEnabled = true
+                        domStorageEnabled = true
+                        userAgentString = "Mozilla/5.0 (Linux; Android 11) AppleWebKit/537.36"
                     }
-                    webView.post { webView.destroy() }
-                }
-            }, "Android")
-
-            webView.webViewClient = object : WebViewClient() {
-                override fun onPageFinished(view: WebView, url: String) {
-                    // Inject JS to extract visitor data + po token
-                    view.evaluateJavascript("""
-                        (function() {
-                            var yt = window.yt && window.yt.config_;
-                            if (yt) {
-                                Android.onTokenExtracted(
-                                    yt.VISITOR_DATA || '',
-                                    yt.INNERTUBE_CONTEXT_CLIENT_INFO?.poToken || ''
-                                );
-                            }
-                        })();
-                    """.trimIndent(), null)
+                    webView.addJavascriptInterface(object : Any() {
+                        @android.webkit.JavascriptInterface
+                        fun onTokenExtracted(visitorData: String, poToken: String) {
+                            cachedToken = poToken
+                            cachedVisitorData = visitorData
+                            lastRefresh = System.currentTimeMillis()
+                            if (cont.isActive) cont.resume(Pair(poToken, visitorData))
+                            webView.post { webView.destroy() }
+                        }
+                    }, "Android")
+                    webView.webViewClient = object : android.webkit.WebViewClient() {
+                        override fun onPageFinished(view: android.webkit.WebView, url: String) {
+                            view.evaluateJavascript("""
+                                (function() {
+                                    var yt = window.yt && window.yt.config_;
+                                    if (yt) {
+                                        Android.onTokenExtracted(
+                                            yt.VISITOR_DATA || '',
+                                            yt.INNERTUBE_CONTEXT_CLIENT_INFO?.poToken || ''
+                                        );
+                                    } else {
+                                        Android.onTokenExtracted('', '');
+                                    }
+                                })();
+                            """.trimIndent(), null)
+                        }
+                    }
+                    webView.loadUrl("https://music.youtube.com")
+                    cont.invokeOnCancellation { webView.post { webView.destroy() } }
+                } catch (e: Exception) {
+                    if (cont.isActive) cont.resume(null)
                 }
             }
-            webView.loadUrl("https://music.youtube.com")
         }
+    }
 }

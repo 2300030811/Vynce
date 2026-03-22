@@ -32,6 +32,7 @@ class InnerTube {
         hl = Locale.getDefault().toLanguageTag()
     )
     var visitorData: String? = null
+    var poToken: String? = null
     var dataSyncId: String? = null
     var cookie: String? = null
         set(value) {
@@ -81,10 +82,10 @@ class InnerTube {
         contentType(ContentType.Application.Json)
         headers {
             append("X-Goog-Api-Format-Version", "1")
-            append("X-YouTube-Client-Name", client.clientId /* Not a typo. The Client-Name header does contain the client id. */)
+            append("X-YouTube-Client-Name", client.clientId ?: "")
             append("X-YouTube-Client-Version", client.clientVersion)
             append("X-Origin", YouTubeClient.ORIGIN_YOUTUBE_MUSIC)
-            append("Referer", YouTubeClient.REFERER_YOUTUBE_MUSIC)
+            append("Referer", client.referer ?: YouTubeClient.REFERER_YOUTUBE_MUSIC)
             if (setLogin && client.loginSupported) {
                 cookie?.let { cookie ->
                     append("cookie", cookie)
@@ -129,6 +130,8 @@ class InnerTube {
         webPlayerPot: String?,
     ) = httpClient.post("player") {
         ytClient(client, setLogin = true)
+        parameter("alr", "yes")
+        parameter("cver", client.clientVersion)
         setBody(
             PlayerBody(
                 context = client.toContext(locale, visitorData, dataSyncId).let {
@@ -149,8 +152,10 @@ class InnerTube {
                         )
                     )
                 } else null,
-                serviceIntegrityDimensions = if (client.useWebPoTokens && webPlayerPot != null) {
-                    PlayerBody.ServiceIntegrityDimensions(webPlayerPot)
+                serviceIntegrityDimensions = if (client.useWebPoTokens) {
+                    (webPlayerPot ?: poToken)?.let { pot ->
+                        PlayerBody.ServiceIntegrityDimensions(pot)
+                    }
                 } else null
             )
         )

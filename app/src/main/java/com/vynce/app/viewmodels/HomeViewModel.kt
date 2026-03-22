@@ -1,208 +1,139 @@
 package com.vynce.app.viewmodels
 
-import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.vynce.app.constants.PlaylistFilter
-import com.vynce.app.constants.PlaylistSortType
-import com.vynce.app.db.MusicDatabase
-import com.vynce.app.db.entities.Album
-import com.vynce.app.db.entities.LocalItem
-import com.vynce.app.db.entities.Song
-import com.vynce.app.models.SimilarRecommendation
-import com.vynce.app.utils.SyncUtils
-import com.vynce.app.utils.reportException
-import com.vynce.app.utils.syncCoroutine
-import com.zionhuang.innertube.YouTube
-import com.zionhuang.innertube.models.PlaylistItem
-import com.zionhuang.innertube.models.WatchEndpoint
-import com.zionhuang.innertube.models.YTItem
-import com.zionhuang.innertube.pages.ExplorePage
-import com.zionhuang.innertube.pages.HomePage
-import com.zionhuang.innertube.utils.completed
+import com.zionhuang.jiosaavn.*
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+data class HomeState(
+    val greeting: String = "",
+    val heroSong: SaavnSong? = null,
+    val newReleases: List<SaavnPlaylist> = emptyList(),
+    val trending: List<SaavnPlaylist> = emptyList(),
+    val topArtists: List<SaavnArtist> = emptyList(),
+    val bollywood: List<SaavnPlaylist> = emptyList(),
+    val tollywood: List<SaavnPlaylist> = emptyList(),
+    val lofi: List<SaavnPlaylist> = emptyList(),
+    val romantic: List<SaavnPlaylist> = emptyList(),
+    val party: List<SaavnPlaylist> = emptyList(),
+    val punjabi: List<SaavnPlaylist> = emptyList(),
+    val english: List<SaavnPlaylist> = emptyList(),
+    val topPicks: List<SaavnPlaylist> = emptyList(),
+    val featuredAlbums: List<SaavnAlbum> = emptyList(),
+    val isLoading: Boolean = true,
+    val error: String? = null
+)
+
 @HiltViewModel
-class HomeViewModel @Inject constructor(
-    @ApplicationContext context: Context,
-    val database: MusicDatabase,
-    val syncUtils: SyncUtils
-) : ViewModel() {
-    val isRefreshing = MutableStateFlow(false)
-    val isLoading = MutableStateFlow(false)
-
-    val quickPicks = MutableStateFlow<List<Song>?>(null)
-    val forgottenFavorites = MutableStateFlow<List<Song>?>(null)
-    val keepListening = MutableStateFlow<List<LocalItem>?>(null)
-    val similarRecommendations = MutableStateFlow<List<SimilarRecommendation>?>(null)
-    val accountPlaylists = MutableStateFlow<List<PlaylistItem>?>(null)
-    val homePage = MutableStateFlow<HomePage?>(null)
-    val selectedChip = MutableStateFlow<HomePage.Chip?>(null)
-    private val previousHomePage = MutableStateFlow<HomePage?>(null)
-    val explorePage = MutableStateFlow<ExplorePage?>(null)
-    val playlists = database.playlists(PlaylistFilter.LIBRARY, PlaylistSortType.NAME, true)
-        .stateIn(viewModelScope, SharingStarted.Lazily, null)
-    val recentActivity = database.recentActivity()
-        .stateIn(viewModelScope, SharingStarted.Lazily, null)
-
-    val allLocalItems = MutableStateFlow<List<LocalItem>>(emptyList())
-    val allYtItems = MutableStateFlow<List<YTItem>>(emptyList())
-
-    private suspend fun load() {
-        isLoading.value = true
-
-        quickPicks.value = database.quickPicks()
-            .first().shuffled().take(20)
-
-        forgottenFavorites.value = database.forgottenFavorites()
-            .first().shuffled().take(20)
-
-        val fromTimeStamp = System.currentTimeMillis() - 86400000 * 7 * 2
-        val keepListeningSongs = database.mostPlayedSongs(fromTimeStamp, limit = 15, offset = 5)
-            .first().shuffled().take(10)
-        val keepListeningAlbums = database.mostPlayedAlbums(fromTimeStamp, limit = 8, offset = 2)
-            .first().filter { it.album.thumbnailUrl != null }.shuffled().take(5)
-        val keepListeningArtists = database.mostPlayedArtists(0, 1)
-            .first().filter { it.artist.artist.isYouTubeArtist && it.artist.thumbnailUrl != null }.shuffled().take(5)
-            .map { it.artist }
-        keepListening.value = (keepListeningSongs + keepListeningAlbums + keepListeningArtists).shuffled()
-
-        allLocalItems.value =
-            (quickPicks.value.orEmpty() + forgottenFavorites.value.orEmpty() + keepListening.value.orEmpty())
-                .filter { it is Song || it is Album }
-
-        if (YouTube.cookie != null) { // if logged in
-            // InnerTune way is YouTube.likedPlaylists().onSuccess { ... }
-            // Vynce uses YouTube.library("FEmusic_liked_playlists").completedL().onSuccess { ... }
-            YouTube.library("FEmusic_liked_playlists").completed().onSuccess {
-                accountPlaylists.value = it.items.filterIsInstance<PlaylistItem>()
-            }.onFailure {
-                reportException(it)
-            }
-        }
-
-        // Similar to artists
-        val artistRecommendations =
-            database.mostPlayedArtists(0, 1, limit = 10).first()
-                .filter { it.artist.artist.isYouTubeArtist }
-                .shuffled().take(3)
-                .mapNotNull {
-                    val items = mutableListOf<YTItem>()
-                    YouTube.artist(it.artist.id).onSuccess { page ->
-                        items += page.sections.getOrNull(page.sections.size - 2)?.items.orEmpty()
-                        items += page.sections.lastOrNull()?.items.orEmpty()
-                    }
-                    SimilarRecommendation(
-                        title = it.artist,
-                        items = items
-                            .shuffled()
-                            .ifEmpty { return@mapNotNull null }
-                    )
-                }
-        // Similar to songs
-        val songRecommendations =
-            database.mostPlayedSongs(fromTimeStamp, limit = 10).first()
-                .filter { it.album != null }
-                .shuffled().take(2)
-                .mapNotNull { song ->
-                    val endpoint = YouTube.next(WatchEndpoint(videoId = song.id)).getOrNull()?.relatedEndpoint
-                        ?: return@mapNotNull null
-                    val page = YouTube.related(endpoint).getOrNull() ?: return@mapNotNull null
-                    SimilarRecommendation(
-                        title = song,
-                        items = (page.songs.shuffled().take(8) +
-                                page.albums.shuffled().take(4) +
-                                page.artists.shuffled().take(4) +
-                                page.playlists.shuffled().take(4))
-                            .shuffled()
-                            .ifEmpty { return@mapNotNull null }
-                    )
-                }
-        similarRecommendations.value = (artistRecommendations + songRecommendations).shuffled()
-
-        YouTube.home().onSuccess { page ->
-            homePage.value = page
-        }.onFailure {
-            reportException(it)
-        }
-
-        YouTube.explore().onSuccess { page ->
-            explorePage.value = page
-        }.onFailure {
-            reportException(it)
-        }
-
-        syncUtils.syncRecentActivity()
-
-        allYtItems.value = similarRecommendations.value?.flatMap { it.items }.orEmpty() +
-                homePage.value?.sections?.flatMap { it.items }.orEmpty()
-
-        isLoading.value = false
-    }
-
-    private val _isLoadingMore = MutableStateFlow(false)
-    fun loadMoreYouTubeItems(continuation: String?) {
-        if (continuation == null || _isLoadingMore.value) return
-
-        viewModelScope.launch(Dispatchers.IO) {
-            _isLoadingMore.value = true
-            val nextSections = YouTube.home(continuation).getOrNull() ?: run {
-                _isLoadingMore.value = false
-                return@launch
-            }
-            homePage.value = nextSections.copy(
-                chips = homePage.value?.chips,
-                sections = homePage.value?.sections.orEmpty() + nextSections.sections
-            )
-            _isLoadingMore.value = false
-        }
-    }
-
-    fun toggleChip(chip: HomePage.Chip?) {
-        if (chip == null || chip == selectedChip.value && previousHomePage.value != null) {
-            homePage.value = previousHomePage.value
-            previousHomePage.value = null
-            selectedChip.value = null
-            return
-        }
-
-        if (selectedChip.value == null) {
-            // store the actual homepage for deselecting chips
-            previousHomePage.value = homePage.value
-        }
-        viewModelScope.launch(Dispatchers.IO) {
-            val nextSections = YouTube.home(params = chip?.endpoint?.params).getOrNull() ?: return@launch
-            homePage.value = nextSections.copy(
-                chips = homePage.value?.chips,
-                sections = nextSections.sections,
-                continuation = nextSections.continuation
-            )
-            selectedChip.value = chip
-        }
-    }
-
-    fun refresh() {
-        if (isRefreshing.value) return
-        viewModelScope.launch(syncCoroutine) {
-            isRefreshing.value = true
-            load()
-            isRefreshing.value = false
-        }
-    }
+class HomeViewModel @Inject constructor() : ViewModel() {
+    private val _state = MutableStateFlow(HomeState())
+    val state = _state.asStateFlow()
 
     init {
-        refresh()
-        viewModelScope.launch(syncCoroutine) {
-            syncUtils.tryAutoSync()
+        loadAll()
+    }
+
+    private fun getGreeting(): String {
+        val hour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
+        return when {
+            hour < 12 -> "Good morning"
+            hour < 17 -> "Good afternoon"
+            else -> "Good evening"
+        }
+    }
+
+    fun loadAll() {
+        viewModelScope.launch {
+            _state.update { it.copy(isLoading = true, greeting = getGreeting()) }
+            val saavn = JioSaavn
+            
+            // Priority Batch: Telugu, English, Hero, Artists
+            val heroSongDefer = async {
+                try {
+                    val telugu = saavn.searchSongs("trending telugu songs 2025")
+                    if (telugu.isNotEmpty()) {
+                        telugu.random()
+                    } else {
+                        saavn.searchSongs("trending english songs 2025").firstOrNull()
+                    }
+                } catch(e: Exception) { null }
+            }
+            val tollywoodDefer = async { try { saavn.searchPlaylists("tollywood hits 2025") } catch(e: Exception) { emptyList() } }
+            val englishDefer = async { try { saavn.searchPlaylists("english pop hits 2025") } catch(e: Exception) { emptyList() } }
+            
+            val artistNames = listOf(
+                "Arijit Singh", "Shreya Ghoshal", "Jubin Nautiyal",
+                "Neha Kakkar", "Diljit Dosanjh", "AP Dhillon",
+                "Badshah", "Atif Aslam"
+            )
+            val topArtistsDefer = async {
+                artistNames.mapNotNull { name ->
+                    try { saavn.searchArtists(name).firstOrNull() } catch (e: Exception) { null }
+                }
+            }
+
+            // Start fetching secondary batch now but await later
+            val newReleasesDefer = async { try { saavn.searchPlaylists("new releases hindi 2025") } catch(e: Exception) { emptyList() } }
+            val trendingDefer = async { try { saavn.searchPlaylists("trending india 2025") } catch(e: Exception) { emptyList() } }
+            val bollywoodDefer = async { try { saavn.searchPlaylists("bollywood hits 2025") } catch(e: Exception) { emptyList() } }
+            val lofiDefer = async { try { saavn.searchPlaylists("lofi chill hindi relaxing") } catch(e: Exception) { emptyList() } }
+            val romanticDefer = async { try { saavn.searchPlaylists("romantic hindi love songs") } catch(e: Exception) { emptyList() } }
+            val partyDefer = async { try { saavn.searchPlaylists("party dance hits hindi 2025") } catch(e: Exception) { emptyList() } }
+            val punjabiDefer = async { try { saavn.searchPlaylists("punjabi hits 2025") } catch(e: Exception) { emptyList() } }
+            val topPicksDefer = async { try { saavn.searchPlaylists("top picks india best of") } catch(e: Exception) { emptyList() } }
+            val albumsDefer = async { try { saavn.searchAlbums("best hindi albums 2025") } catch(e: Exception) { emptyList() } }
+
+            try {
+                // Await priority first
+                val hero = heroSongDefer.await()
+                val tollywood = tollywoodDefer.await()
+                val english = englishDefer.await()
+                val artists = topArtistsDefer.await()
+
+                _state.update { s ->
+                    s.copy(
+                        heroSong = hero,
+                        tollywood = tollywood,
+                        english = english,
+                        topArtists = artists,
+                    )
+                }
+
+                // Await rest
+                val newReleases = newReleasesDefer.await()
+                val trending = trendingDefer.await()
+                val bollywood = bollywoodDefer.await()
+                val lofi = lofiDefer.await()
+                val romantic = romanticDefer.await()
+                val party = partyDefer.await()
+                val punjabi = punjabiDefer.await()
+                val topPicks = topPicksDefer.await()
+                val albums = albumsDefer.await()
+
+                _state.update { s ->
+                    s.copy(
+                        newReleases = newReleases,
+                        trending = trending,
+                        bollywood = bollywood,
+                        featuredAlbums = albums,
+                        lofi = lofi,
+                        romantic = romantic,
+                        party = party,
+                        punjabi = punjabi,
+                        topPicks = topPicks,
+                        isLoading = false
+                    )
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("HomeVM", "Error loading sections: ${e.message}")
+                _state.update { it.copy(isLoading = false, error = e.message) }
+            }
         }
     }
 }
-

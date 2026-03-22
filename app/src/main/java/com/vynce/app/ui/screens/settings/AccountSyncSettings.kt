@@ -64,24 +64,6 @@ fun AccountSyncSettings(
             .padding(horizontal = 16.dp)
             .verticalScroll(rememberScrollState())
     ) {
-        PreferenceGroupTitle(
-            title = stringResource(R.string.account)
-        )
-
-        ElevatedCard(
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            AccountFrag(navController)
-        }
-        Spacer(modifier = Modifier.height(16.dp))
-
-        ElevatedCard(
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            AccountExtrasFrag()
-        }
-        Spacer(modifier = Modifier.height(16.dp))
-
         val (lastFmEnabled, onLastFmEnabledChange) = rememberPreference(
             key = LastFmScrobblingEnabledKey,
             defaultValue = false
@@ -121,38 +103,6 @@ fun AccountSyncSettings(
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
-
-        PreferenceGroupTitle(
-            title = stringResource(R.string.grp_sync)
-        )
-
-        ElevatedCard(
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            SyncAutoFrag()
-        }
-        Spacer(modifier = Modifier.height(16.dp))
-
-        ElevatedCard(
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            SyncManualFrag()
-        }
-        Spacer(modifier = Modifier.height(16.dp))
-
-        ElevatedCard(
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            SyncParamsFrag()
-        }
-        Spacer(modifier = Modifier.height(16.dp))
-
-        ElevatedCard(
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            SyncExtrasFrag()
-        }
         Spacer(modifier = Modifier.height(16.dp))
 
     }

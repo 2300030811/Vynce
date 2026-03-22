@@ -1,49 +1,50 @@
-package com.vynce.app.viewmodels
+package com.vynce.app.ui.screens.saavn
 
-import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.zionhuang.jiosaavn.JioSaavn
 import com.zionhuang.jiosaavn.SaavnSong
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 @HiltViewModel
-class OnlineSearchViewModel @Inject constructor(
-    savedStateHandle: SavedStateHandle,
-) : ViewModel() {
-    val query = savedStateHandle.get<String>("query")!!
+class SaavnViewModel @Inject constructor() : ViewModel() {
+
     private val _searchResults = MutableStateFlow<List<SaavnSong>>(emptyList())
     val searchResults = _searchResults.asStateFlow()
-    
+
+    private val _charts = MutableStateFlow<List<SaavnSong>>(emptyList())
+    val charts = _charts.asStateFlow()
+
     private val _isLoading = MutableStateFlow(false)
     val isLoading = _isLoading.asStateFlow()
 
     init {
-        search()
+        loadCharts()
     }
 
-    fun search() {
+    fun search(query: String) {
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                val results = withContext(Dispatchers.IO) {
-                    JioSaavn.searchSongs(query)
+                val results = JioSaavn.searchSongs(query)
+                android.util.Log.d("SaavnVM", "Search results: ${results.size} for '$query'")
+                if (results.isEmpty()) {
+                    android.util.Log.w("SaavnVM", "No results — API may be down")
                 }
                 _searchResults.value = results
             } catch (e: Exception) {
-                android.util.Log.e("OnlineSearchVM", "Search failed: ${e.message}")
+                android.util.Log.e("SaavnVM", "Search failed: ${e.message}")
             }
             _isLoading.value = false
         }
     }
 
-    fun loadMore() {
-        // Pagination not implemented for JioSaavn yet
+    private fun loadCharts() {
+        viewModelScope.launch {
+            _charts.value = JioSaavn.getCharts()
+        }
     }
 }

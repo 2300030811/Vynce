@@ -1,826 +1,367 @@
 package com.vynce.app.ui.screens
 
-import android.annotation.SuppressLint
-import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
-import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.WindowInsetsSides
-import androidx.compose.foundation.layout.asPaddingValues
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.only
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.systemBars
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyHorizontalGrid
-import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.lazy.grid.itemsIndexed
-import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.TrendingUp
-import androidx.compose.material.icons.rounded.Casino
-import androidx.compose.material.icons.rounded.History
-import androidx.compose.material.icons.rounded.Person
-import androidx.compose.material.icons.rounded.SdCard
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults.Indicator
-import androidx.compose.material3.pulltorefresh.pullToRefresh
-import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.snapshotFlow
+import androidx.compose.material.icons.rounded.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import coil3.compose.AsyncImage
-import com.vynce.app.LocalDatabase
-import com.vynce.app.LocalMenuState
+import coil3.compose.AsyncImagePainter
+import coil3.compose.SubcomposeAsyncImage
+import coil3.compose.rememberAsyncImagePainter
+import coil3.request.ImageRequest
 import com.vynce.app.LocalPlayerAwareWindowInsets
 import com.vynce.app.LocalPlayerConnection
-import com.vynce.app.R
-import com.vynce.app.constants.GridThumbnailHeight
-import com.vynce.app.constants.ListItemHeight
-import com.vynce.app.constants.ListThumbnailSize
-import com.vynce.app.constants.LocalLibraryEnableKey
-import com.vynce.app.constants.ThumbnailCornerRadius
-import com.vynce.app.db.entities.Album
-import com.vynce.app.db.entities.Artist
-import com.vynce.app.db.entities.LocalItem
-import com.vynce.app.db.entities.Playlist
-import com.vynce.app.db.entities.Song
-import com.vynce.app.extensions.togglePlayPause
-import com.vynce.app.models.toMediaMetadata
-import com.vynce.app.playback.queues.ListQueue
-import com.vynce.app.playback.queues.YouTubeAlbumRadio
-import com.vynce.app.playback.queues.YouTubeQueue
-import com.vynce.app.ui.component.ChipsRow
-import com.vynce.app.ui.component.HideOnScrollFAB
-import com.vynce.app.ui.component.LazyColumnScrollbar
-import com.vynce.app.ui.component.NavigationTile
-import com.vynce.app.ui.component.NavigationTitle
-import com.vynce.app.ui.component.ScrollToTopManager
-import com.vynce.app.ui.component.items.AlbumGridItem
-import com.vynce.app.ui.component.items.ArtistGridItem
-import com.vynce.app.ui.component.items.SongGridItem
-import com.vynce.app.ui.component.items.SongListItem
-import com.vynce.app.ui.component.items.YouTubeGridItem
-import com.vynce.app.ui.component.shimmer.GridItemPlaceHolder
-import com.vynce.app.ui.component.shimmer.ShimmerHost
-import com.vynce.app.ui.component.shimmer.TextPlaceholder
-import com.vynce.app.ui.menu.AlbumMenu
-import com.vynce.app.ui.menu.ArtistMenu
-import com.vynce.app.ui.menu.SongMenu
-import com.vynce.app.ui.menu.YouTubeAlbumMenu
-import com.vynce.app.ui.menu.YouTubeArtistMenu
-import com.vynce.app.ui.menu.YouTubePlaylistMenu
-import com.vynce.app.ui.menu.YouTubeSongMenu
-import com.vynce.app.ui.utils.SnapLayoutInfoProvider
-import com.vynce.app.utils.rememberPreference
+import com.vynce.app.utils.playJioSaavnSong
+import com.vynce.app.viewmodels.HomeState
 import com.vynce.app.viewmodels.HomeViewModel
-import com.zionhuang.innertube.models.AlbumItem
-import com.zionhuang.innertube.models.ArtistItem
-import com.zionhuang.innertube.models.PlaylistItem
-import com.zionhuang.innertube.models.SongItem
-import com.zionhuang.innertube.models.WatchEndpoint
-import com.zionhuang.innertube.models.YTItem
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.launch
-import kotlin.math.min
-import kotlin.math.roundToInt
-import kotlin.random.Random
+import com.zionhuang.jiosaavn.*
 
-@SuppressLint("UnusedBoxWithConstraintsScope")
-@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     navController: NavController,
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
-    val menuState = LocalMenuState.current
-    val database = LocalDatabase.current
-    val density = LocalDensity.current
-    val playerConnection = LocalPlayerConnection.current ?: return
-    val haptic = LocalHapticFeedback.current
+    val state by viewModel.state.collectAsState()
+    val playerConnection = LocalPlayerConnection.current
 
-    val isPlaying by playerConnection.isPlaying.collectAsState()
-    val mediaMetadata by playerConnection.mediaMetadata.collectAsState()
-
-    val quickPicks by viewModel.quickPicks.collectAsState()
-    val forgottenFavorites by viewModel.forgottenFavorites.collectAsState()
-    val keepListening by viewModel.keepListening.collectAsState()
-    val similarRecommendations by viewModel.similarRecommendations.collectAsState()
-    val accountPlaylists by viewModel.accountPlaylists.collectAsState()
-    val homePage by viewModel.homePage.collectAsState()
-    val explorePage by viewModel.explorePage.collectAsState()
-
-    val selectedChip by viewModel.selectedChip.collectAsState()
-
-    val allLocalItems by viewModel.allLocalItems.collectAsState()
-    val allYtItems by viewModel.allYtItems.collectAsState()
-
-    val isLoading by viewModel.isLoading.collectAsState()
-    val isRefreshing by viewModel.isRefreshing.collectAsState()
-    val pullRefreshState = rememberPullToRefreshState()
-
-    val quickPicksLazyGridState = rememberLazyGridState()
-    val forgottenFavoritesLazyGridState = rememberLazyGridState()
-
-    val localLibEnable by rememberPreference(LocalLibraryEnableKey, defaultValue = true)
-
-    val scope = rememberCoroutineScope()
-    val lazylistState = rememberLazyListState()
-
-    LaunchedEffect(Unit) {
-        snapshotFlow { lazylistState.layoutInfo.visibleItemsInfo.lastOrNull()?.index }
-            .collect { lastVisibleIndex ->
-                val len = lazylistState.layoutInfo.totalItemsCount
-                if (lastVisibleIndex != null && lastVisibleIndex >= len - 3) {
-                    viewModel.loadMoreYouTubeItems(homePage?.continuation)
-                }
-            }
-    }
-
-    if (selectedChip != null) {
-        BackHandler {
-            // if a chip is selected, go back to the normal homepage first
-            viewModel.toggleChip(selectedChip)
-        }
-    }
-
-
-    val localGridItem: @Composable (LocalItem, String) -> Unit = { it, source ->
-        when (it) {
-            is Song -> SongGridItem(
-                song = it,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .combinedClickable(
-                        onClick = {
-                            if (it.id == mediaMetadata?.id) {
-                                playerConnection.player.togglePlayPause()
-                            } else {
-                                val song = it.toMediaMetadata()
-                                if (song.isLocal) {
-                                    playerConnection.playQueue(
-                                        ListQueue(
-                                            title = source,
-                                            items = listOf(song)
-                                        )
-                                    )
-                                } else {
-                                    playerConnection.playQueue(YouTubeQueue.radio(song), isRadio = true)
-                                }
-                            }
-                        },
-                        onLongClick = {
-                            haptic.performHapticFeedback(
-                                HapticFeedbackType.LongPress,
-                            )
-                            menuState.show {
-                                SongMenu(
-                                    originalSong = it,
-                                    navController = navController,
-                                    onDismiss = menuState::dismiss,
-                                )
-                            }
-                        },
-                    ),
-                isActive = it.id == mediaMetadata?.id,
-                isPlaying = isPlaying,
-            )
-
-            is Album -> AlbumGridItem(
-                album = it,
-                isActive = it.id == mediaMetadata?.album?.id,
-                isPlaying = isPlaying,
-                coroutineScope = scope,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .combinedClickable(
-                        onClick = {
-                            navController.navigate("album/${it.id}")
-                        },
-                        onLongClick = {
-                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                            menuState.show {
-                                AlbumMenu(
-                                    originalAlbum = it,
-                                    navController = navController,
-                                    onDismiss = menuState::dismiss
-                                )
-                            }
-                        }
-                    )
-            )
-
-            is Artist -> ArtistGridItem(
-                artist = it,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .combinedClickable(
-                        onClick = {
-                            navController.navigate("artist/${it.id}")
-                        },
-                        onLongClick = {
-                            haptic.performHapticFeedback(
-                                HapticFeedbackType.LongPress,
-                            )
-                            menuState.show {
-                                ArtistMenu(
-                                    originalArtist = it,
-                                    coroutineScope = scope,
-                                    onDismiss = menuState::dismiss,
-                                )
-                            }
-                        },
-                    ),
-            )
-
-            is Playlist -> {}
-        }
-    }
-
-    val ytGridItem: @Composable (YTItem) -> Unit = { item ->
-        YouTubeGridItem(
-            item = item,
-            isActive = item.id in listOf(mediaMetadata?.album?.id, mediaMetadata?.id),
-            isPlaying = isPlaying,
-            coroutineScope = scope,
-            thumbnailRatio = 1f,
-            modifier = Modifier
-                .combinedClickable(
-                    onClick = {
-                        when (item) {
-                            is SongItem -> playerConnection.playQueue(
-                                YouTubeQueue(
-                                    item.endpoint ?: WatchEndpoint(
-                                        videoId = item.id
-                                    ), item.toMediaMetadata()
-                                ),
-                                isRadio = true,
-                            )
-
-                            is AlbumItem -> navController.navigate("album/${item.id}")
-                            is ArtistItem -> navController.navigate("artist/${item.id}")
-                            is PlaylistItem -> navController.navigate("online_playlist/${item.id}")
-                        }
-                    },
-                    onLongClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        menuState.show {
-                            when (item) {
-                                is SongItem -> YouTubeSongMenu(
-                                    song = item,
-                                    navController = navController,
-                                    onDismiss = menuState::dismiss
-                                )
-
-                                is AlbumItem -> YouTubeAlbumMenu(
-                                    albumItem = item,
-                                    navController = navController,
-                                    onDismiss = menuState::dismiss
-                                )
-
-                                is ArtistItem -> YouTubeArtistMenu(
-                                    artist = item,
-                                    onDismiss = menuState::dismiss
-                                )
-
-                                is PlaylistItem -> YouTubePlaylistMenu(
-                                    navController = navController,
-                                    playlist = item,
-                                    coroutineScope = scope,
-                                    onDismiss = menuState::dismiss
-                                )
-                            }
-                        }
-                    }
-                )
-        )
-    }
-
-    LaunchedEffect(quickPicks) {
-        quickPicksLazyGridState.scrollToItem(0)
-    }
-
-    LaunchedEffect(forgottenFavorites) {
-        forgottenFavoritesLazyGridState.scrollToItem(0)
-    }
-
-    BoxWithConstraints(
-        modifier = Modifier
-            .fillMaxSize()
-            .pullToRefresh(
-                state = pullRefreshState,
-                isRefreshing = isRefreshing,
-                onRefresh = viewModel::refresh
-            ),
-        contentAlignment = Alignment.TopStart
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = LocalPlayerAwareWindowInsets.current.asPaddingValues()
     ) {
-        val listThumbnailSize = (ListThumbnailSize.value * density.density).roundToInt()
-
-        val horizontalLazyGridItemWidthFactor = if (maxWidth * 0.475f >= 320.dp) 0.475f else 0.9f
-        val horizontalLazyGridItemWidth = maxWidth * horizontalLazyGridItemWidthFactor
-        val quickPicksSnapLayoutInfoProvider = remember(quickPicksLazyGridState) {
-            SnapLayoutInfoProvider(
-                lazyGridState = quickPicksLazyGridState,
-                positionInLayout = { layoutSize, itemSize ->
-                    (layoutSize * horizontalLazyGridItemWidthFactor / 2f - itemSize / 2f)
+        // ── HEADER ──────────────────────────────────────
+        item {
+            Row(
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("${state.greeting},", style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("Vynce", style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Bold)
                 }
-            )
-        }
-        val forgottenFavoritesSnapLayoutInfoProvider = remember(forgottenFavoritesLazyGridState) {
-            SnapLayoutInfoProvider(
-                lazyGridState = forgottenFavoritesLazyGridState,
-                positionInLayout = { layoutSize, itemSize ->
-                    (layoutSize * horizontalLazyGridItemWidthFactor / 2f - itemSize / 2f)
-                }
-            )
+            }
         }
 
-        ScrollToTopManager(navController, lazylistState)
-        LazyColumn(
-            state = lazylistState,
-            contentPadding = LocalPlayerAwareWindowInsets.current.asPaddingValues()
-        ) {
+        // ── QUICK ACTIONS ────────────────────────────────
+        item {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                listOf(
+                    Triple(Icons.Rounded.History, "History", "history"),
+                    Triple(Icons.Rounded.BarChart, "Stats", Screens.Stats.route),
+                    Triple(Icons.Rounded.FolderOpen, "Folders", Screens.Folders.route),
+                    Triple(Icons.Rounded.AudioFile, "Local", Screens.Songs.route)
+                ).forEach { (icon, label, route) ->
+                    QuickActionChip(icon, label, modifier = Modifier.weight(1f)) { 
+                        navController.navigate(route) 
+                    }
+                }
+            }
+        }
+
+        // ── MOOD CHIPS ───────────────────────────────────
+        item {
+            LazyRow(
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                val moods = listOf("Trending","Romantic","Party","Lofi","Bollywood","Tollywood","English","Punjabi")
+                items(moods) { mood ->
+                    FilterChip(
+                        selected = false, 
+                        onClick = { navController.navigate("search/$mood") }, 
+                        label = { Text(mood) },
+                        colors = FilterChipDefaults.filterChipColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                    )
+                }
+            }
+        }
+
+        // ── HERO SECTION ─────────────────────────────────
+        state.heroSong?.let { heroSong ->
             item {
-                Row(
+                Box(
                     modifier = Modifier
-                        .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Horizontal))
-                        .padding(horizontal = 12.dp, vertical = 6.dp)
                         .fillMaxWidth()
-                        .animateItem()
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                        .height(180.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .clickable { playJioSaavnSong(heroSong, playerConnection) }
                 ) {
-                    NavigationTile(
-                        title = stringResource(R.string.history),
-                        icon = Icons.Rounded.History,
-                        onClick = { navController.navigate("history") },
-                        modifier = Modifier.weight(1f)
+                    AsyncImage(
+                        model = ImageRequest.Builder(LocalContext.current)
+                            .data(heroSong.image.replace("http://","https://"))
+                            .build(),
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize()
                     )
-
-                    NavigationTile(
-                        title = stringResource(R.string.stats),
-                        icon = Icons.AutoMirrored.Rounded.TrendingUp,
-                        onClick = { navController.navigate("stats") },
-                        modifier = Modifier.weight(1f)
-                    )
-
-                    if (localLibEnable) {
-                        NavigationTile(
-                            title = stringResource(R.string.scanner_local_title),
-                            icon = Icons.Rounded.SdCard,
-                            onClick = {
-                                navController.navigate("settings/local")
-                            },
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-
-                    NavigationTile(
-                        title = stringResource(R.string.account),
-                        icon = Icons.Rounded.Person,
-                        onClick = {
-                            navController.navigate("account")
-                        },
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-            }
-
-            item {
-                ChipsRow(
-                    chips = homePage?.chips?.mapNotNull { it to it.title } ?: emptyList(),
-                    currentValue = selectedChip,
-                    onValueUpdate = {
-                        viewModel.toggleChip(it)
-                    }
-                )
-            }
-
-
-
-            quickPicks?.takeIf { it.isNotEmpty() }?.let { quickPicks ->
-                item {
-                    NavigationTitle(
-                        title = stringResource(R.string.quick_picks),
-                        modifier = Modifier.animateItem()
-                    )
-                }
-
-                item {
-                    LazyHorizontalGrid(
-                        state = quickPicksLazyGridState,
-                        rows = GridCells.Fixed(4),
-                        flingBehavior = rememberSnapFlingBehavior(quickPicksSnapLayoutInfoProvider),
-                        contentPadding = WindowInsets.systemBars
-                            .only(WindowInsetsSides.Horizontal)
-                            .asPaddingValues(),
+                    Box(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .height(ListItemHeight * 4)
-                            .animateItem()
-                    ) {
-                        items(
-                            items = quickPicks,
-                            key = { it.id }
-                        ) { originalSong ->
-                            SongListItem(
-                                song = originalSong,
-                                navController = navController,
-
-                                isActive = originalSong.id == mediaMetadata?.id,
-                                isPlaying = isPlaying,
-                                inSelectMode = null,
-                                isSelected = false,
-                                onSelectedChange = {},
-                                swipeEnabled = false,
-
-                                thumbnailSize = listThumbnailSize,
-                                onPlay = {
-                                    playerConnection.playQueue(
-                                        YouTubeQueue.radio(originalSong.toMediaMetadata()),
-                                        isRadio = true
-                                    )
-                                },
-                                modifier = Modifier.width(horizontalLazyGridItemWidth)
-                            )
-                        }
-                    }
-                }
-            }
-
-            forgottenFavorites?.takeIf { it.isNotEmpty() }?.let { forgottenFavorites ->
-                item {
-                    NavigationTitle(
-                        title = stringResource(R.string.forgotten_favorites),
-                        modifier = Modifier.animateItem()
-                    )
-                }
-
-                item {
-                    val queueTitle = stringResource(R.string.forgotten_favorites)
-                    // take min in case list size is less than 4
-                    val rows = min(4, forgottenFavorites.size)
-                    LazyHorizontalGrid(
-                        state = forgottenFavoritesLazyGridState,
-                        rows = GridCells.Fixed(rows),
-                        flingBehavior = rememberSnapFlingBehavior(forgottenFavoritesSnapLayoutInfoProvider),
-                        contentPadding = WindowInsets.systemBars
-                            .only(WindowInsetsSides.Horizontal)
-                            .asPaddingValues(),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(ListItemHeight * rows)
-                            .animateItem()
-                    ) {
-                        itemsIndexed(
-                            items = forgottenFavorites,
-                            key = { _, song -> song.id }
-                        ) { index, originalSong ->
-                            SongListItem(
-                                song = originalSong,
-                                navController = navController,
-
-                                isActive = originalSong.id == mediaMetadata?.id,
-                                isPlaying = isPlaying,
-                                inSelectMode = null,
-                                isSelected = false,
-                                onSelectedChange = {},
-                                swipeEnabled = false,
-
-                                thumbnailSize = listThumbnailSize,
-                                onPlay = {
-                                    playerConnection.playQueue(
-                                        ListQueue(
-                                            title = queueTitle,
-                                            items = forgottenFavorites.map { it.toMediaMetadata() },
-                                            startIndex = index
-                                        )
-                                    )
-                                },
-                                modifier = Modifier.width(horizontalLazyGridItemWidth)
-                            )
-                        }
-                    }
-                }
-            }
-
-            keepListening?.takeIf { it.isNotEmpty() }?.let { keepListening ->
-                item {
-                    NavigationTitle(
-                        title = stringResource(R.string.keep_listening),
-                        modifier = Modifier.animateItem()
-                    )
-                }
-
-                item {
-                    val rows = if (keepListening.size > 6) 2 else 1
-                    LazyHorizontalGrid(
-                        state = rememberLazyGridState(),
-                        rows = GridCells.Fixed(rows),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height((GridThumbnailHeight + 24.dp + with(LocalDensity.current) {
-                                MaterialTheme.typography.bodyLarge.lineHeight.toDp() * 2 +
-                                        MaterialTheme.typography.bodyMedium.lineHeight.toDp() * 2
-                            }) * rows)
-                            .animateItem()
-                    ) {
-                        items(keepListening) {
-                            localGridItem(it, stringResource(R.string.keep_listening))
-                        }
-                    }
-                }
-            }
-
-            accountPlaylists?.takeIf { it.isNotEmpty() }?.let { accountPlaylists ->
-                item {
-                    NavigationTitle(
-                        title = stringResource(R.string.your_youtube_playlists),
-                        onClick = {
-                            navController.navigate("account")
-                        },
-                        modifier = Modifier.animateItem()
-                    )
-                }
-
-                item {
-                    LazyRow(
-                        contentPadding = WindowInsets.systemBars
-                            .only(WindowInsetsSides.Horizontal)
-                            .asPaddingValues(),
-                        modifier = Modifier.animateItem()
-                    ) {
-                        items(
-                            items = accountPlaylists,
-                            key = { it.id },
-                        ) { item ->
-                            ytGridItem(item)
-                        }
-                    }
-                }
-            }
-
-            similarRecommendations?.forEach {
-                item {
-                    NavigationTitle(
-                        label = stringResource(R.string.similar_to),
-                        title = it.title.title,
-                        thumbnail = it.title.thumbnailUrl?.let { thumbnailUrl ->
-                            {
-                                val shape =
-                                    if (it.title is Artist) CircleShape else RoundedCornerShape(
-                                        ThumbnailCornerRadius
-                                    )
-                                AsyncImage(
-                                    model = thumbnailUrl,
-                                    contentDescription = null,
-                                    modifier = Modifier
-                                        .size(ListThumbnailSize)
-                                        .clip(shape)
+                            .fillMaxSize()
+                            .background(
+                                Brush.verticalGradient(
+                                    colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.8f)),
+                                    startY = 100f
                                 )
-                            }
-                        },
-                        onClick = {
-                            when (it.title) {
-                                is Song -> navController.navigate("album/${it.title.album!!.id}")
-                                is Album -> navController.navigate("album/${it.title.id}")
-                                is Artist -> navController.navigate("artist/${it.title.id}")
-                                is Playlist -> {}
-                            }
-                        },
-                        modifier = Modifier.animateItem()
-                    )
-                }
-
-                item {
-                    LazyRow(
-                        contentPadding = WindowInsets.systemBars
-                            .only(WindowInsetsSides.Horizontal)
-                            .asPaddingValues(),
-                        modifier = Modifier.animateItem()
-                    ) {
-                        items(it.items) { item ->
-                            ytGridItem(item)
-                        }
-                    }
-                }
-            }
-
-            homePage?.sections?.forEach {
-                item {
-                    NavigationTitle(
-                        title = it.title,
-                        label = it.label,
-                        thumbnail = it.thumbnail?.let { thumbnailUrl ->
-                            {
-                                val shape =
-                                    if (it.endpoint?.isArtistEndpoint == true) CircleShape else RoundedCornerShape(
-                                        ThumbnailCornerRadius
-                                    )
-                                AsyncImage(
-                                    model = thumbnailUrl,
-                                    contentDescription = null,
-                                    modifier = Modifier
-                                        .size(ListThumbnailSize)
-                                        .clip(shape)
-                                )
-                            }
-                        },
-                        onClick = it.endpoint?.browseId?.let { browseId ->
-                            {
-                                if (browseId == "FEmusic_moods_and_genres")
-                                    navController.navigate("mood_and_genres")
-                                else
-                                    navController.navigate("browse/$browseId")
-                            }
-                        },
-                        modifier = Modifier.animateItem()
-                    )
-                }
-
-                item {
-                    LazyRow(
-                        contentPadding = WindowInsets.systemBars
-                            .only(WindowInsetsSides.Horizontal)
-                            .asPaddingValues(),
-                        modifier = Modifier.animateItem()
-                    ) {
-                        items(it.items) { item ->
-                            ytGridItem(item)
-                        }
-                    }
-                }
-            }
-
-            if (homePage?.continuation != null && homePage?.sections?.isNotEmpty() == true) {
-                item {
-                    ShimmerHost(
-                        modifier = Modifier.animateItem()
-                    ) {
-                        TextPlaceholder(
-                            height = 36.dp,
-                            modifier = Modifier
-                                .padding(12.dp)
-                                .width(250.dp),
-                        )
-                        LazyRow {
-                            items(4) {
-                                GridItemPlaceHolder()
-                            }
-                        }
-                    }
-                }
-            }
-
-            explorePage?.moodAndGenres?.let { moodAndGenres ->
-                item {
-                    NavigationTitle(
-                        title = stringResource(R.string.mood_and_genres),
-                        onClick = {
-                            navController.navigate("mood_and_genres")
-                        },
-                        modifier = Modifier.animateItem()
-                    )
-                }
-                item {
-                    LazyHorizontalGrid(
-                        rows = GridCells.Fixed(4),
-                        contentPadding = PaddingValues(6.dp),
-                        modifier = Modifier
-                            .height((MoodAndGenresButtonHeight + 12.dp) * 4 + 12.dp)
-                            .animateItem()
-                    ) {
-                        items(moodAndGenres) {
-                            MoodAndGenresButton(
-                                title = it.title,
-                                onClick = {
-                                    navController.navigate("youtube_browse/${it.endpoint.browseId}?params=${it.endpoint.params}")
-                                },
-                                modifier = Modifier
-                                    .padding(6.dp)
-                                    .width(180.dp)
                             )
-                        }
-                    }
-                }
-            }
-
-            if (isLoading) {
-                item {
-                    ShimmerHost(
-                        modifier = Modifier.animateItem()
+                    )
+                    Column(
+                        modifier = Modifier
+                            .align(Alignment.BottomStart)
+                            .padding(16.dp)
                     ) {
-                        TextPlaceholder(
-                            height = 36.dp,
-                            modifier = Modifier
-                                .padding(12.dp)
-                                .width(250.dp),
+                        Text(
+                            text = heroSong.name,
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
-                        LazyRow {
-                            items(4) {
-                                GridItemPlaceHolder()
-                            }
-                        }
+                        Text(
+                            text = heroSong.primaryArtists,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Color.White.copy(alpha = 0.8f),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
                     }
                 }
             }
         }
-        LazyColumnScrollbar(
-            state = lazylistState,
+
+        // ── SECTIONS ─────────────────────────────────────
+        val sectionData = listOf(
+            Triple("Tollywood Hits", state.tollywood, "tollywood hits 2025 telugu"),
+            // Artists & English Charts injected below
+            Triple("New Releases", state.newReleases, "new hindi songs 2025"),
+            Triple("Trending Now", state.trending, "trending hindi songs"),
+            // Albums injected below
+            Triple("Bollywood Hits", state.bollywood, "bollywood hits 2025"),
+            Triple("Romantic Hits", state.romantic, "romantic hindi love songs"),
+            Triple("Lofi & Chill", state.lofi, "lofi chill hindi"),
+            Triple("Party Anthems", state.party, "party dance hits hindi 2025"),
+            Triple("Punjabi Hits", state.punjabi, "punjabi hits 2025"),
+            Triple("Top Picks", state.topPicks, "top picks india 2025")
         )
 
-        HideOnScrollFAB(
-            visible = allLocalItems.isNotEmpty() || allYtItems.isNotEmpty(),
-            lazyListState = lazylistState,
-            icon = Icons.Rounded.Casino,
-            onClick = {
-                val local = when {
-                    allLocalItems.isNotEmpty() && allYtItems.isNotEmpty() -> Random.nextFloat() < 0.5
-                    allLocalItems.isNotEmpty() -> true
-                    else -> false
+        sectionData.forEachIndexed { index, (title, list, query) ->
+            if (list.isNotEmpty()) {
+                item { 
+                    SectionHeader(
+                        title = title, 
+                        showSeeAll = index % 2 == 0,
+                        onSeeAll = { navController.navigate("search/$query") }
+                    ) 
                 }
-                if (local) {
-                    when (val luckyItem = allLocalItems.random()) {
-                        is Song -> playerConnection.playQueue(
-                            YouTubeQueue.radio(luckyItem.toMediaMetadata()),
-                            isRadio = true
-                        )
-
-                        is Album -> {
-                            scope.launch(Dispatchers.IO) {
-                                val songs = database.albumSongs(luckyItem.id).first()
-                                playerConnection.playQueue(
-                                    ListQueue(
-                                        title = luckyItem.title,
-                                        items = songs.map(Song::toMediaMetadata)
-                                    )
-                                )
-                            }
-                        }
-                        // not possible, already filtered out
-                        is Artist -> {}
-                        is Playlist -> {}
+                item { 
+                    val cardWidth = if (title in listOf("New Releases", "Trending Now", "Top Picks")) 160.dp else 150.dp
+                    HorizontalPlaylistRow(list, cardWidth = cardWidth) { 
+                        navController.navigate("search/${it.name}") 
+                    } 
+                }
+            }
+            
+            // Reordered Injections:
+            if (index == 0 && state.topArtists.isNotEmpty()) {
+                item { SectionHeader("Top Artists", showSeeAll = true, onSeeAll = { navController.navigate("search/top hindi artists") }) }
+                item {
+                    LazyRow(
+                        contentPadding = PaddingValues(horizontal = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        items(state.topArtists) { artist -> ArtistCard(artist) }
                     }
-                } else {
-                    when (val luckyItem = allYtItems.random()) {
-                        is SongItem -> playerConnection.playQueue(
-                            YouTubeQueue.radio(luckyItem.toMediaMetadata()),
-                            isRadio = true
-                        )
-
-                        is AlbumItem -> playerConnection.playQueue(
-                            YouTubeAlbumRadio(luckyItem.playlistId),
-                            isRadio = true
-                        )
-
-                        is ArtistItem -> luckyItem.radioEndpoint?.let {
-                            playerConnection.playQueue(YouTubeQueue(it), isRadio = true)
-                        }
-
-                        is PlaylistItem -> luckyItem.playEndpoint?.let {
-                            playerConnection.playQueue(YouTubeQueue(it), isRadio = true)
-                        }
+                }
+                
+                // English right after artists
+                if (state.english.isNotEmpty()) {
+                    item { SectionHeader("English Charts", showSeeAll = true, onSeeAll = { navController.navigate("search/english pop hits 2025") }) }
+                    item { HorizontalPlaylistRow(state.english) { navController.navigate("search/${it.name}") } }
+                }
+            }
+            if (index == 2 && state.featuredAlbums.isNotEmpty()) {
+                item { SectionHeader("Featured Albums", showSeeAll = true, onSeeAll = { navController.navigate("search/best hindi albums 2025") }) }
+                item {
+                    LazyRow(
+                        contentPadding = PaddingValues(horizontal = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        items(state.featuredAlbums) { album -> AlbumCard(album) { navController.navigate("search/${album.name}") } }
                     }
                 }
             }
-        )
+        }
 
-        Indicator(
-            isRefreshing = isRefreshing,
-            state = pullRefreshState,
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .padding(LocalPlayerAwareWindowInsets.current.asPaddingValues()),
-        )
+        // ── LOADING ──────────────────────────────────────
+        if (state.isLoading && state.heroSong == null) {
+            item {
+                Box(Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                }
+            }
+        }
+        
+        item { Spacer(Modifier.height(100.dp)) }
     }
 }
 
+@Composable
+fun SectionHeader(title: String, showSeeAll: Boolean = false, onSeeAll: (() -> Unit)? = null) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        if (showSeeAll) {
+            Text(
+                text = "See all →",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.clickable { onSeeAll?.invoke() }
+            )
+        }
+    }
+}
+
+@Composable
+fun HorizontalPlaylistRow(playlists: List<SaavnPlaylist>, cardWidth: Dp = 150.dp, onClick: (SaavnPlaylist) -> Unit) {
+    LazyRow(
+        contentPadding = PaddingValues(horizontal = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        items(playlists) { playlist ->
+            SaavnPlaylistCard(playlist = playlist, width = cardWidth, onClick = { onClick(playlist) })
+        }
+    }
+}
+
+@Composable
+fun SaavnPlaylistCard(playlist: SaavnPlaylist, width: Dp = 150.dp, onClick: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .width(width)
+            .clickable(onClick = onClick)
+    ) {
+        AsyncImage(
+            model = ImageRequest.Builder(LocalContext.current)
+                .data(playlist.image.replace("http://","https://"))
+                .build(),
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier
+                .size(width)
+                .clip(RoundedCornerShape(12.dp))
+        )
+        Spacer(Modifier.height(8.dp))
+        Text(playlist.name, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text("${playlist.songCount} songs", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    }
+}
+
+@Composable
+fun ArtistAvatar(name: String, imageUrl: String?, modifier: Modifier = Modifier) {
+    val initial = name.firstOrNull()?.uppercaseChar()?.toString() ?: "?"
+    val colors = listOf(0xFF9B72F8, 0xFF7B52D8, 0xFF5B32B8, 0xFFB892FF, 0xFF6A4FC8)
+    val bgColor = Color(colors[name.length % colors.size])
+
+    val validUrl = imageUrl?.replace("http://", "https://")
+        ?.takeIf { it.isNotBlank() && it.startsWith("https://") }
+
+    SubcomposeAsyncImage(
+        model = validUrl,
+        contentDescription = name,
+        modifier = modifier.clip(CircleShape),
+        contentScale = ContentScale.Crop,
+        error = {
+            Box(
+                modifier = Modifier.fillMaxSize().background(bgColor),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(initial, style = MaterialTheme.typography.titleLarge,
+                    color = Color.White, fontWeight = FontWeight.Bold)
+            }
+        }
+    )
+}
+
+@Composable
+fun ArtistCard(artist: SaavnArtist) {
+    Column(
+        modifier = Modifier.width(80.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        ArtistAvatar(name = artist.name, imageUrl = artist.image, modifier = Modifier.size(80.dp))
+        Spacer(Modifier.height(6.dp))
+        Text(artist.name, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
+    }
+}
+
+@Composable
+fun AlbumCard(album: SaavnAlbum, onClick: () -> Unit) {
+    Column(modifier = Modifier.width(170.dp).clickable(onClick = onClick)) {
+        AsyncImage(
+            model = ImageRequest.Builder(LocalContext.current).data(album.image.replace("http://","https://")).build(),
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.size(170.dp).clip(RoundedCornerShape(12.dp))
+        )
+        Spacer(Modifier.height(8.dp))
+        Text(album.name, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(album.artists, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    }
+}
+
+@Composable
+fun QuickActionChip(icon: ImageVector, label: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+        modifier = modifier.height(48.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
+        ) {
+            Icon(icon, null, modifier = Modifier.size(20.dp))
+            Spacer(Modifier.width(6.dp))
+            Text(label, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+        }
+    }
+}

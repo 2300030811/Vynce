@@ -220,6 +220,7 @@ class PlayerConnection(
 
     fun softKillPlayer() {
         Log.i(TAG, "Stopping player and uninitializing queue")
+        player.stop()
         player.clearMediaItems()
         service.deInitQueue()
     }

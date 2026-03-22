@@ -197,7 +197,9 @@ fun AddToPlaylistDialog(
                             if (!playlist.playlist.isLocal) {
                                 playlist.playlist.browseId?.let { plist ->
                                     songIds?.forEach {
-                                        YouTube.addToPlaylist(plist, it)
+                                        if (!it.startsWith("saavn:")) {
+                                            YouTube.addToPlaylist(plist, it)
+                                        }
                                     }
                                 }
                             }

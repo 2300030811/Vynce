@@ -16,6 +16,7 @@ import android.content.Intent
 import android.database.SQLException
 import android.media.audiofx.AudioEffect
 import android.net.ConnectivityManager
+import android.net.Uri
 import android.os.Binder
 import android.util.Log
 import android.widget.Toast
@@ -47,6 +48,7 @@ import androidx.media3.datasource.cache.SimpleCache
 import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
+import com.vynce.app.utils.YTPlayerUtils
 import androidx.media3.exoplayer.analytics.AnalyticsListener
 import androidx.media3.exoplayer.analytics.PlaybackStats
 import androidx.media3.exoplayer.analytics.PlaybackStatsListener
@@ -90,9 +92,12 @@ import com.vynce.app.constants.SkipSilenceKey
 import com.vynce.app.constants.StopMusicOnTaskClearKey
 import com.vynce.app.constants.minPlaybackDurKey
 import com.vynce.app.db.MusicDatabase
+import com.vynce.app.db.entities.ArtistEntity
 import com.vynce.app.db.entities.Event
 import com.vynce.app.db.entities.FormatEntity
 import com.vynce.app.db.entities.RelatedSongMap
+import com.vynce.app.db.entities.Song
+import com.vynce.app.db.entities.SongEntity
 import com.vynce.app.di.AppModule.PlayerCache
 import com.vynce.app.di.DownloadCache
 import com.vynce.app.extensions.SilentHandler
@@ -109,24 +114,8 @@ import com.vynce.app.models.MultiQueueObject
 import com.vynce.app.models.toMediaMetadata
 import com.vynce.app.playback.queues.ListQueue
 import com.vynce.app.playback.queues.Queue
-import com.vynce.app.playback.queues.YouTubeQueue
-import com.vynce.app.utils.CoilBitmapLoader
-import com.vynce.app.utils.LastFmScrobbler
-import com.vynce.app.utils.NetworkConnectivityObserver
-import com.vynce.app.utils.PoTokenExtractor
-import com.vynce.app.utils.SyncUtils
-import com.vynce.app.utils.YTPlayerUtils
-import com.vynce.app.utils.dataStore
-import com.vynce.app.utils.enumPreference
-import com.vynce.app.utils.get
-import com.vynce.app.utils.playerCoroutine
-import com.vynce.app.utils.reportException
-import com.google.common.util.concurrent.MoreExecutors
-import com.zionhuang.innertube.YouTube
-import com.zionhuang.innertube.models.SongItem
-import com.zionhuang.innertube.models.WatchEndpoint
-import com.zionhuang.innertube.utils.PoTokenHelper
-import com.zionhuang.innertube.models.YouTubeClient
+import com.zionhuang.jiosaavn.JioSaavn
+import com.zionhuang.jiosaavn.SaavnSong
 import dagger.hilt.android.AndroidEntryPoint
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.booleanPreferencesKey
@@ -142,12 +131,24 @@ import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
+import okhttp3.Dns
 import okhttp3.OkHttpClient
+import java.net.Inet4Address
+import java.net.Inet6Address
+import java.net.InetAddress
+import com.vynce.app.utils.dataStore
+import com.vynce.app.utils.get
+import com.vynce.app.utils.LastFmScrobbler
+import com.vynce.app.utils.NetworkConnectivityObserver
+import com.vynce.app.utils.CoilBitmapLoader
+import com.vynce.app.playback.SleepTimer
+import com.google.common.util.concurrent.MoreExecutors
 import java.io.File
 import java.net.ConnectException
 import java.net.SocketTimeoutException
@@ -156,6 +157,7 @@ import java.time.LocalDateTime
 import javax.inject.Inject
 import kotlin.math.min
 import kotlin.math.pow
+import com.vynce.app.utils.reportException
 
 private val AudioDecoderPreferenceKey = intPreferencesKey("audio_decoder")
 private val AudioGaplessOffloadPreferenceKey = booleanPreferencesKey("audio_gapless_offload")
@@ -170,7 +172,7 @@ class MusicService : MediaLibraryService(),
     @Inject
     lateinit var database: MusicDatabase
     private val scope = CoroutineScope(Dispatchers.Main)
-    private val offloadScope = CoroutineScope(playerCoroutine)
+    private val offloadScope = CoroutineScope(Dispatchers.Default)
 
     // Critical player components
     @Inject
@@ -201,9 +203,8 @@ class MusicService : MediaLibraryService(),
     private lateinit var mediaSession: MediaLibrarySession
 
     // Player components
-    @Inject
-    lateinit var syncUtils: SyncUtils
 
+    private val streamUrlCache = mutableMapOf<String, String>()
     lateinit var connectivityObserver: NetworkConnectivityObserver
     val waitingForNetworkConnection = MutableStateFlow(false)
     private val isNetworkConnected = MutableStateFlow(true)
@@ -214,11 +215,37 @@ class MusicService : MediaLibraryService(),
     val currentMediaMetadata = MutableStateFlow<MediaMetadata?>(null)
 
     private val currentSong = currentMediaMetadata.flatMapLatest { mediaMetadata ->
-        database.song(mediaMetadata?.id)
+        if (mediaMetadata?.id?.startsWith("saavn:") == true) {
+            // For JioSaavn songs, create a synthetic Song from MediaMetadata
+            flowOf(
+                Song(
+                    song = SongEntity(
+                        id = mediaMetadata.id,
+                        title = mediaMetadata.title ?: "Unknown",
+                        thumbnailUrl = mediaMetadata.thumbnailUrl,
+                        albumName = mediaMetadata.album?.title,
+                        localPath = null
+                    ),
+                    artists = mediaMetadata.artists?.map { artist ->
+                        ArtistEntity(
+                            id = artist.id ?: "unknown_${artist.name}",
+                            name = artist.name
+                        )
+                    } ?: emptyList(),
+                    album = null,
+                    genre = null,
+                    playCount = null
+                )
+            )
+        } else {
+            // Regular database lookup for YouTube songs
+            database.song(mediaMetadata?.id)
+        }
     }.stateIn(offloadScope, SharingStarted.Lazily, null)
 
-    private val poTokenExtractor by lazy { PoTokenExtractor(applicationContext) }
     private val lastFmScrobbler by lazy { LastFmScrobbler() }
+
+    private var previousMediaId: String? = null
 
     private val currentFormat = currentMediaMetadata.flatMapLatest { mediaMetadata ->
         database.format(mediaMetadata?.id)
@@ -363,7 +390,7 @@ class MusicService : MediaLibraryService(),
             connectivityObserver = NetworkConnectivityObserver(this@MusicService)
 
             offloadScope.launch {
-                connectivityObserver.networkStatus.collect { isConnected ->
+                connectivityObserver.networkStatus.collect { isConnected: Boolean ->
                     isNetworkConnected.value = isConnected
 
                     if (isConnected && waitingForNetworkConnection.value) {
@@ -381,38 +408,6 @@ class MusicService : MediaLibraryService(),
 
 // Library functions
 
-    private suspend fun recoverSong(mediaId: String, playbackData: YTPlayerUtils.PlaybackData? = null) {
-        val song = database.song(mediaId).first()
-        val mediaMetadata = withContext(Dispatchers.Main) {
-            player.findNextMediaItemById(mediaId)?.metadata
-        } ?: return
-        val duration = song?.song?.duration?.takeIf { it != -1 }
-            ?: mediaMetadata.duration.takeIf { it != -1 }
-            ?: (playbackData?.videoDetails ?: YTPlayerUtils.playerResponseForMetadata(mediaId)
-                .getOrNull()?.videoDetails)?.lengthSeconds?.toInt()
-            ?: -1
-        database.query {
-            if (song == null) insert(mediaMetadata.copy(duration = duration))
-            else if (song.song.duration == -1) update(song.song.copy(duration = duration))
-        }
-        if (!database.hasRelatedSongs(mediaId)) {
-            val relatedEndpoint = YouTube.next(WatchEndpoint(videoId = mediaId)).getOrNull()?.relatedEndpoint ?: return
-            val relatedPage = YouTube.related(relatedEndpoint).getOrNull() ?: return
-            database.query {
-                relatedPage.songs
-                    .map(SongItem::toMediaMetadata)
-                    .onEach(::insert)
-                    .map {
-                        RelatedSongMap(
-                            songId = mediaId,
-                            relatedSongId = it.id
-                        )
-                    }
-                    .forEach(::insert)
-            }
-        }
-    }
-
     fun toggleLibrary() {
         database.query {
             currentSong.value?.let {
@@ -428,15 +423,14 @@ class MusicService : MediaLibraryService(),
                 update(song)
 
                 if (!song.isLocal) {
-                    syncUtils.likeSong(song)
+//                    syncUtils.likeSong(song)
                 }
             }
         }
     }
 
     fun toggleStartRadio() {
-        val mediaMetadata = player.currentMetadata ?: return
-        playQueue(YouTubeQueue.radio(mediaMetadata), isRadio = true)
+        // Radio is disabled as it was YouTube-based
     }
 
 
@@ -647,7 +641,6 @@ class MusicService : MediaLibraryService(),
                             this,
                             OkHttpDataSource.Factory(
                                 OkHttpClient.Builder()
-                                    .proxy(YouTube.proxy)
                                     .build()
                             )
                         )
@@ -666,124 +659,55 @@ class MusicService : MediaLibraryService(),
     }
 
     private fun createDataSourceFactory(): DataSource.Factory {
-        val songUrlCache = HashMap<String, Pair<String, Long>>()
         return ResolvingDataSource.Factory(createCacheDataSource()) { dataSpec ->
-            val mediaId = dataSpec.key ?: error("No media id")
-            Log.d(TAG, "PLAYING: song id = $mediaId")
+            val uri = dataSpec.uri.toString()
 
-            var song = queueBoard.value.getCurrentQueue()?.findSong(dataSpec.key ?: "")
-            if (song == null) { // in the case of resumption, queueBoard may not be ready yet
-                song = runBlocking { database.song(dataSpec.key).first()?.toMediaMetadata() }
-            }
-            // local song
-            if (song?.localPath != null) {
-                if (song.isLocal) {
-                    Log.d(TAG, "PLAYING: local song")
-                    val file = File(song.localPath)
-                    if (!file.exists()) {
-                        throw PlaybackException(
-                            "File not found",
-                            Throwable(),
-                            PlaybackException.ERROR_CODE_IO_FILE_NOT_FOUND
-                        )
-                    }
-
-                    return@Factory dataSpec.withUri(file.toUri())
-                } else {
-                    val isDownloadNew = downloadUtil.localMgr.getFilePathIfExists(mediaId)
-                    isDownloadNew?.let {
-                        Log.d(TAG, "PLAYING: Custom downloaded song")
-                        return@Factory dataSpec.withUri(it)
-                    }
+            // JioSaavn songs: resolve saavn:ID to actual stream URL
+            if (uri.startsWith("saavn:")) {
+                val saavnId = uri.removePrefix("saavn:")
+                val cachedUrl = streamUrlCache[saavnId]
+                if (cachedUrl != null) {
+                    return@Factory dataSpec.withUri(cachedUrl.toUri())
                 }
+
+                // Fetch stream URL from JioSaavn API
+                val song = runBlocking(Dispatchers.IO) {
+                    JioSaavn.getSong(saavnId)
+                }
+                val streamUrl = with(JioSaavn) { song?.streamUrl() }
+                    ?: throw java.io.IOException("Failed to resolve Saavn stream URL for $saavnId")
+
+                streamUrlCache[saavnId] = streamUrl
+                return@Factory dataSpec.withUri(streamUrl.toUri())
             }
 
-            val isDownload =
-                downloadCache.isCached(mediaId, dataSpec.position, if (dataSpec.length >= 0) dataSpec.length else 1)
-            val isCache = playerCache.isCached(mediaId, dataSpec.position, CHUNK_LENGTH)
-            if (isDownload || isCache) {
-                Log.d(TAG, "PLAYING: remote song (cache = ${isCache}, download = ${isDownload})")
-                offloadScope.launch { recoverSong(mediaId) }
+            // YouTube songs: resolve ID to actual stream URL
+            // If the URI is not a full URL and not local, assume it's a YouTube ID
+            if (!uri.contains("://") && !uri.startsWith("content") && !uri.startsWith("file") && uri.length == 11) {
+                val videoId = uri
+                val cachedUrl = streamUrlCache[videoId]
+                if (cachedUrl != null) {
+                    return@Factory dataSpec.withUri(cachedUrl.toUri())
+                }
+
+                val streamUrl = runBlocking(Dispatchers.IO) {
+                    YTPlayerUtils.getStreamUrl(videoId).getOrNull()
+                } ?: throw java.io.IOException("Failed to resolve YouTube stream URL for $videoId")
+
+                streamUrlCache[videoId] = streamUrl
+                return@Factory dataSpec.withUri(streamUrl.toUri())
+            }
+
+            // JioSaavn direct CDN URLs pass through immediately
+            if (dataSpec.uri.scheme == "https") {
+                return@Factory dataSpec  // already a direct URL, play it
+            }
+            // Local files pass through
+            if (dataSpec.uri.scheme == "content" || dataSpec.uri.scheme == "file") {
                 return@Factory dataSpec
             }
-
-            songUrlCache[mediaId]?.takeIf { it.second > System.currentTimeMillis() }?.let {
-                Log.d(TAG, "PLAYING: remote song (temp cache)")
-                offloadScope.launch { recoverSong(mediaId) }
-                return@Factory dataSpec.withUri(it.first.toUri())
-            }
-
-            Log.d(TAG, "PLAYING: remote song (online fetch)")
-
-            val playbackData = runBlocking(Dispatchers.IO) {
-                val audioQuality by enumPreference(this@MusicService, AudioQualityKey, AudioQuality.AUTO)
-
-                val (poToken, visitorData) = try {
-                    poTokenExtractor.getPoToken() ?: Pair(null, null)
-                } catch (e: Exception) {
-                    Log.w(TAG, "PoToken fetch failed, continuing without: ${e.message}")
-                    Pair<String?, String?>(null, null)
-                }
-
-                visitorData?.let { YouTube.visitorData = it }
-                poToken?.let { YouTube.poToken = it }
-
-                YTPlayerUtils.playerResponseForPlayback(
-                    mediaId,
-                    audioQuality = audioQuality,
-                    connectivityManager = connectivityManager,
-                    poToken = poToken,
-                    visitorData = visitorData,
-                ).getOrElse { throwable ->
-                    // Fallback or handle error
-                    when (throwable) {
-                        is PlaybackException -> throw throwable
-                        is ConnectException, is UnknownHostException -> {
-                            throw PlaybackException(
-                                getString(R.string.error_no_internet),
-                                throwable,
-                                PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED
-                            )
-                        }
-                        is SocketTimeoutException -> {
-                            throw PlaybackException(
-                                getString(R.string.error_timeout),
-                                throwable,
-                                PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT
-                            )
-                        }
-                        else -> throw PlaybackException(
-                            getString(R.string.error_unknown),
-                            throwable,
-                            PlaybackException.ERROR_CODE_REMOTE_ERROR
-                        )
-                    }
-                }
-            }
-            val format = playbackData.format
-
-            database.query {
-                upsert(
-                    FormatEntity(
-                        id = mediaId,
-                        itag = format.itag,
-                        mimeType = format.mimeType.split(";")[0],
-                        codecs = format.mimeType.split("codecs=")[1].removeSurrounding("\""),
-                        bitrate = format.bitrate,
-                        sampleRate = format.audioSampleRate,
-                        contentLength = format.contentLength!!,
-                        loudnessDb = playbackData.audioConfig?.loudnessDb,
-                        playbackTrackingUrl = playbackData.playbackTracking?.videostatsPlaybackUrl?.baseUrl
-                    )
-                )
-            }
-            offloadScope.launch { recoverSong(mediaId, playbackData) }
-
-            val streamUrl = playbackData.streamUrl
-
-            songUrlCache[mediaId] =
-                streamUrl to System.currentTimeMillis() + (playbackData.streamExpiresInSeconds * 1000L)
-            dataSpec.withUri(streamUrl.toUri()).subrange(dataSpec.uriPositionOffset, CHUNK_LENGTH)
+            // Fallback — return as-is
+            return@Factory dataSpec
         }
     }
 
@@ -932,6 +856,10 @@ class MusicService : MediaLibraryService(),
 
     override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
         super.onMediaItemTransition(mediaItem, reason)
+
+        // Clear cache on song change
+        streamUrlCache.clear()
+        previousMediaId = mediaItem?.mediaId
         // +2 when and error happens, and -1 when transition. Thus when error, number increments by 1, else doesn't change
         if (consecutivePlaybackErr > 0) {
             consecutivePlaybackErr--
@@ -942,28 +870,7 @@ class MusicService : MediaLibraryService(),
             player.play()
         }
 
-        // Auto load more songs
-        val q = queueBoard.value.getCurrentQueue()
-        val songCount = q?.getSize() ?: -1
-        val playlistId = q?.playlistId
-        if (dataStore.get(AutoLoadMoreKey, true) &&
-            reason != Player.MEDIA_ITEM_TRANSITION_REASON_REPEAT &&
-            player.mediaItemCount - player.currentMediaItemIndex <= 5 &&
-            playlistId != null // aka "hasNext"
-        ) {
-            Log.d(TAG, "onMediaItemTransition: Triggering queue auto load more")
-            scope.launch(SilentHandler) {
-                val endpoint = playlistId // playlistId.substringBefore("\n")
-                val continuation = null // playlistId.substringAfter("\n")
-                val yq = YouTubeQueue(WatchEndpoint(endpoint, continuation))
-                val mediaItems = yq.nextPage()
-                q.playlistId = mediaItems.takeLast(4).shuffled().first().id // yq.getContinuationEndpoint()
-                Log.d(TAG, "onMediaItemTransition: Got ${mediaItems.size} songs from radio")
-                if (player.playbackState != STATE_IDLE && songCount > 1) { // initial radio loading is handled by playQueue()
-                    queueBoard.value.enqueueEnd(mediaItems.drop(1))
-                }
-            }
-        }
+        // Auto load more songs disabled (was YouTube-based)
 
         queueBoard.value.setCurrQueuePosIndex(player.currentMediaItemIndex)
 
@@ -1066,20 +973,7 @@ class MusicService : MediaLibraryService(),
                     }
                 }
 
-                // TODO: support playlist id
-                val ytHist = mediaItem.metadata?.isLocal != true && !dataStore.get(PauseRemoteListenHistoryKey, false)
-                Log.d(TAG, "Trying to register remote history: $ytHist")
-                if (ytHist) {
-                    val playbackUrl = YTPlayerUtils.playerResponseForMetadata(mediaItem.mediaId, null)
-                        .getOrNull()?.playbackTracking?.videostatsPlaybackUrl?.baseUrl
-                    Log.d(TAG, "Got playback url: $playbackUrl")
-                    playbackUrl?.let {
-                        YouTube.registerPlayback(null, playbackUrl)
-                            .onFailure {
-                                reportException(it)
-                            }
-                    }
-                }
+                // Remote history registration removed (YouTube/JioSaavn)
             }
         }
     }
@@ -1088,7 +982,7 @@ class MusicService : MediaLibraryService(),
         updateNotification()
         offloadScope.launch {
             dataStore.edit { settings ->
-                settings[RepeatModeKey] = repeatMode
+                settings[RepeatModeKey] = repeatMode as Int
             }
         }
     }
@@ -1154,7 +1048,7 @@ class MusicService : MediaLibraryService(),
         const val CHANNEL_NAME = "fgs_workaround"
         const val NOTIFICATION_ID = 888
         const val ERROR_CODE_NO_STREAM = 1000001
-        const val CHUNK_LENGTH = 512 * 1024L
+        // const val CHUNK_LENGTH = 2 * 1024 * 1024L  // 2MB chunks — no longer needed for keepalive connections
 
         const val COMMAND_GET_BINDER = "GET_BINDER"
     }

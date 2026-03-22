@@ -24,6 +24,8 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -41,7 +43,10 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import coil3.compose.AsyncImage
 import com.vynce.app.BuildConfig
@@ -64,9 +69,12 @@ import com.vynce.app.ui.component.SwipeToQueueBox
 import com.vynce.app.ui.component.button.IconButton
 import com.vynce.app.ui.menu.FolderMenu
 import com.vynce.app.ui.menu.MenuState
+import com.vynce.app.ui.menu.SaavnSongMenu
 import com.vynce.app.ui.menu.SongMenu
 import com.vynce.app.utils.joinByBullet
 import com.vynce.app.utils.makeTimeString
+import com.zionhuang.jiosaavn.JioSaavn
+import com.zionhuang.jiosaavn.SaavnSong
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -381,3 +389,77 @@ fun SongGridItem(
     fillMaxWidth = fillMaxWidth,
     modifier = modifier
 )
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun SaavnSongGridItem(
+    song: SaavnSong,
+    navController: NavController,
+    modifier: Modifier = Modifier,
+    fillMaxWidth: Boolean = false,
+    onClick: () -> Unit = {},
+) {
+    val menuState = LocalMenuState.current
+    val haptic = LocalHapticFeedback.current
+    val playerConnection = LocalPlayerConnection.current ?: return
+    val isActive by playerConnection.mediaMetadata.collectAsState()
+    val isPlaying by playerConnection.isPlaying.collectAsState()
+
+    with(JioSaavn) {
+        GridItem(
+            title = {
+                Text(
+                    text = song.name,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            },
+            subtitle = {
+                Text(
+                    text = song.artistNames(),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.secondary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            },
+            badges = {
+                Surface(
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                    shape = RoundedCornerShape(4.dp)
+                ) {
+                    Text(
+                        text = "320",
+                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
+                        fontSize = 10.sp,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            },
+            thumbnailContent = {
+                ItemThumbnail(
+                    thumbnailUrl = song.thumbnailUrl()?.replace("http://", "https://"),
+                    isActive = isActive?.id == "saavn:${song.id}",
+                    isPlaying = isPlaying,
+                    shape = RoundedCornerShape(ThumbnailCornerRadius),
+                )
+            },
+            fillMaxWidth = fillMaxWidth,
+            modifier = modifier.combinedClickable(
+                onClick = onClick,
+                onLongClick = {
+                    menuState.show {
+                        SaavnSongMenu(
+                            song = song,
+                            navController = navController,
+                            onDismiss = menuState::dismiss
+                        )
+                    }
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                }
+            )
+        )
+    }
+}

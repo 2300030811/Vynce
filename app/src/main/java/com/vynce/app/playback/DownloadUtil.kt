@@ -88,6 +88,12 @@ class DownloadUtil @Inject constructor(
                 OkHttpDataSource.Factory(
                     OkHttpClient.Builder()
                         .proxy(YouTube.proxy)
+                        .addInterceptor { chain ->
+                            val request = chain.request().newBuilder()
+                                .header("User-Agent", com.zionhuang.innertube.models.YouTubeClient.Companion.ANDROID_MUSIC.userAgent)
+                                .build()
+                            chain.proceed(request)
+                        }
                         .build()
                 )
             )
@@ -100,6 +106,18 @@ class DownloadUtil @Inject constructor(
 
         songUrlCache[mediaId]?.takeIf { it.second > System.currentTimeMillis() }?.let {
             return@Factory dataSpec.withUri(it.first.toUri())
+        }
+
+        if (mediaId.startsWith("saavn:")) {
+            val saavnId = mediaId.removePrefix("saavn:")
+            val song = runBlocking(Dispatchers.IO) {
+                com.zionhuang.jiosaavn.JioSaavn.getSong(saavnId)
+            }
+            val streamUrl = with(com.zionhuang.jiosaavn.JioSaavn) { song?.streamUrl() }
+                ?: throw java.io.IOException("Failed to resolve Saavn stream URL for $saavnId")
+            
+            songUrlCache[mediaId] = streamUrl to System.currentTimeMillis() + (24 * 60 * 60 * 1000L) // Cache for 24h
+            return@Factory dataSpec.withUri(streamUrl.toUri())
         }
 
         val playbackData = runBlocking(Dispatchers.IO) {
@@ -263,6 +281,12 @@ class DownloadUtil @Inject constructor(
                         OkHttpDataSource.Factory(
                             OkHttpClient.Builder()
                                 .proxy(YouTube.proxy)
+                                .addInterceptor { chain ->
+                                    val request = chain.request().newBuilder()
+                                        .header("User-Agent", com.zionhuang.innertube.models.YouTubeClient.Companion.ANDROID_MUSIC.userAgent)
+                                        .build()
+                                    chain.proceed(request)
+                                }
                                 .build()
                         )
                     )
