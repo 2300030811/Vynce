@@ -295,9 +295,9 @@ fun LyricsMenu(
                 item {
                     Text(
                         text = if (!context.isInternetConnected()) {
-                            context.getString(R.string.error_no_internet)
+                            stringResource(R.string.error_no_internet)
                         } else {
-                            context.getString(R.string.lyrics_not_found)
+                            stringResource(R.string.lyrics_not_found)
                         },
                         textAlign = TextAlign.Center,
                         modifier = Modifier

@@ -49,6 +49,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
 import androidx.media3.common.MediaItem
 import com.vynce.app.LocalPlayerConnection
 import com.vynce.app.R
@@ -74,15 +75,15 @@ fun SwipeToQueueBox(
     val coroutineScope = rememberCoroutineScope()
     val playerConnection = LocalPlayerConnection.current
 
+    val songAddedToQueueText = stringResource(R.string.song_added_to_queue, item.mediaMetadata.title ?: "")
+    val songAddedToQueueEndText = stringResource(R.string.song_added_to_queue_end, item.mediaMetadata.title ?: "")
+
     SwipeActionBox(
         firstAction = Pair(Icons.AutoMirrored.Rounded.PlaylistPlay, {
             playerConnection?.enqueueNext(item)
             coroutineScope.launch {
                 snackbarHostState?.showSnackbar(
-                    message = context.getString(
-                        R.string.song_added_to_queue,
-                        item.mediaMetadata.title
-                    ),
+                    message = songAddedToQueueText,
                     withDismissAction = true,
                     duration = SnackbarDuration.Short
                 )
@@ -93,10 +94,7 @@ fun SwipeToQueueBox(
             coroutineScope.launch {
                 val job = launch {
                     snackbarHostState?.showSnackbar(
-                        message = context.getString(
-                            R.string.song_added_to_queue_end,
-                            item.mediaMetadata.title
-                        ),
+                        message = songAddedToQueueEndText,
                         withDismissAction = true,
                         duration = SnackbarDuration.Indefinite
                     )

@@ -52,6 +52,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
+import androidx.compose.ui.res.stringResource
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -500,6 +501,7 @@ fun DetailsDialog(
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     val snackbarHostState = LocalSnackbarHostState.current
+    val copiedText = stringResource(R.string.copied)
 
     AlertDialog(
         properties = DialogProperties(usePlatformDefaultWidth = false),
@@ -599,7 +601,7 @@ fun DetailsDialog(
                                 coroutineScope.launch {
                                     val job = launch {
                                         snackbarHostState.showSnackbar(
-                                            message = context.getString(R.string.copied),
+                                            message = copiedText,
                                             withDismissAction = true,
                                             duration = SnackbarDuration.Indefinite
                                         )

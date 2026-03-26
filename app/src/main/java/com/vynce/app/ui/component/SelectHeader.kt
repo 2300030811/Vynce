@@ -22,7 +22,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.vynce.app.R
@@ -42,14 +42,14 @@ fun RowScope.SelectHeader(
     onDismiss: () -> Unit = {},
     onRemoveFromHistory: (() -> Unit)? = null
 ) {
-    val context = LocalContext.current
+
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier.padding(top = 2.dp, bottom = 3.dp)
     ) {
         Text(
-            text = "${selectedItems.size}/${context.resources.getQuantityString(R.plurals.n_selected, totalItemCount, totalItemCount)}",
+            text = "${selectedItems.size}/${pluralStringResource(R.plurals.n_selected, totalItemCount, totalItemCount)}",
             modifier = Modifier
                 .padding(start = 8.dp)
                 .weight(1f, false)

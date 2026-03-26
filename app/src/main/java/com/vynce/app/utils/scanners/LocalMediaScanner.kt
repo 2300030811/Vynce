@@ -68,7 +68,7 @@ import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneOffset
 
-class LocalMediaScanner(val context: Context, scannerImpl: ScannerImpl) {
+class LocalMediaScanner(scannerImpl: ScannerImpl) {
     private val TAG = LocalMediaScanner::class.simpleName.toString()
     private var advancedScannerImpl: MetadataScanner = when (scannerImpl) {
         ScannerImpl.TAGLIB -> TagLibScanner()
@@ -84,6 +84,7 @@ class LocalMediaScanner(val context: Context, scannerImpl: ScannerImpl) {
     }
 
     suspend fun advancedScan(
+        context: Context,
         uri: Uri,
     ): SongTempData {
         val file = fileFromUri(context, uri) ?: throw IOException("Could not access file")
@@ -157,6 +158,7 @@ class LocalMediaScanner(val context: Context, scannerImpl: ScannerImpl) {
      */
     @OptIn(ExperimentalCoroutinesApi::class)
     fun scanLocal(
+        context: Context,
         scanPaths: String,
         excludedScanPaths: String,
     ): List<Uri> {
@@ -390,6 +392,7 @@ class LocalMediaScanner(val context: Context, scannerImpl: ScannerImpl) {
      */
     @OptIn(ExperimentalCoroutinesApi::class)
     suspend fun quickSync(
+        context: Context,
         database: MusicDatabase,
         newSongs: List<Uri>,
         matchCriteria: ScannerMatchCriteria,
@@ -525,6 +528,7 @@ class LocalMediaScanner(val context: Context, scannerImpl: ScannerImpl) {
      */
     @OptIn(ExperimentalCoroutinesApi::class)
     suspend fun fullSync(
+        context: Context,
         database: MusicDatabase,
         newSongs: List<Uri>,
         matchCriteria: ScannerMatchCriteria,
@@ -568,7 +572,7 @@ class LocalMediaScanner(val context: Context, scannerImpl: ScannerImpl) {
                                 throw ScannerAbortException("")
                             }
                             try {
-                                val ret = advancedScan(uri)
+                                val ret = advancedScan(context, uri)
                                 scannerProgressProbe.value++
                                 if (SCANNER_DEBUG && scannerProgressProbe.value % mod == 0) {
                                     Log.d(
@@ -588,7 +592,7 @@ class LocalMediaScanner(val context: Context, scannerImpl: ScannerImpl) {
                 }
             } else {
                 // force synchronous scanning of songs. Do not catch errors
-                finalSongs.add(advancedScan(uri))
+                finalSongs.add(advancedScan(context, uri))
             }
         }
 
@@ -634,6 +638,7 @@ class LocalMediaScanner(val context: Context, scannerImpl: ScannerImpl) {
      */
     @OptIn(ExperimentalCoroutinesApi::class)
     suspend fun fullMediaStoreSync(
+        context: Context,
         database: MusicDatabase,
         scanPaths: List<Uri>,
         excludedScanPaths: List<Uri>,
@@ -1052,7 +1057,7 @@ class LocalMediaScanner(val context: Context, scannerImpl: ScannerImpl) {
                         }
                     }
                 }
-                localScanner = LocalMediaScanner(context, scannerImpl)
+                localScanner = LocalMediaScanner(scannerImpl)
                 scannerProgressTotal.value = 0
                 scannerProgressCurrent.value = -1
                 scannerProgressProbe.value = 0

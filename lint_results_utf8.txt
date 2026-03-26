@@ -1,0 +1,1219 @@
+﻿C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\java\org\akanework\gramophone\logic\utils\SemanticLyrics.kt:44: Warning: This block comment looks like it was intended to be a KDoc comment [WrongCommentType]
+ *  - [offset:] tag in header (ref Wikipedia)
+      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\java\org\akanework\gramophone\logic\utils\SemanticLyrics.kt:453: Warning: This block comment looks like it was intended to be a KDoc comment [WrongCommentType]
+ *  - [offset:] tag in header (ref Wikipedia)
+      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+   Explanation for issues of type "WrongCommentType":
+   This check flags any block comments which look like they had been intended
+   to be KDoc or javadoc comments instead.
+
+   If you really want to use Javadoc-like constructs in a block comment,
+   there's a convention you can use: include (non-Javadoc) somewhere in the
+   comment, e.g.
+     /* (non-Javadoc)
+      * @see
+   org.xml.sax.helpers.DefaultHandler#setDocumentLocator(org.xml.sax.Locator)
+      */
+     @Override
+     public void setDocumentLocator(Locator locator) {
+   (see https://stackoverflow.com/questions/5172841/non-javadoc-meaning)
+
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\debug\res\xml\shortcuts.xml:4: Warning: Attribute shortcutId is only used in API level 25 and higher (current min is 24) [UnusedAttribute]
+        android:shortcutId="search"
+        ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\xml\shortcuts.xml:4: Warning: Attribute shortcutId is only used in API level 25 and higher (current min is 24) [UnusedAttribute]
+        android:shortcutId="search"
+        ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\debug\res\xml\shortcuts.xml:7: Warning: Attribute shortcutShortLabel is only used in API level 25 and higher (current min is 24) [UnusedAttribute]
+        android:shortcutShortLabel="@string/search">
+        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\xml\shortcuts.xml:7: Warning: Attribute shortcutShortLabel is only used in API level 25 and higher (current min is 24) [UnusedAttribute]
+        android:shortcutShortLabel="@string/search">
+        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\debug\res\xml\shortcuts.xml:14: Warning: Attribute shortcutId is only used in API level 25 and higher (current min is 24) [UnusedAttribute]
+        android:shortcutId="songs"
+        ~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\xml\shortcuts.xml:14: Warning: Attribute shortcutId is only used in API level 25 and higher (current min is 24) [UnusedAttribute]
+        android:shortcutId="songs"
+        ~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\debug\res\xml\shortcuts.xml:17: Warning: Attribute shortcutShortLabel is only used in API level 25 and higher (current min is 24) [UnusedAttribute]
+        android:shortcutShortLabel="@string/songs">
+        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\xml\shortcuts.xml:17: Warning: Attribute shortcutShortLabel is only used in API level 25 and higher (current min is 24) [UnusedAttribute]
+        android:shortcutShortLabel="@string/songs">
+        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\debug\res\xml\shortcuts.xml:24: Warning: Attribute shortcutId is only used in API level 25 and higher (current min is 24) [UnusedAttribute]
+        android:shortcutId="albums"
+        ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\xml\shortcuts.xml:24: Warning: Attribute shortcutId is only used in API level 25 and higher (current min is 24) [UnusedAttribute]
+        android:shortcutId="albums"
+        ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\debug\res\xml\shortcuts.xml:27: Warning: Attribute shortcutShortLabel is only used in API level 25 and higher (current min is 24) [UnusedAttribute]
+        android:shortcutShortLabel="@string/albums">
+        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\xml\shortcuts.xml:27: Warning: Attribute shortcutShortLabel is only used in API level 25 and higher (current min is 24) [UnusedAttribute]
+        android:shortcutShortLabel="@string/albums">
+        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\debug\res\xml\shortcuts.xml:34: Warning: Attribute shortcutId is only used in API level 25 and higher (current min is 24) [UnusedAttribute]
+        android:shortcutId="playlists"
+        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\xml\shortcuts.xml:34: Warning: Attribute shortcutId is only used in API level 25 and higher (current min is 24) [UnusedAttribute]
+        android:shortcutId="playlists"
+        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\debug\res\xml\shortcuts.xml:37: Warning: Attribute shortcutShortLabel is only used in API level 25 and higher (current min is 24) [UnusedAttribute]
+        android:shortcutShortLabel="@string/playlists">
+        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\xml\shortcuts.xml:37: Warning: Attribute shortcutShortLabel is only used in API level 25 and higher (current min is 24) [UnusedAttribute]
+        android:shortcutShortLabel="@string/playlists">
+        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+   Explanation for issues of type "UnusedAttribute":
+   This check finds attributes set in XML files that were introduced in a
+   version newer than the oldest version targeted by your application (with
+   the minSdkVersion attribute).
+
+   This is not an error; the application will simply ignore the attribute.
+   However, if the attribute is important to the appearance or functionality
+   of your application, you should consider finding an alternative way to
+   achieve the same result with only available attributes, and then you can
+   optionally create a copy of the layout in a layout-vNN folder which will be
+   used on API NN or higher where you can take advantage of the newer
+   attribute.
+
+   Note: This check does not only apply to attributes. For example, some tags
+   can be unused too, such as the new <tag> element in layouts introduced in
+   API 21.
+
+C:\Users\bhima\OneDrive\Desktop\Vynce\gradle\libs.versions.toml:4: Warning: A newer version of com.android.tools.build:gradle than 8.13.2 is available: 9.1.0 [AndroidGradlePluginVersion]
+androidGradlePlugin = "8.13.2"
+                      ~~~~~~~~
+
+   Explanation for issues of type "AndroidGradlePluginVersion":
+   This detector looks for usage of the Android Gradle Plugin where the
+   version you are using is not the current stable release. Using older
+   versions is fine, and there are cases where you deliberately want to stick
+   with an older version. However, you may simply not be aware that a more
+   recent version is available, and that is what this lint check helps find.
+
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\build.gradle.kts:268: Warning: A newer version of androidx.webkit:webkit than 1.14.0 is available: 1.15.0 [GradleDependency]
+    implementation("androidx.webkit:webkit:1.14.0")
+                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\gradle\libs.versions.toml:8: Warning: A newer version of androidx.compose.animation:animation-graphics than 1.10.2 is available: 1.10.6 [GradleDependency]
+compose = "1.10.2"
+          ~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\gradle\libs.versions.toml:8: Warning: A newer version of androidx.compose.runtime:runtime than 1.10.2 is available: 1.10.6 [GradleDependency]
+compose = "1.10.2"
+          ~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\gradle\libs.versions.toml:8: Warning: A newer version of androidx.compose.ui:ui than 1.10.2 is available: 1.10.6 [GradleDependency]
+compose = "1.10.2"
+          ~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\gradle\libs.versions.toml:8: Warning: A newer version of androidx.compose.ui:ui-tooling than 1.10.2 is available: 1.10.6 [GradleDependency]
+compose = "1.10.2"
+          ~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\gradle\libs.versions.toml:8: Warning: A newer version of androidx.compose.ui:ui-util than 1.10.2 is available: 1.10.6 [GradleDependency]
+compose = "1.10.2"
+          ~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\gradle\libs.versions.toml:8: Warning: Upgrade androidx.compose.foundation for keyboard and mouse support [GradleDependency]
+compose = "1.10.2"
+          ~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\gradle\libs.versions.toml:12: Warning: A newer version of androidx.media3:media3-datasource-okhttp than 1.8.0 is available: 1.9.3 [GradleDependency]
+media3 = "1.8.0"
+         ~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\gradle\libs.versions.toml:12: Warning: A newer version of androidx.media3:media3-exoplayer than 1.8.0 is available: 1.9.3 [GradleDependency]
+media3 = "1.8.0"
+         ~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\gradle\libs.versions.toml:12: Warning: A newer version of androidx.media3:media3-exoplayer-workmanager than 1.8.0 is available: 1.9.3 [GradleDependency]
+media3 = "1.8.0"
+         ~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\gradle\libs.versions.toml:12: Warning: A newer version of androidx.media3:media3-session than 1.8.0 is available: 1.9.3 [GradleDependency]
+media3 = "1.8.0"
+         ~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\gradle\libs.versions.toml:26: Warning: A newer version of androidx.activity:activity-compose than 1.12.3 is available: 1.13.0 [GradleDependency]
+activity = { group = "androidx.activity", name = "activity-compose", version = "1.12.3" }
+                                                                               ~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\gradle\libs.versions.toml:28: Warning: A newer version of androidx.datastore:datastore-preferences than 1.2.0 is available: 1.2.1 [GradleDependency]
+datastore = { group = "androidx.datastore", name = "datastore-preferences", version = "1.2.0" }
+                                                                                      ~~~~~~~
+
+   Explanation for issues of type "GradleDependency":
+   This detector looks for usages of libraries where the version you are using
+   is not the current stable release. Using older versions is fine, and there
+   are cases where you deliberately want to stick with an older version.
+   However, you may simply not be aware that a more recent version is
+   available, and that is what this lint check helps find.
+
+C:\Users\bhima\OneDrive\Desktop\Vynce\gradle\libs.versions.toml:2: Warning: A newer version of com.mikepenz.aboutlibraries.plugin than 12.2.4 is available: 13.2.1 [NewerVersionAvailable]
+aboutLibraries = "12.2.4"
+                 ~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\gradle\libs.versions.toml:2: Warning: A newer version of com.mikepenz:aboutlibraries-compose-m3 than 12.2.4 is available: 13.2.1 [NewerVersionAvailable]
+aboutLibraries = "12.2.4"
+                 ~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\gradle\libs.versions.toml:6: Warning: A newer version of org.jetbrains.kotlin.plugin.compose than 2.3.0 is available: 2.3.20 [NewerVersionAvailable]
+kotlin = "2.3.0"
+         ~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\gradle\libs.versions.toml:6: Warning: A newer version of org.jetbrains.kotlin.plugin.serialization than 2.3.0 is available: 2.3.20 [NewerVersionAvailable]
+kotlin = "2.3.0"
+         ~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\gradle\libs.versions.toml:7: Warning: A newer version of io.coil-kt.coil3:coil-compose than 3.3.0 is available: 3.4.0 [NewerVersionAvailable]
+coil = "3.3.0"
+       ~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\gradle\libs.versions.toml:7: Warning: A newer version of io.coil-kt.coil3:coil-network-okhttp than 3.3.0 is available: 3.4.0 [NewerVersionAvailable]
+coil = "3.3.0"
+       ~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\gradle\libs.versions.toml:14: Warning: A newer version of com.google.dagger.hilt.android than 2.57.2 is available: 2.59.2 [NewerVersionAvailable]
+hilt = "2.57.2"
+       ~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\gradle\libs.versions.toml:14: Warning: A newer version of com.google.dagger:hilt-android than 2.57.2 is available: 2.59.2 [NewerVersionAvailable]
+hilt = "2.57.2"
+       ~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\gradle\libs.versions.toml:14: Warning: A newer version of com.google.dagger:hilt-android-compiler than 2.57.2 is available: 2.59.2 [NewerVersionAvailable]
+hilt = "2.57.2"
+       ~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\gradle\libs.versions.toml:15: Warning: A newer version of io.ktor:ktor-client-content-negotiation than 3.4.0 is available: 3.4.1 [NewerVersionAvailable]
+ktor = "3.4.0"
+       ~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\gradle\libs.versions.toml:15: Warning: A newer version of io.ktor:ktor-client-core than 3.4.0 is available: 3.4.1 [NewerVersionAvailable]
+ktor = "3.4.0"
+       ~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\gradle\libs.versions.toml:15: Warning: A newer version of io.ktor:ktor-client-encoding than 3.4.0 is available: 3.4.1 [NewerVersionAvailable]
+ktor = "3.4.0"
+       ~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\gradle\libs.versions.toml:15: Warning: A newer version of io.ktor:ktor-client-okhttp than 3.4.0 is available: 3.4.1 [NewerVersionAvailable]
+ktor = "3.4.0"
+       ~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\gradle\libs.versions.toml:15: Warning: A newer version of io.ktor:ktor-serialization-kotlinx-json than 3.4.0 is available: 3.4.1 [NewerVersionAvailable]
+ktor = "3.4.0"
+       ~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\gradle\libs.versions.toml:20: Warning: A newer version of com.google.errorprone:error_prone_core than 2.46.0 is available: 2.48.0 [NewerVersionAvailable]
+error-prone-core = { module = "com.google.errorprone:error_prone_core", version = "2.46.0" }
+                                                                                  ~~~~~~~~
+
+   Explanation for issues of type "NewerVersionAvailable":
+   This detector checks with a central repository to see if there are newer
+   versions available for the dependencies used by this project. This is
+   similar to the GradleDependency check, which checks for newer versions
+   available in the Android SDK tools and libraries, but this works with any
+   MavenCentral dependency, and connects to the library every time, which
+   makes it more flexible but also much slower.
+
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\java\com\vynce\app\ui\component\items\Items.kt:398: Warning: Using Configuration.screenWidthDp instead of LocalWindowInfo.current.containerSize [ConfigurationScreenWidthHeight from androidx.compose.ui]
+    val screenWidthDp = configuration.screenWidthDp
+                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+   Explanation for issues of type "ConfigurationScreenWidthHeight":
+   Configuration.screenWidthDp and Configuration.screenHeightDp have different
+   insets behaviour depending on target SDK version, and are rounded to the
+   nearest Dp. This means that using these values in composition to size a
+   layout can result in issues, as these values do not accurately represent
+   the actual available window size. Instead it is recommended to use
+   WindowInfo.containerSize which accurately represents the window size.
+
+   Vendor: Jetpack Compose
+   Identifier: androidx.compose.ui
+   Feedback: https://issuetracker.google.com/issues/new?component=612128
+
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\java\com\vynce\app\ui\screens\settings\AboutScreen.kt:209: Error: Querying resource values using LocalContext.current [LocalContextGetResourceValueCall from androidx.compose.ui]
+                            context.getString(R.string.app_name),
+                            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\java\com\vynce\app\ui\component\AnchorDraggable.kt:82: Error: Querying resource values using LocalContext.current [LocalContextGetResourceValueCall from androidx.compose.ui]
+                    message = context.getString(
+                              ^
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\java\com\vynce\app\ui\component\AnchorDraggable.kt:96: Error: Querying resource values using LocalContext.current [LocalContextGetResourceValueCall from androidx.compose.ui]
+                        message = context.getString(
+                                  ^
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\java\com\vynce\app\ui\dialog\Dialog.kt:602: Error: Querying resource values using LocalContext.current [LocalContextGetResourceValueCall from androidx.compose.ui]
+                                            message = context.getString(R.string.copied),
+                                                      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\java\com\vynce\app\ui\screens\library\LibrarySongsScreen.kt:255: Error: Querying resource values using LocalContext.current [LocalContextGetResourceValueCall from androidx.compose.ui]
+                                            title = context.getString(R.string.queue_all_songs),
+                                                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\java\com\vynce\app\ui\screens\library\LibrarySongsScreen.kt:268: Error: Querying resource values using LocalContext.current [LocalContextGetResourceValueCall from androidx.compose.ui]
+                                            title = context.getString(R.string.queue_all_songs),
+                                                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\java\com\vynce\app\ui\screens\library\LibrarySongsScreen.kt:398: Error: Querying resource values using LocalContext.current [LocalContextGetResourceValueCall from androidx.compose.ui]
+                                    title = context.getString(R.string.queue_all_songs),
+                                            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\java\com\vynce\app\ui\screens\settings\fragments\LocalMediaSettingsFrag.kt:183: Error: Querying resource values using LocalContext.current [LocalContextGetResourceValueCall from androidx.compose.ui]
+                            message = context.getString(R.string.scanner_missing_storage_perm),
+                                      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\java\com\vynce\app\ui\screens\settings\fragments\LocalMediaSettingsFrag.kt:235: Error: Querying resource values using LocalContext.current [LocalContextGetResourceValueCall from androidx.compose.ui]
+                                message = "${context.getString(R.string.scanner_scan_fail)}: ${e.message}",
+                                             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\java\com\vynce\app\ui\screens\settings\fragments\LocalMediaSettingsFrag.kt:272: Error: Querying resource values using LocalContext.current [LocalContextGetResourceValueCall from androidx.compose.ui]
+                                message = "${context.getString(R.string.scanner_scan_fail)}: ${e.message}",
+                                             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\java\com\vynce\app\ui\screens\search\LocalSearchScreen.kt:192: Error: Querying resource values using LocalContext.current [LocalContextGetResourceValueCall from androidx.compose.ui]
+                                            title = "${context.getString(R.string.queue_searched_songs_ot)} $query",
+                                                       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\java\com\vynce\app\ui\menu\LyricsMenu.kt:298: Error: Querying resource values using LocalContext.current [LocalContextGetResourceValueCall from androidx.compose.ui]
+                            context.getString(R.string.error_no_internet)
+                            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\java\com\vynce\app\ui\menu\LyricsMenu.kt:300: Error: Querying resource values using LocalContext.current [LocalContextGetResourceValueCall from androidx.compose.ui]
+                            context.getString(R.string.lyrics_not_found)
+                            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\java\com\vynce\app\ui\screens\search\OnlineSearchScreen.kt:191: Error: Querying resource values using LocalContext.current [LocalContextGetResourceValueCall from androidx.compose.ui]
+                                    title = context.getString(R.string.queue_searched_songs),
+                                            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\java\com\vynce\app\ui\screens\settings\fragments\StorageFrag.kt:116: Error: Querying resource values using LocalContext.current [LocalContextGetResourceValueCall from androidx.compose.ui]
+                    "${context.getString(R.string.app_name)}_${MusicDatabase.MUSIC_DATABASE_VERSION}_${
+                       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+   Explanation for issues of type "LocalContextGetResourceValueCall":
+   Changes to the Configuration object will not cause LocalContext.current
+   reads to be invalidated, so calls to APIs such as Context.getString() will
+   not be updated when the Configuration changes, and so stale values might be
+   used. Instead, you can use Compose APIs such as stringResource,
+   colorResource, and painterResource - or LocalResources.current and query
+   properties from Resources directly. Using these APIs will invalidate
+   callers when the Configuration changes, to ensure that these calls reflect
+   the latest values.
+
+   Vendor: Jetpack Compose
+   Identifier: androidx.compose.ui
+   Feedback: https://issuetracker.google.com/issues/new?component=612128
+
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\java\com\vynce\app\ui\component\items\Items.kt:482: Warning: Modifier parameter should be the first optional parameter [ModifierParameter from androidx.compose.ui]
+    modifier: Modifier = Modifier,
+    ~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\java\com\vynce\app\ui\component\items\SongItems.kt:108: Warning: Modifier parameter should be named modifier [ModifierParameter from androidx.compose.ui]
+    dragHandleModifier: Modifier? = null,
+    ~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\java\com\vynce\app\ui\component\items\SongItems.kt:108: Warning: Modifier parameter should be the first optional parameter [ModifierParameter from androidx.compose.ui]
+    dragHandleModifier: Modifier? = null,
+    ~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\java\com\vynce\app\ui\component\items\SongItems.kt:108: Warning: Optional Modifier parameter should have a default value of Modifier [ModifierParameter from androidx.compose.ui]
+    dragHandleModifier: Modifier? = null,
+    ~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\java\com\vynce\app\ui\component\button\TextButton.kt:26: Warning: Modifier parameter should be the first optional parameter [ModifierParameter from androidx.compose.ui]
+    modifier: Modifier = Modifier,
+    ~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\java\com\vynce\app\ui\component\button\TextButton.kt:54: Warning: Modifier parameter should be the first optional parameter [ModifierParameter from androidx.compose.ui]
+    modifier: Modifier = Modifier,
+    ~~~~~~~~
+
+   Explanation for issues of type "ModifierParameter":
+   The first (or only) Modifier parameter in a Composable function should
+   follow the following rules:
+   - Be named modifier
+   - Have a type of Modifier
+   - Either have no default value, or have a default value of Modifier
+   - If optional, be the first optional parameter in the parameter list
+
+   Vendor: Jetpack Compose
+   Identifier: androidx.compose.ui
+   Feedback: https://issuetracker.google.com/issues/new?component=612128
+
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings.xml:234: Warning: Overriding @string/state_off which is marked as private in androidx.compose.ui:ui-android:1.10.2. If deliberate, use tools:override="true", otherwise pick a different name. [PrivateResource]
+    <string name="state_off">Off</string>
+                  ~~~~~~~~~
+
+   Explanation for issues of type "PrivateResource":
+   Private resources should not be referenced; the may not be present
+   everywhere, and even where they are they may disappear without notice.
+
+   To fix this, copy the resource into your own project instead.
+
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values-pt-rBR\strings-vynce.xml:21: Warning: "Boas vindas" is a common misspelling; did you mean "Boas-vindas"? [Typos]
+    <string name="oobe_welcome_message">Boas vindas ao Vynce</string>
+                                        ~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values-pt\strings-vynce.xml:202: Warning: "possivel" is a common misspelling; did you mean "possÃ­vel"? [Typos]
+    <string name="import_innertune_tooltip">A reposiÃ§Ã£o de backups do InnerTune Ã© possivel, mas hÃ¡ uma possibilidade de anomalias devido a limitaÃ§Ãµes tÃ©cnicas. A importaÃ§Ã£o de outras aplicaÃ§Ãµes nÃ£o Ã© permitido.</string>
+                                                                                  ~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values-pt\strings-vynce.xml:208: Warning: "Boas vindas" is a common misspelling; did you mean "Boas-vindas"? [Typos]
+    <string name="oobe_welcome_message">Boas vindas ao Vynce</string>
+                                        ~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values-nb-rNO\strings.xml:74: Warning: "Media" is a common misspelling; did you mean "Medier"? [Typos]
+    <string name="media_id">Media-ID</string>
+                            ~~~~~
+
+   Explanation for issues of type "Typos":
+   This check looks through the string definitions, and if it finds any words
+   that look like likely misspellings, they are flagged.
+
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values-bg\strings-vynce.xml:51: Error: "scanner_ytm_link_start" is translated here but not found in default locale [ExtraTranslation]
+    <string name="scanner_ytm_link_start">Ð¡Ñ‚Ð°Ñ€Ñ‚Ð¸Ñ€Ð° ÑÐµ ÑÐ²ÑŠÑ€Ð·Ð²Ð°Ð½ÐµÑ‚Ð¾ Ð½Ð° Ð¸Ð·Ð¿ÑŠÐ»Ð½Ð¸Ñ‚ÐµÐ» Ð² YouTubeâ€¦</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values-it\strings-vynce.xml:57: Error: "scanner_ytm_link_fail" is translated here but not found in default locale [ExtraTranslation]
+    <string name="scanner_ytm_link_fail">Collegamento dell\'artista su YouTube fallito</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values-ko\strings-vynce.xml:58: Error: "scanner_ytm_link_fail" is translated here but not found in default locale [ExtraTranslation]
+    <string name="scanner_ytm_link_fail">ìœ íŠœë¸Œ ì•„í‹°ìŠ¤íŠ¸ ì—°ê²° ì‹¤íŒ¨</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values-it\strings-vynce.xml:61: Error: "scanner_ytm_link_start" is translated here but not found in default locale [ExtraTranslation]
+    <string name="scanner_ytm_link_start">Avvio del collegamento dell\'artista su YouTubeâ€¦</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values-es\strings-vynce.xml:85: Error: "scanner_ytm_link_fail" is translated here but not found in default locale [ExtraTranslation]
+    <string name="scanner_ytm_link_fail">Error en la tarea de vinculaciÃ³n de artistas de YouTube</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values-zh-rCN\strings-vynce.xml:94: Error: "scanner_ytm_link_fail" is translated here but not found in default locale [ExtraTranslation]
+    <string name="scanner_ytm_link_fail">YouTube éŸ³ä¹äººé“¾æŽ¥ä»»åŠ¡å¤±è´¥</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values-zh-rCN\strings-vynce.xml:95: Error: "scanner_ytm_link_start" is translated here but not found in default locale [ExtraTranslation]
+    <string name="scanner_ytm_link_start">æ­£åœ¨å…³è” YouTube éŸ³ä¹äººâ€¦</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values-ja\strings-vynce.xml:97: Error: "scanner_ytm_link_fail" is translated here but not found in default locale [ExtraTranslation]
+    <string name="scanner_ytm_link_fail">YouTube ã‚¢ãƒ¼ãƒ†ã‚£ã‚¹ãƒˆã®ãƒªãƒ³ã‚¯ ã‚¸ãƒ§ãƒ–ãŒå¤±æ•—ã—ã¾ã—ãŸ</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values-ja\strings-vynce.xml:98: Error: "scanner_ytm_link_start" is translated here but not found in default locale [ExtraTranslation]
+    <string name="scanner_ytm_link_start">YouTube ã‚¢ãƒ¼ãƒ†ã‚£ã‚¹ãƒˆã®ãƒªãƒ³ã‚¯ã‚’é–‹å§‹â€¦</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values-fr\strings-vynce.xml:109: Error: "scanner_ytm_link_fail" is translated here but not found in default locale [ExtraTranslation]
+    <string name="scanner_ytm_link_fail">La tÃ¢che de liaison des artistes YouTube a Ã©chouÃ©</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values-pt-rBR\strings-vynce.xml:111: Error: "scanner_ytm_link_fail" is translated here but not found in default locale [ExtraTranslation]
+    <string name="scanner_ytm_link_fail">O processo de vÃ­nculo de artistas do YouTube falhou</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values-uk\strings-vynce.xml:112: Error: "scanner_ytm_link_fail" is translated here but not found in default locale [ExtraTranslation]
+    <string name="scanner_ytm_link_fail">ÐÐµ Ð²Ð´Ð°Ð»Ð¾ÑÑ Ð¿Ð¾Ð²\'ÑÐ·Ð°Ñ‚Ð¸ Ð· Ð²Ð¸ÐºÐ¾Ð½Ð°Ð²Ñ†ÐµÐ¼ Ð½Ð° YouTube</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values-pl\strings-vynce.xml:112: Error: "scanner_ytm_link_start" is translated here but not found in default locale [ExtraTranslation]
+    <string name="scanner_ytm_link_start">Rozpoczynanie linkowania artysty YouTubeâ€¦</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values-uk\strings-vynce.xml:113: Error: "scanner_ytm_link_start" is translated here but not found in default locale [ExtraTranslation]
+    <string name="scanner_ytm_link_start">ÐŸÐ¾Ñ‡Ð°Ñ‚Ð¾Ðº Ð¿Ð¾Ð²\'ÑÐ·ÑƒÐ²Ð°Ð½Ð½Ñ Ð· Ð²Ð¸ÐºÐ¾Ð½Ð°Ð²Ñ†ÐµÐ¼ Ð½Ð° YouTubeâ€¦</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values-ru\strings-vynce.xml:114: Error: "scanner_ytm_link_start" is translated here but not found in default locale [ExtraTranslation]
+    <string name="scanner_ytm_link_start">ÐÐ°Ñ‡Ð°Ð»Ð¾ Ð¿Ñ€Ð¸Ð²ÑÐ·ÐºÐ¸ Ð¸ÑÐ¿Ð¾Ð»Ð½Ð¸Ñ‚ÐµÐ»ÐµÐ¹ Ðº YouTubeâ€¦</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values-es\strings-vynce.xml:117: Error: "scanner_ytm_link_start" is translated here but not found in default locale [ExtraTranslation]
+    <string name="scanner_ytm_link_start">Iniciando vinculaciÃ³n de artistas de YouTubeâ€¦</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values-bg\strings-vynce.xml:125: Error: "scanner_ytm_link_fail" is translated here but not found in default locale [ExtraTranslation]
+    <string name="scanner_ytm_link_fail">ÐÐµÑƒÑÐ¿ÐµÑˆÐ½Ð° Ð·Ð°Ð´Ð°Ñ‡Ð° Ð·Ð° ÑÐ²ÑŠÑ€Ð·Ð²Ð°Ð½Ðµ Ð½Ð° Ð¸Ð·Ð¿ÑŠÐ»Ð½Ð¸Ñ‚ÐµÐ» Ð² YouTube</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values-de\strings-vynce.xml:127: Error: "scanner_ytm_link_fail" is translated here but not found in default locale [ExtraTranslation]
+    <string name="scanner_ytm_link_fail">YouTube-KÃ¼nstler-VerknÃ¼pfung fehlgeschlagen</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values-de\strings-vynce.xml:128: Error: "scanner_ytm_link_start" is translated here but not found in default locale [ExtraTranslation]
+    <string name="scanner_ytm_link_start">Starte YouTube-KÃ¼nstler-VerknÃ¼pfungâ€¦</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values-fr\strings-vynce.xml:129: Error: "scanner_ytm_link_start" is translated here but not found in default locale [ExtraTranslation]
+    <string name="scanner_ytm_link_start">DÃ©marrage de la crÃ©ation de liens d\'artistes sur YouTubeâ€¦</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values-pt-rBR\strings-vynce.xml:130: Error: "scanner_ytm_link_start" is translated here but not found in default locale [ExtraTranslation]
+    <string name="scanner_ytm_link_start">Iniciando o vÃ­nculo de artistas do YouTubeâ€¦</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values-ru\strings-vynce.xml:132: Error: "scanner_ytm_link_fail" is translated here but not found in default locale [ExtraTranslation]
+    <string name="scanner_ytm_link_fail">ÐÐµ ÑƒÐ´Ð°Ð»Ð¾ÑÑŒ ÑÐ²ÑÐ·Ð°Ñ‚ÑŒ Ñ Ð¸ÑÐ¿Ð¾Ð»Ð½Ð¸Ñ‚ÐµÐ»ÐµÐ¼ Ð½Ð° YouTube</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values-fa\strings-vynce.xml:135: Error: "scanner_ytm_link_fail" is translated here but not found in default locale [ExtraTranslation]
+    <string name="scanner_ytm_link_fail">Ú©Ø§Ø± Ù¾ÛŒÙˆÙ†Ø¯ Ø¯Ø§Ø¯Ù† Ù‡Ù†Ø±Ù…Ù†Ø¯ ÛŒÙˆØªÛŒÙˆØ¨ Ù†Ø§Ù…ÙˆÙÙ‚ Ø¨ÙˆØ¯</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values-hi\strings-vynce.xml:135: Error: "scanner_ytm_link_fail" is translated here but not found in default locale [ExtraTranslation]
+    <string name="scanner_ytm_link_fail">YouTube à¤•à¤²à¤¾à¤•à¤¾à¤° à¤²à¤¿à¤‚à¤• à¤•à¤°à¤¨à¥‡ à¤•à¥€ à¤ªà¥à¤°à¤•à¥à¤°à¤¿à¤¯à¤¾ à¤µà¤¿à¤«à¤² à¤¹à¥à¤ˆ</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values-fa\strings-vynce.xml:136: Error: "scanner_ytm_link_start" is translated here but not found in default locale [ExtraTranslation]
+    <string name="scanner_ytm_link_start">Ø´Ø±ÙˆØ¹ Ù¾ÛŒÙˆÙ†Ø¯ Ø¯Ø§Ø¯Ù† Ø¨Ù‡ Ù‡Ù†Ø±Ù…Ù†Ø¯Ø§Ù† ÛŒÙˆØªÛŒÙˆØ¨â€¦</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values-hi\strings-vynce.xml:136: Error: "scanner_ytm_link_start" is translated here but not found in default locale [ExtraTranslation]
+    <string name="scanner_ytm_link_start">YouTube à¤•à¤²à¤¾à¤•à¤¾à¤° à¤²à¤¿à¤‚à¤• à¤•à¤°à¤¨à¤¾ à¤ªà¥à¤°à¤¾à¤°à¤‚à¤­ à¤•à¤¿à¤¯à¤¾ à¤œà¤¾ à¤°à¤¹à¤¾ à¤¹à¥ˆâ€¦</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values-pl\strings-vynce.xml:138: Error: "scanner_ytm_link_fail" is translated here but not found in default locale [ExtraTranslation]
+    <string name="scanner_ytm_link_fail">Nieudane podejÅ›cie linkowania artysty YouTube</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values-ar\strings-vynce.xml:143: Error: "scanner_ytm_link_fail" is translated here but not found in default locale [ExtraTranslation]
+    <string name="scanner_ytm_link_fail">ÙØ´Ù„Øª Ù…Ù‡Ù…Ø© Ø±Ø¨Ø· ÙÙ†Ø§Ù† YouTube</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values-ar\strings-vynce.xml:144: Error: "scanner_ytm_link_start" is translated here but not found in default locale [ExtraTranslation]
+    <string name="scanner_ytm_link_start">Ø¨Ø¯Ø¡ Ø±Ø¨Ø· ÙÙ†Ø§Ù† YouTubeâ€¦</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values-ko\strings-vynce.xml:149: Error: "scanner_ytm_link_start" is translated here but not found in default locale [ExtraTranslation]
+    <string name="scanner_ytm_link_start">ìœ íŠœë¸Œ ì•„í‹°ìŠ¤íŠ¸ ì—°ê²° ì¤‘â€¦</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values-sr\strings-vynce.xml:150: Error: "scanner_ytm_link_fail" is translated here but not found in default locale [ExtraTranslation]
+    <string name="scanner_ytm_link_fail">Povezivanje izvoÄ‘aÄa na YouTube-u nije uspelo</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values-sr\strings-vynce.xml:151: Error: "scanner_ytm_link_start" is translated here but not found in default locale [ExtraTranslation]
+    <string name="scanner_ytm_link_start">Pokretanje povezivanja YouTube izvoÄ‘aÄaâ€¦</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values-in\strings-vynce.xml:154: Error: "scanner_ytm_link_fail" is translated here but not found in default locale [ExtraTranslation]
+    <string name="scanner_ytm_link_fail">Pekerjaan penautan artis YouTube gagal</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values-in\strings-vynce.xml:155: Error: "scanner_ytm_link_start" is translated here but not found in default locale [ExtraTranslation]
+    <string name="scanner_ytm_link_start">Memulai menautkan artis YouTubeâ€¦</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values-pt\strings-vynce.xml:156: Error: "scanner_ytm_link_fail" is translated here but not found in default locale [ExtraTranslation]
+    <string name="scanner_ytm_link_fail">Falha ao vincular artistas do YouTube</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values-pt\strings-vynce.xml:157: Error: "scanner_ytm_link_start" is translated here but not found in default locale [ExtraTranslation]
+    <string name="scanner_ytm_link_start">A iniciar vÃ­nculo dos artistas YouTubeâ€¦</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values-iw\strings-vynce.xml:206: Error: "scanner_ytm_link_fail" is translated here but not found in default locale [ExtraTranslation]
+    <string name="scanner_ytm_link_fail">×§×™×©×•×¨ ××ž×Ÿ YouTube × ×›×©×œ</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values-iw\strings-vynce.xml:207: Error: "scanner_ytm_link_start" is translated here but not found in default locale [ExtraTranslation]
+    <string name="scanner_ytm_link_start">×ž×ª×—×™×œ ×§×™×©×•×¨ ××ž×Ÿ YouTubeâ€¦</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+   Explanation for issues of type "ExtraTranslation":
+   If a string appears in a specific language translation file, but there is
+   no corresponding string in the default locale, then this string is probably
+   unused. (It's technically possible that your application is only intended
+   to run in a specific locale, but it's still a good idea to provide a
+   fallback.)
+
+   Note that these strings can lead to crashes if the string is looked up on
+   any locale not providing a translation, so it's important to clean them
+   up.
+
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings.xml:163: Warning: Formatting %d followed by words ("songs"): This should probably be a plural rather than a string [PluralsCandidate]
+    <string name="duplicates_description_multiple">%d songs are already in your playlist</string>
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+   Explanation for issues of type "PluralsCandidate":
+   This lint check looks for potential errors in internationalization where
+   you have translated a message which involves a quantity and it looks like
+   other parts of the string may need grammatical changes.
+
+   For example, rather than something like this:
+     <string name="try_again">Try again in %d seconds.</string>
+   you should be using a plural:
+      <plurals name="try_again">
+           <item quantity="one">Try again in %d second</item>
+           <item quantity="other">Try again in %d seconds</item>
+       </plurals>
+   This will ensure that in other languages the right set of translations are
+   provided for the different quantity classes.
+
+   (This check depends on some heuristics, so it may not accurately determine
+   whether a string really should be a quantity. You can use tools:ignore to
+   filter out false positives.
+
+   https://developer.android.com/guide/topics/resources/string-resource.html#Plurals
+
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\java\androidx\documentfile\provider\DocumentsContractApi19Ot.java:28: Warning: Unnecessary; SDK_INT is always >= 19 [ObsoleteSdkInt]
+@RequiresApi(19)
+~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\java\com\zionhuang\jiosaavn\JioSaavn.kt:83: Warning: Unnecessary; SDK_INT is always >= 24 [ObsoleteSdkInt]
+        return if (Build.VERSION.SDK_INT >= 24) {
+                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\java\androidx\documentfile\provider\TreeDocumentFileOt.java:29: Warning: Unnecessary; SDK_INT is always >= 21 [ObsoleteSdkInt]
+@RequiresApi(21)
+~~~~~~~~~~~~~~~~
+
+   Explanation for issues of type "ObsoleteSdkInt":
+   This check flags version checks that are not necessary, because the
+   minSdkVersion (or surrounding known API level) is already at least as high
+   as the version checked for.
+
+   Similarly, it also looks for resources in -vNN folders, such as values-v14
+   where the version qualifier is less than or equal to the minSdkVersion,
+   where the contents should be merged into the best folder.
+
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\drawable\buymeacoffee.xml:47: Warning: Very long vector path (4146 characters), which is bad for performance. Considering reducing precision, removing minor details or rasterizing vector. [VectorPath]
+        android:pathData="M879.6,341.8L872.5,306.4C866.2,274.5 851.9,244.4 819.2,232.9C808.7,229.2 796.8,227.6 788.8,220C780.8,212.4 778.4,200.6 776.5,189.6C773.1,169.4 769.8,149.3 766.3,129.1C763.3,111.8 760.9,92.4 752.9,76.6C742.6,55.3 721.2,42.8 699.9,34.6C689,30.5 677.8,27 666.5,24.2C613.3,10.2 557.3,5 502.6,2.1C436.9,-1.5 371,-0.4 305.4,5.4C256.6,9.8 205.2,15.2 158.9,32C141.9,38.2 124.4,45.6 111.6,58.7C95.7,74.8 90.6,99.7 102.1,119.8C110.3,134 124.2,144.1 139,150.7C158.2,159.3 178.3,165.8 198.8,170.2C256.1,182.9 315.5,187.9 374,190C438.9,192.6 503.9,190.5 568.4,183.6C584.4,181.9 600.3,179.8 616.3,177.3C635,174.4 647,149.9 641.5,132.9C634.9,112.5 617.1,104.5 597.1,107.6C594.1,108.1 591.2,108.5 588.2,108.9L586.1,109.3C579.3,110.1 572.5,110.9 565.7,111.7C551.6,113.2 537.5,114.4 523.4,115.4C491.8,117.6 460.1,118.6 428.4,118.6C397.2,118.6 366.1,117.8 335,115.7C320.8,114.8 306.7,113.6 292.6,112.2C286.1,111.5 279.7,110.8 273.3,110L267.2,109.2L265.9,109L259.6,108.1C246.7,106.2 233.8,104 221,101.3C219.7,101 218.6,100.2 217.8,99.2C216.9,98.2 216.5,96.9 216.5,95.6C216.5,94.3 216.9,93 217.8,92C218.6,90.9 219.7,90.2 221,89.9H221.3C232.3,87.6 243.5,85.6 254.7,83.8C258.4,83.2 262.1,82.6 265.9,82.1H266C273,81.6 280,80.4 287,79.5C347.6,73.2 408.6,71.1 469.5,73.1C499.1,74 528.7,75.7 558.1,78.7C564.4,79.3 570.7,80 577,80.8C579.5,81.1 581.9,81.4 584.3,81.7L589.2,82.4C603.4,84.6 617.6,87.1 631.7,90.2C652.6,94.7 679.4,96.2 688.7,119.1C691.7,126.3 693,134.4 694.6,142L696.7,151.8C696.8,151.9 696.8,152.1 696.9,152.3C701.8,175.2 706.7,198.2 711.6,221.1C712,222.8 712,224.6 711.7,226.3C711.3,228 710.6,229.6 709.6,231C708.6,232.4 707.4,233.6 705.9,234.5C704.4,235.4 702.8,236 701,236.2H700.9L697.9,236.6L694.9,237C685.5,238.3 676,239.4 666.6,240.5C648,242.6 629.3,244.4 610.6,246C573.5,249.1 536.4,251.1 499.1,252.1C480.1,252.6 461.1,252.8 442.2,252.8C366.6,252.7 291.2,248.3 216.2,239.6C208.1,238.7 199.9,237.6 191.8,236.6C198.1,237.4 187.2,236 185,235.7C179.9,234.9 174.7,234.2 169.5,233.4C152.2,230.8 135,227.6 117.7,224.8C96.8,221.4 76.8,223.1 57.9,233.4C42.4,241.9 29.8,254.9 21.9,270.7C13.7,287.6 11.3,306 7.6,324.1C4,342.2 -1.7,361.7 0.5,380.3C5.1,420.4 33.2,453.1 73.5,460.4C111.5,467.2 149.7,472.8 188,477.6C338.4,496 490.3,498.2 641.2,484.1C653.4,483 665.7,481.7 678,480.4C681.8,480 685.7,480.4 689.3,481.7C692.9,482.9 696.2,485 699,487.7C701.7,490.4 703.8,493.7 705.1,497.3C706.4,501 706.8,504.8 706.5,508.7L702.6,545.8C694.9,620.8 687.2,695.9 679.5,770.9C671.5,849.7 663.4,928.4 655.3,1007.2C653,1029.4 650.7,1051.6 648.4,1073.7C646.2,1095.6 645.9,1118.1 641.8,1139.7C635.2,1173.6 612.2,1194.4 578.7,1202.1C548,1209.1 516.7,1212.7 485.2,1213C450.2,1213.2 415.4,1211.7 380.4,1211.8C343.2,1212.1 297.5,1208.6 268.8,1180.9C243.5,1156.5 240,1118.4 236.5,1085.4C232,1041.7 227.4,998 222.9,954.4L197.6,711.6L181.2,554.5C181,551.9 180.7,549.4 180.4,546.8C178.5,528 165.2,509.7 144.3,510.6C126.4,511.4 106.1,526.6 108.2,546.8L120.3,663.2L145.4,904.1C152.5,972.5 159.7,1041 166.8,1109.4C168.1,1122.5 169.4,1135.7 170.9,1148.8C178.7,1220.4 233.5,1259 301.2,1269.9C340.8,1276.3 381.3,1277.6 421.5,1278.2C473,1279.1 525,1281.1 575.6,1271.7C650.7,1257.9 707,1207.8 715,1130.1C717.3,1107.7 719.6,1085.3 721.9,1062.8C729.5,988.6 737.1,914.3 744.7,840.1L769.6,597.5L781,486.3C781.6,480.7 783.9,475.6 787.6,471.5C791.4,467.4 796.4,464.6 801.8,463.6C823.3,459.4 843.8,452.2 859,435.9C883.3,409.9 888.2,376 879.6,341.8ZM72.4,365.8C72.8,365.7 72.2,368.5 71.9,369.8C71.8,367.8 71.9,366.1 72.4,365.8ZM74.5,381.9C74.7,381.8 75.2,382.5 75.7,383.3C74.9,382.6 74.4,382 74.5,381.9H74.5ZM76.6,384.6C77.3,385.9 77.7,386.7 76.6,384.6V384.6ZM80.7,388H80.8C80.8,388.1 81,388.2 81,388.3C80.9,388.2 80.8,388.1 80.7,388H80.7ZM800.8,383C793.1,390.3 781.5,393.7 770,395.4C641.3,414.5 510.7,424.2 380.6,419.9C287.5,416.7 195.3,406.4 103.1,393.4C94.1,392.1 84.3,390.5 78.1,383.8C66.4,371.2 72.2,345.9 75.2,330.8C78,316.9 83.3,298.3 99.9,296.4C125.7,293.3 155.6,304.2 181.2,308.1C211.9,312.8 242.8,316.5 273.7,319.4C405.9,331.4 540.3,329.5 671.9,311.9C695.9,308.7 719.8,304.9 743.6,300.7C764.8,296.9 788.4,289.7 801.2,311.7C810,326.7 811.1,346.7 809.8,363.6C809.4,371 806.1,377.9 800.8,383H800.8Z" />
+                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+   Explanation for issues of type "VectorPath":
+   Using long vector paths is bad for performance. There are several ways to
+   make the pathData shorter:
+   * Using less precision
+   * Removing some minor details
+   * Using the Android Studio vector conversion tool
+   * Rasterizing the image (converting to PNG)
+
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\java\com\vynce\app\ui\component\AutoResizeText.kt:44: Hint: Prefer mutableFloatStateOf instead of mutableStateOf [AutoboxingStateCreation from androidx.compose.runtime]
+    var fontSizeValue by remember { mutableStateOf(fontSizeRange.max.value) }
+                                    ~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\java\com\vynce\app\MainActivity.kt:826: Hint: Prefer mutableIntStateOf instead of mutableStateOf [AutoboxingStateCreation from androidx.compose.runtime]
+                                        val playbackState by playerConnection?.playbackState?.collectAsState() ?: remember { mutableStateOf(Player.STATE_IDLE) }
+                                                                                                                             ~~~~~~~~~~~~~~
+
+   Explanation for issues of type "AutoboxingStateCreation":
+   Calling mutableStateOf<T>() when T is either backed by a primitive type on
+   the JVM or is a value class results in a state implementation that requires
+   all state values to be boxed. This usually causes an additional allocation
+   for each state write, and adds some additional work to auto-unbox values
+   when reading the value of the state. Instead, prefer to use a specialized
+   primitive state implementation for Int, Long, Float, and Double when the
+   state does not need to track null values and does not override the default
+   SnapshotMutationPolicy. See mutableIntStateOf(), mutableLongStateOf(),
+   mutableFloatStateOf(), and mutableDoubleStateOf() for more information.
+
+   Vendor: Jetpack Compose
+   Identifier: androidx.compose.runtime
+   Feedback: https://issuetracker.google.com/issues/new?component=612128
+
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\drawable\buymeacoffee.xml:1: Warning: The resource R.drawable.buymeacoffee appears to be unused [UnusedResources]
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+^
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\drawable\launcher_monochrome.xml:1: Warning: The resource R.drawable.launcher_monochrome appears to be unused [UnusedResources]
+<vector xmlns:android="http://schemas.android.com/apk/res/android" android:height="108dp" android:viewportHeight="180" android:viewportWidth="180" android:width="108dp">
+^
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\drawable\library_music.xml:1: Warning: The resource R.drawable.library_music appears to be unused [UnusedResources]
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+^
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\xml\network_security_config.xml:2: Warning: The resource R.xml.network_security_config appears to be unused [UnusedResources]
+<network-security-config>
+^
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\drawable\pause.xml:1: Warning: The resource R.drawable.pause appears to be unused [UnusedResources]
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+^
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\drawable\radio.xml:1: Warning: The resource R.drawable.radio appears to be unused [UnusedResources]
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+^
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\drawable\replay.xml:1: Warning: The resource R.drawable.replay appears to be unused [UnusedResources]
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+^
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\drawable\skip_previous.xml:1: Warning: The resource R.drawable.skip_previous appears to be unused [UnusedResources]
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+^
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings-vynce.xml:15: Warning: The resource R.string.recent_activity appears to be unused [UnusedResources]
+    <string name="recent_activity">Recent activity</string>
+            ~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings-vynce.xml:18: Warning: The resource R.string.local_history appears to be unused [UnusedResources]
+    <string name="local_history">Local</string>
+            ~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings-vynce.xml:19: Warning: The resource R.string.queue_local_history appears to be unused [UnusedResources]
+    <string name="queue_local_history">History (local)</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings-vynce.xml:20: Warning: The resource R.string.queue_remote_history appears to be unused [UnusedResources]
+    <string name="queue_remote_history">History (remote)</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings-vynce.xml:21: Warning: The resource R.string.remote_history appears to be unused [UnusedResources]
+    <string name="remote_history">Remote</string>
+            ~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings-vynce.xml:41: Warning: The resource R.string.select appears to be unused [UnusedResources]
+    <string name="select">Selection mode</string>
+            ~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings-vynce.xml:42: Warning: The resource R.string.like_all appears to be unused [UnusedResources]
+    <string name="like_all">Like all</string>
+            ~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings-vynce.xml:48: Warning: The resource R.string.err_invalid_ytm_song appears to be unused [UnusedResources]
+    <string name="err_invalid_ytm_song">Failed to play song. Only content accessible on JioSaavn can be played</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings-vynce.xml:63: Warning: The resource R.string.create_sync_playlist appears to be unused [UnusedResources]
+    <string name="create_sync_playlist">Sync Playlist</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings-vynce.xml:64: Warning: The resource R.string.create_sync_playlist_description appears to be unused [UnusedResources]
+    <string name="create_sync_playlist_description">Note: This allows for syncing with your online account. This is NOT changeable later. You cannot add local songs to synced playlists.</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings-vynce.xml:70: Warning: The resource R.string.playlist_add_local_to_synced_note appears to be unused [UnusedResources]
+    <string name="playlist_add_local_to_synced_note">Note: Adding local songs to synced/remote playlists is unsupported. Any other combination is valid</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings-vynce.xml:71: Warning: The resource R.string.playlist_missing_note appears to be unused [UnusedResources]
+    <string name="playlist_missing_note">Playlists missing? Click here to enable sync read-write mode in settings</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings-vynce.xml:75: Warning: The resource R.string.sync_progress_active appears to be unused [UnusedResources]
+    <string name="sync_progress_active">Syncing with JioSaavn accountâ€¦</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings-vynce.xml:76: Warning: The resource R.string.sync_progress_success appears to be unused [UnusedResources]
+    <string name="sync_progress_success">Sync complete</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings-vynce.xml:95: Warning: The resource R.string.grp_more_settings appears to be unused [UnusedResources]
+    <string name="grp_more_settings">More settings</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings-vynce.xml:96: Warning: The resource R.string.grp_proxy appears to be unused [UnusedResources]
+    <string name="grp_proxy">Proxy</string>
+            ~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings-vynce.xml:97: Warning: The resource R.string.grp_sync appears to be unused [UnusedResources]
+    <string name="grp_sync">Sync</string>
+            ~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings-vynce.xml:101: Warning: The resource R.string.check_for_update appears to be unused [UnusedResources]
+    <string name="check_for_update">Check for updates</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings-vynce.xml:102: Warning: The resource R.string.checking_for_update appears to be unused [UnusedResources]
+    <string name="checking_for_update">Checking for updates</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings-vynce.xml:108: Warning: The resource R.string.no_updates_available appears to be unused [UnusedResources]
+    <string name="no_updates_available">No updates available</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings-vynce.xml:119: Warning: The resource R.string.attrib_zhuang appears to be unused [UnusedResources]
+    <string name="attrib_zhuang">Zion Huang for InnerTune</string>
+            ~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings-vynce.xml:121: Warning: The resource R.string.special_thanks appears to be unused [UnusedResources]
+    <string name="special_thanks">Special thanks</string>
+            ~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings-vynce.xml:124: Warning: The resource R.string.new_interface appears to be unused [UnusedResources]
+    <string name="new_interface">New interface layout</string>
+            ~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings-vynce.xml:142: Warning: The resource R.string.like_autodownload appears to be unused [UnusedResources]
+    <string name="like_autodownload">Automatically download your liked songs</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings-vynce.xml:143: Warning: The resource R.string.action_logout_tooltip appears to be unused [UnusedResources]
+    <string name="action_logout_tooltip">To fully log out, please sign out of your JioSaavn account in their web portal before using this logout button</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values-ar\strings-vynce.xml:143: Warning: The resource R.string.scanner_ytm_link_fail appears to be unused [UnusedResources]
+    <string name="scanner_ytm_link_fail">ÙØ´Ù„Øª Ù…Ù‡Ù…Ø© Ø±Ø¨Ø· ÙÙ†Ø§Ù† YouTube</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values-ar\strings-vynce.xml:144: Warning: The resource R.string.scanner_ytm_link_start appears to be unused [UnusedResources]
+    <string name="scanner_ytm_link_start">Ø¨Ø¯Ø¡ Ø±Ø¨Ø· ÙÙ†Ø§Ù† YouTubeâ€¦</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings-vynce.xml:144: Warning: The resource R.string.token_adv_login_description appears to be unused [UnusedResources]
+    <string name="token_adv_login_description">This is an ADVANCED login method. As an alternative to the web portal, you may directly enter or update your login token here. For example, this can speed up logging in on multiple devices. Please note that any invalid token formats the app fails to parse will not be accepted</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings-vynce.xml:145: Warning: The resource R.string.token_hidden appears to be unused [UnusedResources]
+    <string name="token_hidden">Tap to show token</string>
+            ~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings-vynce.xml:146: Warning: The resource R.string.token_shown appears to be unused [UnusedResources]
+    <string name="token_shown">Tap again to copy or edit</string>
+            ~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings-vynce.xml:147: Warning: The resource R.string.sync_conflict_add_only appears to be unused [UnusedResources]
+    <string name="sync_conflict_add_only">Keep all local content, add new remote content</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings-vynce.xml:148: Warning: The resource R.string.sync_conflict_overwrite appears to be unused [UnusedResources]
+    <string name="sync_conflict_overwrite">Overwrite local content with remote content</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings-vynce.xml:149: Warning: The resource R.string.sync_conflict_title appears to be unused [UnusedResources]
+    <string name="sync_conflict_title">Conflict resolution</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings-vynce.xml:150: Warning: The resource R.string.sync_mode appears to be unused [UnusedResources]
+    <string name="sync_mode">Sync mode</string>
+            ~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings-vynce.xml:151: Warning: The resource R.string.sync_mode_ro appears to be unused [UnusedResources]
+    <string name="sync_mode_ro">Read only (View remote content)</string>
+            ~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings-vynce.xml:152: Warning: The resource R.string.sync_mode_rw appears to be unused [UnusedResources]
+    <string name="sync_mode_rw">Read write (Also allow changes to remote content)</string>
+            ~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings-vynce.xml:153: Warning: The resource R.string.ytm_sync appears to be unused [UnusedResources]
+    <string name="ytm_sync">Automatically sync with your JioSaavn account</string>
+            ~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings-vynce.xml:154: Warning: The resource R.string.wifi_only appears to be unused [UnusedResources]
+    <string name="wifi_only">Wi-Fi only</string>
+            ~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings-vynce.xml:206: Warning: The resource R.string.scanner_local_title appears to be unused [UnusedResources]
+    <string name="scanner_local_title">Local scanner</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings-vynce.xml:207: Warning: The resource R.string.scanner_manual_btn appears to be unused [UnusedResources]
+    <string name="scanner_manual_btn">Trigger manual sync</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings-vynce.xml:212: Warning: The resource R.string.scanner_missing_ffmpeg appears to be unused [UnusedResources]
+ <string name="scanner_missing_ffmpeg">FFmpeg extractor not detected</string>
+         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings-vynce.xml:222: Warning: The resource R.string.scanner_progress_scanning appears to be unused [UnusedResources]
+ <string name="scanner_progress_scanning">Scanningâ€¦</string>
+         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings-vynce.xml:226: Warning: The resource R.string.scanner_ytm_link_success appears to be unused [UnusedResources]
+ <string name="scanner_ytm_link_success">JioSaavn artist linking job complete</string>
+         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings-vynce.xml:255: Warning: The resource R.string.scanner_online_artist_linking appears to be unused [UnusedResources]
+    <string name="scanner_online_artist_linking">Try to link local files\' artists with ones on JioSaavn</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings-vynce.xml:269: Warning: The resource R.string.dl_oobe_tooltip appears to be unused [UnusedResources]
+    <string name="dl_oobe_tooltip">Songs are download to the app\'s private internal storage. To download songs to the external storage, you need to choose a folder first. You can add, change or remove folders, or migrate Internal Downloads to External Downloads later in Settings.</string>
+            ~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings-vynce.xml:285: Warning: The resource R.string.pause_remote_listen_history appears to be unused [UnusedResources]
+    <string name="pause_remote_listen_history">Pause sharing listen history with JioSaavn</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings-vynce.xml:303: Warning: The resource R.string.oobe_welcome_message appears to be unused [UnusedResources]
+    <string name="oobe_welcome_message">Welcome to Vynce</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings-vynce.xml:304: Warning: The resource R.string.oobe_welcome_tip appears to be unused [UnusedResources]
+    <string name="oobe_welcome_tip">For the best experience, we recommend completing a quick setup to personalize key settings like theme, JioSaavn account, local media, and downloads.</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings-vynce.xml:307: Warning: The resource R.string.oobe_ytm_integration appears to be unused [UnusedResources]
+    <string name="oobe_ytm_integration">JioSaavn Integration</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings-vynce.xml:308: Warning: The resource R.string.oobe_ytm_integration_description appears to be unused [UnusedResources]
+    <string name="oobe_ytm_integration_description">Access your favorite tracks seamlessly</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings-vynce.xml:309: Warning: The resource R.string.oobe_ad_free_exp appears to be unused [UnusedResources]
+    <string name="oobe_ad_free_exp">No ADs</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings-vynce.xml:310: Warning: The resource R.string.oobe_ad_free_exp_description appears to be unused [UnusedResources]
+    <string name="oobe_ad_free_exp_description">Enjoy uninterrupted music playback</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings-vynce.xml:311: Warning: The resource R.string.oobe_local_music_support appears to be unused [UnusedResources]
+    <string name="oobe_local_music_support">Extensive Local Music Support</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings-vynce.xml:312: Warning: The resource R.string.oobe_local_music_support_description appears to be unused [UnusedResources]
+    <string name="oobe_local_music_support_description">Play your music files (ex. MP3, OGG, FLAC, etc.)</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings-vynce.xml:313: Warning: The resource R.string.oobe_cross_platform_sync appears to be unused [UnusedResources]
+    <string name="oobe_cross_platform_sync">Cross-Platform Sync</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings-vynce.xml:314: Warning: The resource R.string.oobe_cross_platform_sync_description appears to be unused [UnusedResources]
+    <string name="oobe_cross_platform_sync_description">Keep your music in harmony across devices</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings-vynce.xml:315: Warning: The resource R.string.oobe_use_backup appears to be unused [UnusedResources]
+    <string name="oobe_use_backup">I have a backup</string>
+            ~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings-vynce.xml:318: Warning: The resource R.string.oobe_interface_subtitle appears to be unused [UnusedResources]
+    <string name="oobe_interface_subtitle">Customize how Vynce looks and what content it shows you.</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings-vynce.xml:321: Warning: The resource R.string.oobe_ytm_logon_title appears to be unused [UnusedResources]
+    <string name="oobe_ytm_logon_title">Account</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings-vynce.xml:322: Warning: The resource R.string.oobe_ytm_logon_subtitle appears to be unused [UnusedResources]
+    <string name="oobe_ytm_logon_subtitle">Sign in to your JioSaavn account to sync and access private account content. This is optional.</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings-vynce.xml:325: Warning: The resource R.string.oobe_local_media_title appears to be unused [UnusedResources]
+    <string name="oobe_local_media_title">Local media</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings-vynce.xml:326: Warning: The resource R.string.oobe_local_media_subtitle appears to be unused [UnusedResources]
+    <string name="oobe_local_media_subtitle">Choose folders that contain your music. We\'ll scan them for songs to import.</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings-vynce.xml:329: Warning: The resource R.string.oobe_cache_title appears to be unused [UnusedResources]
+    <string name="oobe_cache_title">Song cache</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings-vynce.xml:330: Warning: The resource R.string.oobe_cache_subtitle appears to be unused [UnusedResources]
+    <string name="oobe_cache_subtitle">Choose a song cache size. This can help reduce internet playback issues</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings-vynce.xml:331: Warning: The resource R.string.oobe_downloads_title appears to be unused [UnusedResources]
+    <string name="oobe_downloads_title">Song downloads</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings-vynce.xml:332: Warning: The resource R.string.oobe_downloads_subtitle appears to be unused [UnusedResources]
+    <string name="oobe_downloads_subtitle">Choose a folder where downloaded songs will be saved.</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings-vynce.xml:335: Warning: The resource R.string.oobe_complete_title appears to be unused [UnusedResources]
+    <string name="oobe_complete_title">You\'re All Set!</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings-vynce.xml:336: Warning: The resource R.string.oobe_complete appears to be unused [UnusedResources]
+    <string name="oobe_complete">Vynce is set up and ready to use. Explore your music, discover new tracks, and enjoy the experience!</string>
+            ~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings-vynce.xml:345: Warning: The resource R.string.m3u_ytm_lookup appears to be unused [UnusedResources]
+    <string name="m3u_ytm_lookup">Search on JioSaavn for songs not found in the app database</string>
+            ~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings-vynce.xml:350: Warning: The resource R.string.action_skip appears to be unused [UnusedResources]
+    <string name="action_skip">Skip</string>
+            ~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings-vynce.xml:352: Warning: The resource R.string.info appears to be unused [UnusedResources]
+    <string name="info">Information</string>
+            ~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings-vynce.xml:357: Warning: The resource R.string.speed_very_slow appears to be unused [UnusedResources]
+    <string name="speed_very_slow">Very slow</string>
+            ~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings-vynce.xml:361: Warning: The resource R.string.speed_very_fast appears to be unused [UnusedResources]
+    <string name="speed_very_fast">Very fast</string>
+            ~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings.xml:13: Warning: The resource R.string.saavn appears to be unused [UnusedResources]
+    <string name="saavn">Saavn</string>
+            ~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings.xml:23: Warning: The resource R.string.mood_and_genres appears to be unused [UnusedResources]
+    <string name="mood_and_genres">Mood and Genres</string>
+            ~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings.xml:24: Warning: The resource R.string.account appears to be unused [UnusedResources]
+    <string name="account">Account</string>
+            ~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings.xml:25: Warning: The resource R.string.quick_picks appears to be unused [UnusedResources]
+    <string name="quick_picks">Quick picks</string>
+            ~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings.xml:26: Warning: The resource R.string.quick_picks_empty appears to be unused [UnusedResources]
+    <string name="quick_picks_empty">Listen to songs to generate your quick picks</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings.xml:27: Warning: The resource R.string.forgotten_favorites appears to be unused [UnusedResources]
+    <string name="forgotten_favorites">Forgotten favorites</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings.xml:28: Warning: The resource R.string.keep_listening appears to be unused [UnusedResources]
+    <string name="keep_listening">Keep listening</string>
+            ~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings.xml:29: Warning: The resource R.string.your_youtube_playlists appears to be unused [UnusedResources]
+    <string name="your_youtube_playlists">JioSaavn Playlists</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings.xml:30: Warning: The resource R.string.similar_to appears to be unused [UnusedResources]
+    <string name="similar_to">Similar to</string>
+            ~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings.xml:31: Warning: The resource R.string.new_release_albums appears to be unused [UnusedResources]
+    <string name="new_release_albums">New release albums</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings.xml:34: Warning: The resource R.string.today appears to be unused [UnusedResources]
+     <string name="today">Today</string>
+             ~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings.xml:35: Warning: The resource R.string.yesterday appears to be unused [UnusedResources]
+     <string name="yesterday">Yesterday</string>
+             ~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings.xml:36: Warning: The resource R.string.this_week appears to be unused [UnusedResources]
+     <string name="this_week">This week</string>
+             ~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings.xml:37: Warning: The resource R.string.last_week appears to be unused [UnusedResources]
+     <string name="last_week">Last week</string>
+             ~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings.xml:46: Warning: The resource R.string.search_yt_music appears to be unused [UnusedResources]
+     <string name="search_yt_music">Searchâ€¦</string>
+             ~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings.xml:54: Warning: The resource R.string.filter_videos appears to be unused [UnusedResources]
+    <string name="filter_videos">Videos</string>
+            ~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings.xml:58: Warning: The resource R.string.filter_community_playlists appears to be unused [UnusedResources]
+    <string name="filter_community_playlists">Community playlists</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings.xml:59: Warning: The resource R.string.filter_featured_playlists appears to be unused [UnusedResources]
+    <string name="filter_featured_playlists">Featured playlists</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings.xml:60: Warning: The resource R.string.filter_bookmarked appears to be unused [UnusedResources]
+    <string name="filter_bookmarked">Bookmarked</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings.xml:70: Warning: The resource R.string.from_your_library appears to be unused [UnusedResources]
+    <string name="from_your_library">From your library</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings.xml:73: Warning: The resource R.string.other_versions appears to be unused [UnusedResources]
+    <string name="other_versions">Other versions</string>
+            ~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings.xml:83: Warning: The resource R.string.retry appears to be unused [UnusedResources]
+    <string name="retry">Retry</string>
+            ~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings.xml:84: Warning: The resource R.string.radio appears to be unused [UnusedResources]
+    <string name="radio">Radio</string>
+            ~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings.xml:111: Warning: The resource R.string.remove_from_queue appears to be unused [UnusedResources]
+    <string name="remove_from_queue">Remove from queue</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings.xml:113: Warning: The resource R.string.action_sync appears to be unused [UnusedResources]
+    <string name="action_sync">Sync</string>
+            ~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings.xml:115: Warning: The resource R.string.tempo_and_pitch appears to be unused [UnusedResources]
+    <string name="tempo_and_pitch">Tempo and Pitch</string>
+            ~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings.xml:124: Warning: The resource R.string.sort_by_play_time appears to be unused [UnusedResources]
+    <string name="sort_by_play_time">Play time</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings.xml:134: Warning: The resource R.string.volume appears to be unused [UnusedResources]
+    <string name="volume">Volume</string>
+            ~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings.xml:139: Warning: The resource R.string.edit_lyrics appears to be unused [UnusedResources]
+    <string name="edit_lyrics">Edit lyrics</string>
+            ~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings.xml:145: Warning: The resource R.string.error_song_title_empty appears to be unused [UnusedResources]
+    <string name="error_song_title_empty">Song title cannot be empty.</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings.xml:146: Warning: The resource R.string.error_song_artist_empty appears to be unused [UnusedResources]
+    <string name="error_song_artist_empty">Song artist cannot be empty.</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings.xml:147: Warning: The resource R.string.save appears to be unused [UnusedResources]
+    <string name="save">Save</string>
+            ~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings.xml:149: Warning: The resource R.string.choose_playlist appears to be unused [UnusedResources]
+    <string name="choose_playlist">Choose playlist</string>
+            ~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings.xml:152: Warning: The resource R.string.playlist_name appears to be unused [UnusedResources]
+    <string name="playlist_name">Playlist name</string>
+            ~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings.xml:153: Warning: The resource R.string.error_playlist_name_empty appears to be unused [UnusedResources]
+    <string name="error_playlist_name_empty">Playlist name cannot be empty.</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings.xml:155: Warning: The resource R.string.edit_artist appears to be unused [UnusedResources]
+    <string name="edit_artist">Edit artist</string>
+            ~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings.xml:156: Warning: The resource R.string.artist_name appears to be unused [UnusedResources]
+    <string name="artist_name">Artist name</string>
+            ~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings.xml:157: Warning: The resource R.string.error_artist_name_empty appears to be unused [UnusedResources]
+    <string name="error_artist_name_empty">Artist name cannot be empty.</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings.xml:196: Warning: The resource R.string.playlist_imported appears to be unused [UnusedResources]
+    <string name="playlist_imported">Playlist imported</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings.xml:197: Warning: The resource R.string.removed_song_from_playlist appears to be unused [UnusedResources]
+    <string name="removed_song_from_playlist">Removed \"%s\" from playlist</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings.xml:198: Warning: The resource R.string.playlist_synced appears to be unused [UnusedResources]
+    <string name="playlist_synced">Playlist synced</string>
+            ~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings.xml:199: Warning: The resource R.string.undo appears to be unused [UnusedResources]
+    <string name="undo">Undo</string>
+            ~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings.xml:209: Warning: The resource R.string.error_no_stream appears to be unused [UnusedResources]
+    <string name="error_no_stream">No stream available</string>
+            ~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings.xml:211: Warning: The resource R.string.error_timeout appears to be unused [UnusedResources]
+    <string name="error_timeout">Timeout</string>
+            ~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings.xml:243: Warning: The resource R.string.customize_navigation_tabs appears to be unused [UnusedResources]
+    <string name="customize_navigation_tabs">Customize navigation tabs</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings.xml:245: Warning: The resource R.string.player_text_alignment appears to be unused [UnusedResources]
+    <string name="player_text_alignment">Player text alignment</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings.xml:247: Warning: The resource R.string.sided appears to be unused [UnusedResources]
+    <string name="sided">Sided</string>
+            ~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings.xml:251: Warning: The resource R.string.player_slider_style appears to be unused [UnusedResources]
+    <string name="player_slider_style">Player slider style</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings.xml:252: Warning: The resource R.string.default_ appears to be unused [UnusedResources]
+    <string name="default_">Default</string>
+            ~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings.xml:253: Warning: The resource R.string.squiggly appears to be unused [UnusedResources]
+    <string name="squiggly">Squiggly</string>
+            ~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings.xml:254: Warning: The resource R.string.misc appears to be unused [UnusedResources]
+    <string name="misc">Misc</string>
+            ~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings.xml:256: Warning: The resource R.string.grid_cell_size appears to be unused [UnusedResources]
+    <string name="grid_cell_size">Grid cell size</string>
+            ~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings.xml:257: Warning: The resource R.string.small appears to be unused [UnusedResources]
+    <string name="small">Small</string>
+            ~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings.xml:258: Warning: The resource R.string.big appears to be unused [UnusedResources]
+    <string name="big">Big</string>
+            ~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings.xml:261: Warning: The resource R.string.action_logout appears to be unused [UnusedResources]
+    <string name="action_logout">Log out</string>
+            ~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings.xml:262: Warning: The resource R.string.action_login appears to be unused [UnusedResources]
+    <string name="action_login">Log in</string>
+            ~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings.xml:263: Warning: The resource R.string.login appears to be unused [UnusedResources]
+    <string name="login">Login</string>
+            ~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings.xml:264: Warning: The resource R.string.not_logged_in appears to be unused [UnusedResources]
+    <string name="not_logged_in">Not logged in</string>
+            ~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings.xml:265: Warning: The resource R.string.login_failed appears to be unused [UnusedResources]
+    <string name="login_failed">Login failed</string>
+            ~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings.xml:273: Warning: The resource R.string.restart_to_take_effect appears to be unused [UnusedResources]
+    <string name="restart_to_take_effect">Restart to take effect</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings.xml:282: Warning: The resource R.string.persistent_queue_desc appears to be unused [UnusedResources]
+    <string name="persistent_queue_desc">Restore your last queue when the app starts</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings.xml:293: Warning: The resource R.string.cache appears to be unused [UnusedResources]
+    <string name="cache">Cache</string>
+            ~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings.xml:299: Warning: The resource R.string.max_image_cache_size appears to be unused [UnusedResources]
+    <string name="max_image_cache_size">Max image cache size</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings.xml:301: Warning: The resource R.string.max_song_cache_size appears to be unused [UnusedResources]
+    <string name="max_song_cache_size">Max song cache size</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings.xml:306: Warning: The resource R.string.listen_history appears to be unused [UnusedResources]
+    <string name="listen_history">Listen history</string>
+            ~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings.xml:310: Warning: The resource R.string.search_history appears to be unused [UnusedResources]
+    <string name="search_history">Search history</string>
+            ~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings.xml:314: Warning: The resource R.string.use_login_for_browse appears to be unused [UnusedResources]
+    <string name="use_login_for_browse">Use login for browsing content</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings.xml:315: Warning: The resource R.string.use_login_for_browse_desc appears to be unused [UnusedResources]
+    <string name="use_login_for_browse_desc">This can influence what content you see and for example shows premium-only albums if you are logged in with a Premium account</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings.xml:316: Warning: The resource R.string.disable_screenshot appears to be unused [UnusedResources]
+    <string name="disable_screenshot">Disable screenshot</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings.xml:317: Warning: The resource R.string.disable_screenshot_desc appears to be unused [UnusedResources]
+    <string name="disable_screenshot_desc">When this option is on, screenshots and the app\'s view in Recents are disabled.</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings.xml:320: Warning: The resource R.string.hide_explicit appears to be unused [UnusedResources]
+    <string name="hide_explicit">Hide explicit content</string>
+            ~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings.xml:325: Warning: The resource R.string.imported_playlist appears to be unused [UnusedResources]
+    <string name="imported_playlist">Imported playlist</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings.xml:328: Warning: The resource R.string.restore_failed appears to be unused [UnusedResources]
+    <string name="restore_failed">Failed to restore backup</string>
+            ~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings.xml:330: Warning: The resource R.string.discord_integration appears to be unused [UnusedResources]
+    <string name="discord_integration">Discord Integration</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings.xml:331: Warning: The resource R.string.discord_information appears to be unused [UnusedResources]
+    <string name="discord_information">Vynce uses the KizzyRPC library to set your Discord account\'s status. This involves using the Discord Gateway connection, which may be considered a violation of Discord\'s TOS. However, there are no known cases of user accounts being suspended for this reason. Use at your own risk.\n\nVynce will only extract your token, and everything else is stored locally.</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings.xml:332: Warning: The resource R.string.dismiss appears to be unused [UnusedResources]
+    <string name="dismiss">Dismiss</string>
+            ~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings.xml:333: Warning: The resource R.string.options appears to be unused [UnusedResources]
+    <string name="options">Options</string>
+            ~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings.xml:334: Warning: The resource R.string.preview appears to be unused [UnusedResources]
+    <string name="preview">Preview</string>
+            ~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings.xml:335: Warning: The resource R.string.enable_discord_rpc appears to be unused [UnusedResources]
+    <string name="enable_discord_rpc">Enable Rich Presence</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings.xml:338: Warning: The resource R.string.app_version appears to be unused [UnusedResources]
+    <string name="app_version">App version</string>
+            ~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings.xml:340: Warning: The resource R.string.new_version_available appears to be unused [UnusedResources]
+    <string name="new_version_available">New version available</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings.xml:341: Warning: The resource R.string.translation_models appears to be unused [UnusedResources]
+    <string name="translation_models">Translation Models</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\strings.xml:342: Warning: The resource R.string.clear_translation_models appears to be unused [UnusedResources]
+    <string name="clear_translation_models">Clear translation models</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\values.xml:4: Warning: The resource R.drawable.media3_notification_play appears to be unused [UnusedResources]
+    <drawable name="media3_notification_play">@drawable/play</drawable>
+              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\values.xml:5: Warning: The resource R.drawable.media3_notification_pause appears to be unused [UnusedResources]
+    <drawable name="media3_notification_pause">@drawable/pause</drawable>
+              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\values.xml:6: Warning: The resource R.drawable.media3_notification_seek_to_previous appears to be unused [UnusedResources]
+    <drawable name="media3_notification_seek_to_previous">@drawable/skip_previous</drawable>
+              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values\values.xml:7: Warning: The resource R.drawable.media3_notification_seek_to_next appears to be unused [UnusedResources]
+    <drawable name="media3_notification_seek_to_next">@drawable/skip_next</drawable>
+              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+   Explanation for issues of type "UnusedResources":
+   Unused resources make applications larger and slow down builds.
+
+
+   The unused resource check can ignore tests. If you want to include
+   resources that are only referenced from tests, consider packaging them in a
+   test source set instead.
+
+   You can include test sources in the unused resource check by setting the
+   system property lint.unused-resources.include-tests =true, and to exclude
+   them (usually for performance reasons), use
+   lint.unused-resources.exclude-tests =true.
+   ,
+
+   Available options:
+
+   **skip-libraries** (default is true):
+   Whether the unused resource check should skip reporting unused resources in libraries.
+
+   Many libraries will declare resources that are part of the library surface; other modules depending on the library will also reference the resources. To avoid reporting all these resources as unused (in the context of a library), the unused resource check normally skips reporting unused resources in libraries. Instead, run the unused resource check on the consuming app module (along with `checkDependencies=true`).
+
+   However, there are cases where you want to check that all the resources declared in a library are used; in that case, you can disable the skip option.
+
+   To configure this option, use a `lint.xml` file with an <option> like this:
+
+   ```xml
+   <lint>
+       <issue id="UnusedResources">
+           <option name="skip-libraries" value="true" />
+       </issue>
+   </lint>
+   ```
+
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values-pt\strings-vynce.xml:26: Warning: Replace "..." with ellipsis character (â€¦, &#8230;) ? [TypographyEllipsis]
+    <string name="err_play_next_on_error">Ocurreu um erro. A reproduzir seguinte...</string>
+                                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\values-vi\strings-vynce.xml:117: Warning: Replace "..." with ellipsis character (â€¦, &#8230;) ? [TypographyEllipsis]
+    <string name="oobe_local_music_support_description">PhÃ¡t tá»‡p nháº¡c cá»§a báº¡n (VD. MP3, OGG, FLAC,...)</string>
+                                                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+   Explanation for issues of type "TypographyEllipsis":
+   You can replace the string "..." with a dedicated ellipsis character,
+   ellipsis character (u2026, &#8230;). This can help make the text more
+   readable.
+
+   https://en.wikipedia.org/wiki/Ellipsis
+
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\mipmap-xxxhdpi\ic_launcher.png: Warning: Launcher icons should not fill every pixel of their square region; see the design guide for details [IconLauncherShape]
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\mipmap-xxxhdpi\ic_launcher_round.png: Warning: Launcher icon used as round icon did not have a circular shape [IconLauncherShape]
+
+   Explanation for issues of type "IconLauncherShape":
+   According to the Android Design Guide
+   (https://d.android.com/r/studio-ui/designer/material/iconography) your
+   launcher icons should "use a distinct silhouette", a "three-dimensional,
+   front view, with a slight perspective as if viewed from above, so that
+   users perceive some depth."
+
+   The unique silhouette implies that your launcher icon should not be a
+   filled square.
+
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\mipmap-anydpi-v26\ic_launcher.xml:1: Warning: The application adaptive icon is missing a monochrome tag [MonochromeLauncherIcon]
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+^
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\mipmap-anydpi-v26\ic_launcher_round.xml:1: Warning: The application adaptive roundIcon is missing a monochrome tag [MonochromeLauncherIcon]
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+^
+
+   Explanation for issues of type "MonochromeLauncherIcon":
+   If android:roundIcon and android:icon are both in your manifest, you must
+   either remove the reference to android:roundIcon if it is not needed; or,
+   supply the monochrome icon in the drawable defined by the android:roundIcon
+   and android:icon attribute.
+
+   For example, if android:roundIcon and android:icon are both in the
+   manifest, a launcher might choose to use android:roundIcon over
+   android:icon to display the adaptive app icon. Therefore, your themed
+   application iconwill not show if your monochrome attribute is not also
+   specified in android:roundIcon.
+
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\drawable\vynce_logo.png: Warning: Found bitmap drawable res/drawable/vynce_logo.png in densityless folder [IconLocation]
+
+   Explanation for issues of type "IconLocation":
+   The res/drawable folder is intended for density-independent graphics such
+   as shapes defined in XML. For bitmaps, move it to drawable-mdpi and
+   consider providing higher and lower resolution versions in drawable-ldpi,
+   drawable-hdpi and drawable-xhdpi. If the icon really is density independent
+   (for example a solid color) you can place it in drawable-nodpi.
+
+   https://developer.android.com/guide/practices/screens_support.html
+
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\res\mipmap-xxxhdpi\ic_launcher_round.png: Warning: The following unrelated icon files have identical contents: vynce_logo.png, ic_launcher.png, ic_launcher_round.png [IconDuplicates]
+
+   Explanation for issues of type "IconDuplicates":
+   If an icon is repeated under different names, you can consolidate and just
+   use one of the icons and delete the others to make your application
+   smaller. However, duplicated icons usually are not intentional and can
+   sometimes point to icons that were accidentally overwritten or accidentally
+   not updated.
+
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\java\com\vynce\app\utils\CoilBitmapLoader.kt:164: Warning: Use the KTX function createBitmap instead? [UseKtx]
+            val bitmap = Bitmap.createBitmap(x, y, Bitmap.Config.ARGB_8888)
+                         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\java\com\vynce\app\ui\screens\home\HomeViewModel.kt:97: Warning: Use the KTX extension function SharedPreferences.edit instead? [UseKtx]
+                        prefs.edit().putString("pl_$query", id).apply()
+                        ~~~~~~~~~~~~
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\src\main\java\com\zionhuang\jiosaavn\JioSaavn.kt:354: Warning: Use the KTX extension function SharedPreferences.edit instead? [UseKtx]
+        prefs.edit().putString("playlist_id_$name", id).apply()
+        ~~~~~~~~~~~~
+
+   Explanation for issues of type "UseKtx":
+   The Android KTX libraries decorates the Android platform SDK as well as
+   various libraries with more convenient extension functions available from
+   Kotlin, allowing you to use default parameters, named parameters, and
+   more.
+
+   Available options:
+
+   **remove-defaults** (default is true):
+   Whether to skip arguments that match the defaults provided by the extension.
+
+   Extensions often provide default values for some of the parameters. For example:
+   ```kotlin
+   fun Path.readLines(charset: Charset = Charsets.UTF_8): List<String> { return Files.readAllLines(this, charset) }
+   ```
+   This lint check will by default automatically omit parameters that match the default, so if your code was calling
+
+   ```kotlin
+   Files.readAllLines(file, Charset.UTF_8)
+   ```
+   lint would replace this with
+   ```kotlin
+   file.readLines()
+   ```
+   rather than
+
+   ```kotlin
+   file.readLines(Charset.UTF_8
+   ```
+   You can turn this behavior off using this option.
+
+   To configure this option, use a `lint.xml` file with an <option> like this:
+
+   ```xml
+   <lint>
+       <issue id="UseKtx">
+           <option name="remove-defaults" value="true" />
+       </issue>
+   </lint>
+   ```
+
+   **require-present** (default is true):
+   Whether to only offer extensions already available.
+
+   This option lets you only have lint suggest extension replacements if those extensions are already available on the class path (in other words, you're already depending on the library containing the extension method.)
+
+   To configure this option, use a `lint.xml` file with an <option> like this:
+
+   ```xml
+   <lint>
+       <issue id="UseKtx">
+           <option name="require-present" value="true" />
+       </issue>
+   </lint>
+   ```
+
+C:\Users\bhima\OneDrive\Desktop\Vynce\app\build.gradle.kts:268: Warning: Use version catalog instead [UseTomlInstead]
+    implementation("androidx.webkit:webkit:1.14.0")
+                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+   Explanation for issues of type "UseTomlInstead":
+   If your project is using a libs.versions.toml file, you should place all
+   Gradle dependencies in the TOML file. This lint check looks for version
+   declarations outside of the TOML file and suggests moving them (and in the
+   IDE, provides a quickfix to performing the operation automatically).
+
+53 errors, 244 warnings, 2 hints

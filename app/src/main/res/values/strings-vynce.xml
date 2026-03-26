@@ -224,6 +224,8 @@ while also allowing users to translate our app as well. New, specific strings to
 	<string name="scanner_scan_fail">Scanner failed</string>
 
 	<string name="scanner_ytm_link_success">JioSaavn artist linking job complete</string>
+	<string name="scanner_ytm_link_start">Starting JioSaavn artist linking…</string>
+	<string name="scanner_ytm_link_fail">JioSaavn artist linking failed</string>
 
     <plurals name="scanner_n_song_processed">
         <item quantity="one">%d song processed</item>

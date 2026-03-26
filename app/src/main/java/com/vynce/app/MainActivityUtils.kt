@@ -139,8 +139,8 @@ suspend fun scanInit(
                 val scanner = LocalMediaScanner.getScanner(
                     context, scannerImpl, SCANNER_OWNER_LM
                 )
-                val uris = scanner.scanLocal(scanPaths, excludedScanPaths)
-                scanner.quickSync(database, uris, scannerSensitivity, strictExtensions, strictFilePaths)
+                val uris = scanner.scanLocal(context, scanPaths, excludedScanPaths)
+                scanner.quickSync(context, database, uris, scannerSensitivity, strictExtensions, strictFilePaths)
             } catch (e: Exception) {
                 coroutineScope.launch {
                     snackbarHostState.showSnackbar(
@@ -230,6 +230,7 @@ suspend fun triggerMediaScan(
             if (fullRescan) {
                 if (scannerImpl == ScannerImpl.MEDIASTORE) {
                     scanner.fullMediaStoreSync(
+                        context,
                         database,
                         uriListFromString(scanPaths),
                         uriListFromString(excludedScanPaths),
@@ -239,12 +240,13 @@ suspend fun triggerMediaScan(
                         true,
                     )
                 } else {
-                    val uris = scanner.scanLocal(scanPaths, excludedScanPaths)
-                    scanner.fullSync(database, uris, scannerSensitivity, strictExtensions, strictFilePaths)
+                    val uris = scanner.scanLocal(context, scanPaths, excludedScanPaths)
+                    scanner.fullSync(context, database, uris, scannerSensitivity, strictExtensions, strictFilePaths)
                 }
             } else {
                 if (scannerImpl == ScannerImpl.MEDIASTORE) {
                     scanner.fullMediaStoreSync(
+                        context,
                         database,
                         uriListFromString(scanPaths),
                         uriListFromString(excludedScanPaths),
@@ -254,8 +256,8 @@ suspend fun triggerMediaScan(
                         false,
                     )
                 } else {
-                    val uris = scanner.scanLocal(scanPaths, excludedScanPaths)
-                    scanner.quickSync(database, uris, scannerSensitivity, strictExtensions, strictFilePaths)
+                    val uris = scanner.scanLocal(context, scanPaths, excludedScanPaths)
+                    scanner.quickSync(context, database, uris, scannerSensitivity, strictExtensions, strictFilePaths)
                 }
             }
             

@@ -116,6 +116,9 @@ fun ColumnScope.LocalScannerFrag() {
     val playerConnection = LocalPlayerConnection.current
     val snackbarHostState = LocalSnackbarHostState.current
 
+    val scannerMissingPermText = stringResource(R.string.scanner_missing_storage_perm)
+    val scannerScanFailText = stringResource(R.string.scanner_scan_fail)
+
     // scanner vars
     val scannerState by scannerState.collectAsState()
     val scannerProgressTotal by scannerProgressTotal.collectAsState()
@@ -180,7 +183,7 @@ fun ColumnScope.LocalScannerFrag() {
                 ) {
                     coroutineScope.launch {
                         snackbarHostState.showSnackbar(
-                            message = context.getString(R.string.scanner_missing_storage_perm),
+                            message = scannerMissingPermText,
                             withDismissAction = true,
                             duration = SnackbarDuration.Short
                         )
@@ -213,6 +216,7 @@ fun ColumnScope.LocalScannerFrag() {
                             val scanner = getScanner(context, scannerImpl, SCANNER_OWNER_LM)
                             if (scannerImpl == ScannerImpl.MEDIASTORE) {
                                 scanner.fullMediaStoreSync(
+                                    context,
                                     database,
                                     uriListFromString(scanPaths),
                                     uriListFromString(excludedScanPaths),
@@ -222,8 +226,8 @@ fun ColumnScope.LocalScannerFrag() {
                                     true,
                                 )
                             } else {
-                                val uris = scanner.scanLocal(scanPaths, excludedScanPaths)
-                                scanner.fullSync(database, uris, scannerSensitivity, strictExtensions, strictFilePaths)
+                                val uris = scanner.scanLocal(context, scanPaths, excludedScanPaths)
+                                scanner.fullSync(context, database, uris, scannerSensitivity, strictExtensions, strictFilePaths)
                             }
 
                             delay(1000)
@@ -231,7 +235,7 @@ fun ColumnScope.LocalScannerFrag() {
                             scannerFailure = true
 
                             snackbarHostState.showSnackbar(
-                                message = "${context.getString(R.string.scanner_scan_fail)}: ${e.message}",
+                                message = "$scannerScanFailText: ${e.message}",
                                 withDismissAction = true,
                                 duration = SnackbarDuration.Short
                             )
@@ -246,6 +250,7 @@ fun ColumnScope.LocalScannerFrag() {
 
                             if (scannerImpl == ScannerImpl.MEDIASTORE) {
                                 scanner.fullMediaStoreSync(
+                                    context,
                                     database,
                                     uriListFromString(scanPaths),
                                     uriListFromString(excludedScanPaths),
@@ -255,9 +260,9 @@ fun ColumnScope.LocalScannerFrag() {
                                     false
                                 )
                             } else {
-                                val uris = scanner.scanLocal(scanPaths, excludedScanPaths)
+                                val uris = scanner.scanLocal(context, scanPaths, excludedScanPaths)
                                 scanner.quickSync(
-                                    database, uris, scannerSensitivity, strictExtensions,
+                                    context, database, uris, scannerSensitivity, strictExtensions,
                                     strictFilePaths
                                 )
                             }
@@ -267,7 +272,7 @@ fun ColumnScope.LocalScannerFrag() {
                             scannerFailure = true
 
                             snackbarHostState.showSnackbar(
-                                message = "${context.getString(R.string.scanner_scan_fail)}: ${e.message}",
+                                message = "$scannerScanFailText: ${e.message}",
                                 withDismissAction = true,
                                 duration = SnackbarDuration.Short
                             )

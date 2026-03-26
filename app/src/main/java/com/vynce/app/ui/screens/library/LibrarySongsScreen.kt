@@ -108,6 +108,7 @@ fun LibrarySongsScreen(
     val menuState = LocalMenuState.current
     val playerConnection = LocalPlayerConnection.current ?: return
     val snackbarHostState = LocalSnackbarHostState.current
+    val queueAllSongsText = stringResource(R.string.queue_all_songs)
 
     var filter by rememberEnumPreference(SongFilterKey, SongFilter.LIKED)
     
@@ -252,7 +253,7 @@ fun LibrarySongsScreen(
                                 action = {
                                     playerConnection.playQueue(
                                         ListQueue(
-                                            title = context.getString(R.string.queue_all_songs),
+                                            title = queueAllSongsText,
                                             items = songs.map { it.toMediaMetadata() },
                                             startShuffled = false,
                                         )
@@ -265,7 +266,7 @@ fun LibrarySongsScreen(
                                 action = {
                                     playerConnection.playQueue(
                                         ListQueue(
-                                            title = context.getString(R.string.queue_all_songs),
+                                            title = queueAllSongsText,
                                             items = songs.map { it.toMediaMetadata() },
                                             startShuffled = true,
                                         )
@@ -395,7 +396,7 @@ fun LibrarySongsScreen(
                         onPlay = {
                             playerConnection.playQueue(
                                 ListQueue(
-                                    title = context.getString(R.string.queue_all_songs),
+                                    title = queueAllSongsText,
                                     items = songs.map { it.toMediaMetadata() },
                                     startIndex = index
                                 )

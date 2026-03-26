@@ -91,6 +91,7 @@ import java.time.format.DateTimeFormatter
 @Composable
 fun ColumnScope.BackupAndRestoreFrag(viewModel: BackupRestoreViewModel) {
     val context = LocalContext.current
+    val appName = stringResource(R.string.app_name)
 
     val backupLauncher =
         rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/octet-stream")) { uri ->
@@ -113,7 +114,7 @@ fun ColumnScope.BackupAndRestoreFrag(viewModel: BackupRestoreViewModel) {
             onClick = {
                 val formatter = DateTimeFormatter.ofPattern("yyyyMMddHHmmss")
                 backupLauncher.launch(
-                    "${context.getString(R.string.app_name)}_${MusicDatabase.MUSIC_DATABASE_VERSION}_${
+                    "${appName}_${MusicDatabase.MUSIC_DATABASE_VERSION}_${
                         LocalDateTime.now().format(formatter)
                     }.backup"
                 )
@@ -767,7 +768,7 @@ fun ColumnScope.SongCacheFrag() {
         values = listOf(0, 128, 256, 512, 1024, 2048, 4096, 8192, -1),
         valueText = {
             when (it) {
-                0 -> stringResource(androidx.compose.ui.R.string.state_off)
+                0 -> stringResource(R.string.state_off)
                 -1 -> stringResource(R.string.unlimited)
                 else -> formatFileSize(it * 1024 * 1024L)
             }
