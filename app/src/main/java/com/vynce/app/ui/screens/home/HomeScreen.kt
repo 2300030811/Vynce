@@ -17,6 +17,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.painter.ColorPainter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -318,9 +319,9 @@ fun SongCard(song: com.zionhuang.jiosaavn.SaavnSong, onClick: () -> Unit) {
         AsyncImage(
             model = ImageRequest.Builder(LocalContext.current)
                 .data(song.image.replace("http://", "https://").replace("150x150", "500x500"))
-                .placeholder(ColorDrawable(0xFF1A1A2E.toInt()))
-                .fallback(ColorDrawable(0xFF1A1A2E.toInt()))
                 .build(),
+            placeholder = ColorPainter(Color(0xFF1A1A2E)),
+            fallback = ColorPainter(Color(0xFF1A1A2E)),
             contentDescription = null,
             contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxSize()

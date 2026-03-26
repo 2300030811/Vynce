@@ -356,7 +356,7 @@ fun LibrarySongsScreen(
                                 Button(
                                     onClick = {
                                         coroutineScope.launch {
-                                            triggerMediaScan(context, database, coroutineScope, playerConnection, snackbarHostState)
+                                            triggerMediaScan(context, viewModel.database, coroutineScope, playerConnection, snackbarHostState)
                                         }
                                     }
                                 ) {

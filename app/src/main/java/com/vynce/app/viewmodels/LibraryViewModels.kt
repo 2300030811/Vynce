@@ -76,7 +76,7 @@ import javax.inject.Inject
 @HiltViewModel
 class LibrarySongsViewModel @Inject constructor(
     @ApplicationContext context: Context,
-    private val database: MusicDatabase,
+    val database: MusicDatabase,
 ) : ViewModel() {
     val allSongs = getSyncedSongs(context, database)
     val isSyncingRemoteLikedSongs = MutableStateFlow(false)

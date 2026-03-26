@@ -11,6 +11,7 @@ import androidx.room.RenameColumn
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
+import androidx.room.withTransaction
 import androidx.room.migration.AutoMigrationSpec
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
@@ -67,7 +68,7 @@ class MusicDatabase(
 
     suspend fun <T> runInTransaction(block: suspend MusicDatabase.() -> T): T = with(delegate) {
         // Room's withTransaction is a suspend function that handles transactions correctly
-        androidx.room.withTransaction {
+        withTransaction {
             block(this@MusicDatabase)
         }
     }
