@@ -48,8 +48,8 @@ import com.vynce.app.utils.scanners.LocalMediaScanner
 import com.vynce.app.utils.scanners.LocalMediaScanner.Companion.destroyScanner
 import com.vynce.app.utils.scanners.LocalMediaScanner.Companion.scannerState
 import com.vynce.app.utils.scanners.LocalMediaScanner.Companion.getScanner
-import com.vynce.app.utils.scanners.LocalMediaScanner.Companion.lmScannerCoroutine
-import com.vynce.app.utils.scanners.LocalMediaScanner.Companion.uriListFromString
+import com.vynce.app.utils.lmScannerCoroutine
+import com.vynce.app.utils.scanners.uriListFromString
 import kotlinx.coroutines.delay
 
 suspend fun scanInit(

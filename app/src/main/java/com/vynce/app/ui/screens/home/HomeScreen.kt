@@ -253,41 +253,10 @@ fun HomeScreen(
                                 onClick = { navController.navigate("album/${album.id}") }
                             )
                         }
+                    }
+                }
             }
-    }
-}
-
-@Composable
-fun ArtistLetterAvatar(name: String, bgColor: Color) {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(bgColor),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = name.take(1).uppercase(),
-            style = MaterialTheme.typography.headlineLarge,
-            fontWeight = FontWeight.Bold,
-            color = Color.White
-        )
-    }
-}
-
-@Composable
-fun ArtistLetterAvatar(name: String, bgColor: Color) {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(bgColor),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = name.take(1).uppercase(),
-            style = MaterialTheme.typography.headlineLarge,
-            fontWeight = FontWeight.Bold,
-            color = Color.White
-        )
+        }
     }
 }
 
