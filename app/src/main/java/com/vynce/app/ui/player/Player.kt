@@ -1043,7 +1043,7 @@ fun PlayerBackground(
         val mediaMetadata by playerConnection.mediaMetadata.collectAsState()
         AsyncImage(
             model = ImageRequest.Builder(LocalContext.current)
-                .data(mediaMetadata?.getThumbnailModel(100, 100))
+                .data((mediaMetadata?.getThumbnailModel(100, 100) as? String)?.replace("http://", "https://"))
                 .build(),
             contentDescription = null,
             contentScale = ContentScale.Crop,
@@ -1071,7 +1071,7 @@ fun PlayerBackground(
             withContext(coilCoroutine) {
                 val result = context.imageLoader.execute(
                     ImageRequest.Builder(context)
-                        .data(mediaMetadata?.getThumbnailModel(100, 100))
+                        .data((mediaMetadata?.getThumbnailModel(100, 100) as? String)?.replace("http://", "https://"))
                         .allowHardware(false)
                         .build()
                 )
@@ -1093,7 +1093,7 @@ fun PlayerBackground(
             if (playerBackground == PlayerBackgroundStyle.BLUR) {
                 Log.v(TAG, "PLR-2.2a")
                 AsyncImage(
-                    model = metadata?.getThumbnailModel(100, 100),
+                    model = (metadata?.getThumbnailModel(100, 100) as? String)?.replace("http://", "https://"),
                     contentDescription = null,
                     contentScale = ContentScale.FillBounds,
                     modifier = Modifier

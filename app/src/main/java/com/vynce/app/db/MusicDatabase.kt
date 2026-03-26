@@ -65,10 +65,17 @@ class MusicDatabase(
         }
     }
 
+    suspend fun <T> runInTransaction(block: suspend MusicDatabase.() -> T): T = with(delegate) {
+        // Room's withTransaction is a suspend function that handles transactions correctly
+        androidx.room.withTransaction {
+            block(this@MusicDatabase)
+        }
+    }
+
     fun close() = delegate.close()
 
     companion object {
-        const val MUSIC_DATABASE_VERSION = 20
+        const val MUSIC_DATABASE_VERSION = 21
     }
 }
 
@@ -134,6 +141,7 @@ abstract class InternalDatabase : RoomDatabase() {
                     .addMigrations(MIGRATION_14_15)
                     .addMigrations(MIGRATION_15_16)
                     .addMigrations(MIGRATION_16_17)
+                    .fallbackToDestructiveMigration()
                     .build()
             )
 
@@ -145,6 +153,7 @@ abstract class InternalDatabase : RoomDatabase() {
                     .addMigrations(MIGRATION_14_15)
                     .addMigrations(MIGRATION_15_16)
                     .addMigrations(MIGRATION_16_17)
+                    .fallbackToDestructiveMigration()
                     .build()
             )
     }

@@ -280,7 +280,7 @@ interface SongsDao {
 
     // region downloaded Songs utils
     @Transaction
-    @Query("SELECT * FROM song WHERE isLocal = 0 AND dateDownload IS NOT NULL AND dateDownload IS NOT 0")
+    @Query("SELECT * FROM song WHERE (isLocal = 0 AND dateDownload IS NOT NULL AND dateDownload IS NOT 0) OR (isLocal = 1 AND inLibrary IS NOT NULL)")
     fun downloadedSongs(): Flow<List<Song>>
 
     @Transaction
@@ -313,29 +313,29 @@ interface SongsDao {
 
     // region Downloaded Songs Sort
     @Transaction
-    @Query("SELECT * FROM song WHERE isLocal = 0 AND dateDownload IS NOT NULL ORDER BY dateDownload")
+    @Query("SELECT * FROM song WHERE (isLocal = 0 AND dateDownload IS NOT NULL) OR (isLocal = 1 AND inLibrary IS NOT NULL) ORDER BY COALESCE(dateDownload, inLibrary)")
     fun downloadNoLocalSongs(): Flow<List<Song>>
 
     @Transaction
-    @Query("SELECT * FROM song WHERE isLocal = 0 AND dateDownload IS NOT NULL ORDER BY inLibrary")
+    @Query("SELECT * FROM song WHERE (isLocal = 0 AND dateDownload IS NOT NULL) OR (isLocal = 1 AND inLibrary IS NOT NULL) ORDER BY inLibrary")
     fun downloadSongsByCreateDateAsc(): Flow<List<Song>>
 
     @Transaction
-    @Query("SELECT * FROM song WHERE isLocal = 0 AND dateDownload IS NOT NULL ORDER BY date")
+    @Query("SELECT * FROM song WHERE (isLocal = 0 AND dateDownload IS NOT NULL) OR (isLocal = 1 AND inLibrary IS NOT NULL) ORDER BY date")
     fun downloadSongsByReleaseDateAsc(): Flow<List<Song>>
 
     @Transaction
-    @Query("SELECT * FROM song WHERE isLocal = 0 AND dateDownload IS NOT NULL ORDER BY dateModified")
+    @Query("SELECT * FROM song WHERE (isLocal = 0 AND dateDownload IS NOT NULL) OR (isLocal = 1 AND inLibrary IS NOT NULL) ORDER BY dateModified")
     fun downloadSongsByDateModifiedAsc(): Flow<List<Song>>
 
     @Transaction
-    @Query("SELECT * FROM song WHERE isLocal = 0 AND dateDownload IS NOT NULL ORDER BY title COLLATE NOCASE ASC")
+    @Query("SELECT * FROM song WHERE ((isLocal = 0 AND dateDownload IS NOT NULL) OR (isLocal = 1 AND inLibrary IS NOT NULL)) ORDER BY title COLLATE NOCASE ASC")
     fun downloadSongsByNameAsc(): Flow<List<Song>>
 
     @Transaction
     @Query("""
         SELECT * FROM song
-        WHERE isLocal = 0 AND dateDownload IS NOT NULL
+        WHERE (isLocal = 0 AND dateDownload IS NOT NULL) OR (isLocal = 1 AND inLibrary IS NOT NULL)
         ORDER BY (
             SELECT LOWER(GROUP_CONCAT(name, ''))
             FROM artist
@@ -352,7 +352,7 @@ interface SongsDao {
             FROM playCount 
             WHERE playCount.song = song.id) AS pc 
         FROM song 
-        WHERE isLocal = 0 AND dateDownload IS NOT NULL
+        WHERE (isLocal = 0 AND dateDownload IS NOT NULL) OR (isLocal = 1 AND inLibrary IS NOT NULL)
         ORDER BY pc ASC
     """)
     fun downloadSongsByPlayCountAsc(): Flow<List<Song>>
@@ -366,6 +366,16 @@ interface SongsDao {
             SongSortType.ARTIST -> downloadSongsByArtistAsc()
             SongSortType.PLAY_COUNT -> downloadSongsByPlayCountAsc()
         }.map { it.reversed(descending) }
+    // region History Songs
+    @Transaction
+    @Query("""
+        SELECT song.* FROM song
+        INNER JOIN event ON song.id = event.songId
+        GROUP BY song.id
+        ORDER BY MAX(event.timestamp) DESC
+        LIMIT 200
+    """)
+    fun historySongs(): Flow<List<Song>>
     // endregion
     // endregion
 

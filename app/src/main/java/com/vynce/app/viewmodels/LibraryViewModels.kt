@@ -104,6 +104,7 @@ class LibrarySongsViewModel @Inject constructor(
                     SongFilter.LIBRARY -> database.songs(sortType, descending)
                     SongFilter.LIKED -> database.likedSongs(sortType, descending)
                     SongFilter.DOWNLOADED -> database.downloadSongs(sortType, descending)
+                    SongFilter.HISTORY -> database.historySongs()
                 }
             }.stateIn(viewModelScope, SharingStarted.Lazily, null)
     }

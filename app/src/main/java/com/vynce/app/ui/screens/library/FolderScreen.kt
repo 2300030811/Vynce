@@ -117,6 +117,7 @@ import com.vynce.app.utils.fixFilePath
 import com.vynce.app.utils.numberToAlpha
 import com.vynce.app.utils.rememberEnumPreference
 import com.vynce.app.utils.rememberPreference
+import com.vynce.app.triggerMediaScan
 import com.vynce.app.viewmodels.LibraryFoldersViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
@@ -142,6 +143,7 @@ fun FolderScreen(
     val haptic = LocalHapticFeedback.current
     val menuState = LocalMenuState.current
     val playerConnection = LocalPlayerConnection.current ?: return
+    val database = com.vynce.app.LocalDatabase.current
     val snackbarHostState = LocalSnackbarHostState.current
 
     val (flatSubfolders, onFlatSubfoldersChange) = rememberPreference(FlatSubfoldersKey, defaultValue = true)
@@ -353,15 +355,26 @@ fun FolderScreen(
                                         .focusRequester(focusRequester)
                                 )
                             } else {
-                                // scanner icon
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    modifier = Modifier.padding(horizontal = 16.dp)
-                                ) {
-                                    IconTextButton(R.string.scanner_local_title, Icons.Rounded.SdCard) {
-                                        navController.navigate("settings/local")
-                                    }
-                                }
+                                 // scanner icon
+                                 Row(
+                                     verticalAlignment = Alignment.CenterVertically,
+                                     modifier = Modifier.padding(horizontal = 16.dp)
+                                 ) {
+                                     IconButton(
+                                         onClick = {
+                                             coroutineScope.launch {
+                                                 triggerMediaScan(context, database, coroutineScope, playerConnection, snackbarHostState)
+                                             }
+                                         },
+                                         onLongClick = {
+                                             coroutineScope.launch {
+                                                 triggerMediaScan(context, database, coroutineScope, playerConnection, snackbarHostState, fullRescan = true)
+                                             }
+                                         }
+                                     ) {
+                                         Icon(Icons.Rounded.SdCard, contentDescription = null)
+                                     }
+                                 }
                             }
 
                             if (!isSearching) {

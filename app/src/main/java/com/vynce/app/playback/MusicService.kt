@@ -658,40 +658,46 @@ class MusicService : MediaLibraryService(),
     }
 
     private fun createDataSourceFactory(): DataSource.Factory {
+        val defaultDataSourceFactory = DefaultDataSource.Factory(this)
         return ResolvingDataSource.Factory(createCacheDataSource()) { dataSpec ->
-            val uri = dataSpec.uri.toString()
+            try {
+                val uri = dataSpec.uri.toString()
 
-            // JioSaavn songs: resolve saavn:ID to actual stream URL
-            if (uri.startsWith("saavn:")) {
-                val saavnId = uri.removePrefix("saavn:")
-                val cachedUrl = streamUrlCache[saavnId]
-                if (cachedUrl != null) {
-                    return@Factory dataSpec.withUri(cachedUrl.toUri())
+                // JioSaavn songs: resolve saavn:ID to actual stream URL
+                if (uri.startsWith("saavn:")) {
+                    val saavnId = uri.removePrefix("saavn:")
+                    val cachedUrl = streamUrlCache[saavnId]
+                    if (cachedUrl != null) {
+                        return@Factory dataSpec.withUri(cachedUrl.toUri())
+                    }
+
+                    // Fetch stream URL from JioSaavn API
+                    val song = runBlocking(Dispatchers.IO) {
+                        JioSaavn.getSong(saavnId)
+                    }
+                    val streamUrl = with(JioSaavn) { song?.streamUrl() }
+                        ?: throw java.io.IOException("Failed to resolve Saavn stream URL for $saavnId")
+
+                    streamUrlCache[saavnId] = streamUrl
+                    return@Factory dataSpec.withUri(streamUrl.toUri())
                 }
 
-                // Fetch stream URL from JioSaavn API
-                val song = runBlocking(Dispatchers.IO) {
-                    JioSaavn.getSong(saavnId)
+                // JioSaavn direct CDN URLs pass through immediately
+                if (dataSpec.uri.scheme == "https") {
+                    return@Factory dataSpec  // already a direct URL, play it
                 }
-                val streamUrl = with(JioSaavn) { song?.streamUrl() }
-                    ?: throw java.io.IOException("Failed to resolve Saavn stream URL for $saavnId")
+                // Local files pass through
+                if (dataSpec.uri.scheme == "content" || dataSpec.uri.scheme == "file") {
+                    return@Factory dataSpec
+                }
 
-                streamUrlCache[saavnId] = streamUrl
-                return@Factory dataSpec.withUri(streamUrl.toUri())
+                // Unsupported URI scheme — log and return original
+                android.util.Log.w("MusicService", "Unsupported URI: $uri")
+                dataSpec
+            } catch (e: Exception) {
+                android.util.Log.e("MusicService", "Resolver error: ${dataSpec.uri}", e)
+                dataSpec
             }
-
-            // JioSaavn direct CDN URLs pass through immediately
-            if (dataSpec.uri.scheme == "https") {
-                return@Factory dataSpec  // already a direct URL, play it
-            }
-            // Local files pass through
-            if (dataSpec.uri.scheme == "content" || dataSpec.uri.scheme == "file") {
-                return@Factory dataSpec
-            }
-            
-            // Unsupported URI scheme — log and return original
-            android.util.Log.w("MusicService", "Unsupported URI: $uri")
-            dataSpec
         }
     }
 

@@ -74,6 +74,7 @@ import com.vynce.app.constants.SwipeToQueueKey
 import com.vynce.app.db.entities.Song
 import com.vynce.app.models.toMediaMetadata
 import com.vynce.app.playback.queues.ListQueue
+import com.vynce.app.triggerMediaScan
 import com.vynce.app.ui.component.ChipsRow
 import com.vynce.app.ui.component.EmptyPlaceholder
 import com.vynce.app.ui.component.FloatingFooter
@@ -95,7 +96,8 @@ import kotlin.math.roundToInt
 fun LibrarySongsScreen(
     navController: NavController,
     viewModel: LibrarySongsViewModel = hiltViewModel(),
-    libraryFilterContent: @Composable (() -> Unit)? = null
+    libraryFilterContent: @Composable (() -> Unit)? = null,
+    initialFilter: SongFilter? = null
 ) {
     Log.v("LibrarySongsScreen", "S_RC-1")
     val context = LocalContext.current
@@ -106,6 +108,12 @@ fun LibrarySongsScreen(
     val snackbarHostState = LocalSnackbarHostState.current
 
     var filter by rememberEnumPreference(SongFilterKey, SongFilter.LIKED)
+    
+    LaunchedEffect(initialFilter) {
+        if (initialFilter != null) {
+            filter = initialFilter
+        }
+    }
     val localLibEnable by rememberPreference(LocalLibraryEnableKey, defaultValue = true)
     val (sortType, onSortTypeChange) = rememberEnumPreference(SongSortTypeKey, SongSortType.CREATE_DATE)
     val (sortDescending, onSortDescendingChange) = rememberPreference(SongSortDescendingKey, true)
@@ -157,7 +165,8 @@ fun LibrarySongsScreen(
             chips = listOf(
                 SongFilter.LIKED to stringResource(R.string.filter_liked),
                 SongFilter.LIBRARY to stringResource(R.string.filter_library),
-                SongFilter.DOWNLOADED to stringResource(R.string.filter_downloaded)
+                SongFilter.DOWNLOADED to stringResource(R.string.filter_downloaded),
+                SongFilter.HISTORY to stringResource(R.string.filter_history)
             ),
             currentValue = filter,
             onValueUpdate = {
@@ -227,6 +236,11 @@ fun LibrarySongsScreen(
                                             title = stringResource(R.string.filter_downloaded),
                                             leadingIcon = null,
                                             action = { filter = SongFilter.DOWNLOADED }
+                                        ),
+                                        DropdownItem(
+                                            title = stringResource(R.string.filter_history),
+                                            leadingIcon = null,
+                                            action = { filter = SongFilter.HISTORY }
                                         ),
                                     )
                             ),
@@ -326,11 +340,28 @@ fun LibrarySongsScreen(
             songs?.let { songs ->
                 if (songs.isEmpty()) {
                     item {
-                        EmptyPlaceholder(
-                            icon = Icons.Rounded.MusicNote,
-                            text = stringResource(R.string.library_song_empty),
-                            modifier = Modifier.animateItem()
-                        )
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            EmptyPlaceholder(
+                                icon = Icons.Rounded.MusicNote,
+                                text = stringResource(if (filter == SongFilter.DOWNLOADED) R.string.no_downloaded_songs else R.string.library_song_empty),
+                                modifier = Modifier.animateItem()
+                            )
+                            if (filter == SongFilter.DOWNLOADED) {
+                                Spacer(Modifier.padding(8.dp))
+                                Button(
+                                    onClick = {
+                                        coroutineScope.launch {
+                                            triggerMediaScan(context, database, coroutineScope, playerConnection, snackbarHostState)
+                                        }
+                                    }
+                                ) {
+                                    Text(text = stringResource(R.string.scanner_btn_idle))
+                                }
+                            }
+                        }
                     }
                 }
                 val thumbnailSize = (ListThumbnailSize.value * density.density).roundToInt()

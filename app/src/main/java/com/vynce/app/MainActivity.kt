@@ -127,6 +127,7 @@ import com.vynce.app.constants.OOBE_VERSION
 import com.vynce.app.constants.OobeStatusKey
 import com.vynce.app.constants.PureBlackKey
 import com.vynce.app.constants.SlimNavBarKey
+import com.vynce.app.constants.SongFilter
 import com.vynce.app.db.MusicDatabase
 import com.vynce.app.extensions.tabMode
 import com.vynce.app.playback.DownloadUtil
@@ -138,8 +139,7 @@ import com.vynce.app.ui.component.shimmer.ShimmerTheme
 import com.vynce.app.ui.menu.BottomSheetMenu
 import com.vynce.app.ui.menu.MenuState
 import com.vynce.app.ui.player.BottomSheetPlayer
-import com.vynce.app.ui.screens.HomeScreen
-import com.vynce.app.ui.screens.HomeScreen
+import com.vynce.app.ui.screens.home.HomeScreen
 import com.vynce.app.ui.screens.PlayerScreen
 import com.vynce.app.ui.screens.Screens
 import com.vynce.app.ui.screens.SetupWizard
@@ -174,6 +174,9 @@ import com.vynce.app.ui.theme.VynceTheme
 import com.vynce.app.ui.utils.appBarScrollBehavior
 import com.vynce.app.utils.ActivityLauncherHelper
 import com.vynce.app.utils.NetworkConnectivityObserver
+import com.vynce.app.ui.screens.saavn.AlbumScreen
+import com.vynce.app.ui.screens.saavn.ArtistScreen
+import com.vynce.app.ui.screens.saavn.PlaylistScreen
 
 import com.vynce.app.utils.lmScannerCoroutine
 import com.vynce.app.utils.rememberEnumPreference
@@ -482,10 +485,16 @@ class MainActivity : ComponentActivity() {
                                 )
                                 {
                                     composable(Screens.Home.route) {
-                                        HomeScreen(navController)
+                                        HomeScreen(navController, playerConnection)
                                     }
                                     composable(Screens.Songs.route) {
                                         LibrarySongsScreen(navController)
+                                    }
+                                    composable(Screens.History.route) {
+                                        LibrarySongsScreen(navController, initialFilter = SongFilter.HISTORY)
+                                    }
+                                    composable(Screens.Liked.route) {
+                                        LibrarySongsScreen(navController, initialFilter = SongFilter.LIKED)
                                     }
                                     composable(Screens.Folders.route) {
                                         LibraryFoldersScreen(navController, scrollBehavior)
@@ -599,6 +608,19 @@ class MainActivity : ComponentActivity() {
 
                                     composable("setup_wizard") {
                                         SetupWizard(navController)
+                                    }
+
+                                    composable("album/{albumId}") { backStack ->
+                                        val albumId = backStack.arguments?.getString("albumId") ?: return@composable
+                                        AlbumScreen(albumId = albumId, navController = navController, playerConnection = playerConnection)
+                                    }
+                                    composable("artist/{artistId}") { backStack ->
+                                        val artistId = backStack.arguments?.getString("artistId") ?: return@composable
+                                        ArtistScreen(artistId = artistId, navController = navController, playerConnection = playerConnection)
+                                    }
+                                    composable("playlist/{playlistId}") { backStack ->
+                                        val playlistId = backStack.arguments?.getString("playlistId") ?: return@composable
+                                        PlaylistScreen(playlistId = playlistId, navController = navController, playerConnection = playerConnection)
                                     }
                                 }
                             }

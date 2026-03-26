@@ -47,6 +47,10 @@ import com.vynce.app.utils.reportException
 import com.vynce.app.utils.scanners.LocalMediaScanner
 import com.vynce.app.utils.scanners.LocalMediaScanner.Companion.destroyScanner
 import com.vynce.app.utils.scanners.LocalMediaScanner.Companion.scannerState
+import com.vynce.app.utils.scanners.LocalMediaScanner.Companion.getScanner
+import com.vynce.app.utils.scanners.LocalMediaScanner.Companion.lmScannerCoroutine
+import com.vynce.app.utils.scanners.LocalMediaScanner.Companion.uriListFromString
+import kotlinx.coroutines.delay
 
 suspend fun scanInit(
     context: Context,
@@ -174,6 +178,113 @@ suspend fun scanInit(
             duration = SnackbarDuration.Short
         )
     }
+}
 
+suspend fun triggerMediaScan(
+    context: Context,
+    database: MusicDatabase,
+    coroutineScope: CoroutineScope,
+    playerConnection: PlayerConnection?,
+    snackbarHostState: SnackbarHostState,
+    fullRescan: Boolean = false
+) {
+    val MAIN_TAG = "MainOtActivityScan"
+    val localLibEnable = context.dataStore.get(LocalLibraryEnableKey, defaultValue = true)
+    if (!localLibEnable) return
+
+    val scannerSensitivity by enumPreference(
+        context = context,
+        key = ScannerSensitivityKey,
+        defaultValue = ScannerMatchCriteria.LEVEL_2
+    )
+    val scannerImpl by enumPreference(
+        context = context,
+        key = ScannerImplKey,
+        defaultValue = ScannerImpl.TAGLIB
+    )
+    val scanPaths = context.dataStore.get(ScanPathsKey, defaultValue = "")
+    val excludedScanPaths = context.dataStore.get(ExcludedScanPathsKey, defaultValue = "")
+    val strictExtensions = context.dataStore.get(ScannerStrictExtKey, defaultValue = false)
+    val strictFilePaths = context.dataStore.get(ScannerStrictFilePathsKey, defaultValue = false)
+
+    val perms = context.checkSelfPermission(MEDIA_PERMISSION_LEVEL)
+    if (perms != PackageManager.PERMISSION_GRANTED) {
+        (context as MainActivity).permissionLauncher.launch(MEDIA_PERMISSION_LEVEL)
+        return
+    }
+
+    if (scannerState.value > 0) {
+        Log.w(MAIN_TAG, "Cannot perform manual scan, scanner is in use")
+        return
+    }
+
+    Log.i(MAIN_TAG, "Starting manual local media scan (fullRescan=$fullRescan)")
+    
+    coroutineScope.launch(lmScannerCoroutine) {
+        try {
+            withContext(Dispatchers.Main) {
+                playerConnection?.player?.pause()
+            }
+            val scanner = getScanner(context, scannerImpl, SCANNER_OWNER_LM)
+            
+            if (fullRescan) {
+                if (scannerImpl == ScannerImpl.MEDIASTORE) {
+                    scanner.fullMediaStoreSync(
+                        database,
+                        uriListFromString(scanPaths),
+                        uriListFromString(excludedScanPaths),
+                        scannerSensitivity,
+                        strictExtensions,
+                        strictFilePaths,
+                        true,
+                    )
+                } else {
+                    val uris = scanner.scanLocal(scanPaths, excludedScanPaths)
+                    scanner.fullSync(database, uris, scannerSensitivity, strictExtensions, strictFilePaths)
+                }
+            } else {
+                if (scannerImpl == ScannerImpl.MEDIASTORE) {
+                    scanner.fullMediaStoreSync(
+                        database,
+                        uriListFromString(scanPaths),
+                        uriListFromString(excludedScanPaths),
+                        scannerSensitivity,
+                        strictExtensions,
+                        strictFilePaths,
+                        false,
+                    )
+                } else {
+                    val uris = scanner.scanLocal(scanPaths, excludedScanPaths)
+                    scanner.quickSync(database, uris, scannerSensitivity, strictExtensions, strictFilePaths)
+                }
+            }
+            
+            delay(1000)
+            withContext(Dispatchers.Main) {
+                snackbarHostState.showSnackbar(
+                    message = context.getString(R.string.scanner_progress_complete),
+                    withDismissAction = true,
+                    duration = SnackbarDuration.Short
+                )
+            }
+        } catch (e: Exception) {
+            Log.e(MAIN_TAG, "Scanner failed", e)
+            withContext(Dispatchers.Main) {
+                snackbarHostState.showSnackbar(
+                    message = "${context.getString(R.string.scanner_scan_fail)}: ${e.message}",
+                    withDismissAction = true,
+                    duration = SnackbarDuration.Short
+                )
+            }
+            reportException(e)
+        } finally {
+            clearDtCache()
+            destroyScanner(SCANNER_OWNER_LM)
+            val timeNow = LocalDateTime.now().toInstant(ZoneOffset.UTC).toEpochMilli()
+            context.dataStore.edit { settings ->
+                settings[LastLocalScanKey] = timeNow
+            }
+        }
+    }
 }
 

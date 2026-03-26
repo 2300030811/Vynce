@@ -24,6 +24,7 @@ while also allowing users to translate our app as well. New, specific strings to
     <string name="library_filter">Library filter</string>
     <string name="library_empty">Your library contents will show up here</string>
     <string name="missing_media_permission_warning">Storage permissions is required for local media. Click to grant permission.</string>
+    <string name="no_downloaded_songs">No offline songs found on your device</string>
 
 <!-- Queue -->
     <string name="queues_title">Queues</string>
