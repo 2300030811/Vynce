@@ -600,22 +600,22 @@ class Migration12To13 : AutoMigrationSpec {
                 val month = timestamp.monthValue
 
                 // Check if the entry exists in playCounts
-                val checkCursor = db.query(
+                db.query(
                     "SELECT * FROM playCount WHERE song = ? AND year = ? AND month = ?",
                     arrayOf(song, year, month)
-                )
-                if (checkCursor.moveToFirst()) { // If it exists, update the count
-                    db.execSQL(
-                        "UPDATE playCount SET count = count + 1 WHERE song = ? AND year = ? AND month = ?",
-                        arrayOf(song, year, month)
-                    )
-                } else { // If it doesn't exist, insert a new row
-                    db.execSQL(
-                        "INSERT INTO playCount (song, year, month, count) VALUES (?, ?, ?, ?)",
-                        arrayOf(song, year, month, 1)
-                    )
+                ).use { checkCursor ->
+                    if (checkCursor.moveToFirst()) { // If it exists, update the count
+                        db.execSQL(
+                            "UPDATE playCount SET count = count + 1 WHERE song = ? AND year = ? AND month = ?",
+                            arrayOf(song, year, month)
+                        )
+                    } else { // If it doesn't exist, insert a new row
+                        db.execSQL(
+                            "INSERT INTO playCount (song, year, month, count) VALUES (?, ?, ?, ?)",
+                            arrayOf(song, year, month, 1)
+                        )
+                    }
                 }
-                checkCursor.close()
             }
         }
 

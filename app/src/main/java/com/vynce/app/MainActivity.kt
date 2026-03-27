@@ -174,9 +174,12 @@ import com.vynce.app.ui.theme.VynceTheme
 import com.vynce.app.ui.utils.appBarScrollBehavior
 import com.vynce.app.utils.ActivityLauncherHelper
 import com.vynce.app.utils.NetworkConnectivityObserver
+import com.vynce.app.ui.dialog.ActionPromptDialog
 import com.vynce.app.ui.screens.saavn.AlbumScreen
 import com.vynce.app.ui.screens.saavn.ArtistScreen
 import com.vynce.app.ui.screens.saavn.PlaylistScreen
+import android.net.Uri
+import androidx.lifecycle.lifecycleScope
 
 import com.vynce.app.utils.lmScannerCoroutine
 import com.vynce.app.utils.rememberEnumPreference
@@ -205,13 +208,26 @@ class MainActivity : ComponentActivity() {
 
     lateinit var controllerViewModel: MediaControllerViewModel
 
-    // storage permission helpers
+    var showPermissionRationale by mutableStateOf(false)
+    var showSettingsRedirect by mutableStateOf(false)
+
     val permissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
             if (isGranted) {
-//                Toast.makeText(this, "Granted", Toast.LENGTH_SHORT).show()
+                // Permission granted, trigger scan
+                lifecycleScope.launch(lmScannerCoroutine) {
+                    scanInit(
+                        this@MainActivity, database, downloadUtil, this, playerConnection,
+                        SnackbarHostState() // temporary snackbar host
+                    )
+                }
             } else {
-                Toast.makeText(this, getString(R.string.scanner_missing_storage_perm), Toast.LENGTH_SHORT).show()
+                if (!shouldShowRequestPermissionRationale(com.vynce.app.ui.utils.MEDIA_PERMISSION_LEVEL)) {
+                    // User denied and selected "Don't ask again"
+                    showSettingsRedirect = true
+                } else {
+                    Toast.makeText(this, getString(R.string.scanner_missing_storage_perm), Toast.LENGTH_SHORT).show()
+                }
             }
         }
 
@@ -416,6 +432,34 @@ class MainActivity : ComponentActivity() {
                         LocalNetworkConnected provides isNetworkConnected,
                         LocalSnackbarHostState provides snackbarHostState,
                     ) {
+                        if (showPermissionRationale) {
+                            com.vynce.app.ui.dialog.ActionPromptDialog(
+                                title = stringResource(R.string.scanner_missing_storage_perm),
+                                description = "Vynce needs access to your audio files to build your local library. Please grant the permission to continue.",
+                                confirmText = stringResource(R.string.action_next),
+                                onConfirm = {
+                                    showPermissionRationale = false
+                                    permissionLauncher.launch(com.vynce.app.ui.utils.MEDIA_PERMISSION_LEVEL)
+                                },
+                                onDismiss = { showPermissionRationale = false }
+                            )
+                        }
+
+                        if (showSettingsRedirect) {
+                            com.vynce.app.ui.dialog.ActionPromptDialog(
+                                title = "Permission Required",
+                                description = "Storage access has been denied permanently. Please enable it in Settings to use the local library feature.",
+                                confirmText = "Open Settings",
+                                onConfirm = {
+                                    showSettingsRedirect = false
+                                    val intent = Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                        data = Uri.fromParts("package", packageName, null)
+                                    }
+                                    startActivity(intent)
+                                },
+                                onDismiss = { showSettingsRedirect = false }
+                            )
+                        }
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()

@@ -9,6 +9,7 @@
 package com.vynce.app.ui.screens.settings.fragments
 
 import android.app.Activity
+import com.vynce.app.MainActivity
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -124,8 +125,15 @@ fun ColumnScope.LocalScannerFrag() {
     val scannerProgressTotal by scannerProgressTotal.collectAsState()
     val scannerProgressCurrent by scannerProgressCurrent.collectAsState()
 
-    var scannerFailure = false
-    var mediaPermission by remember { mutableStateOf(true) }
+    val scannerSensitivity by rememberEnumPreference(
+        key = ScannerSensitivityKey,
+        defaultValue = ScannerMatchCriteria.LEVEL_2
+    )
+    val scannerImpl by rememberEnumPreference(
+        key = ScannerImplKey,
+        defaultValue = ScannerImpl.TAGLIB
+    )
+    var scannerFailure by remember { mutableStateOf(false) }
 
     /**
      * True = include folders
@@ -135,16 +143,6 @@ fun ColumnScope.LocalScannerFrag() {
     var showAddFolderDialog: Boolean? by remember {
         mutableStateOf(null)
     }
-
-    // scanner prefs
-    val scannerSensitivity by rememberEnumPreference(
-        key = ScannerSensitivityKey,
-        defaultValue = ScannerMatchCriteria.LEVEL_2
-    )
-    val scannerImpl by rememberEnumPreference(
-        key = ScannerImplKey,
-        defaultValue = ScannerImpl.TAGLIB
-    )
     val strictExtensions by rememberPreference(ScannerStrictExtKey, defaultValue = false)
     val strictFilePaths by rememberPreference(ScannerStrictFilePathsKey, defaultValue = false)
     val downloadPath by rememberPreference(DownloadPathKey, "")
@@ -162,12 +160,11 @@ fun ColumnScope.LocalScannerFrag() {
         }
     }
 
-    // scanner
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 20.dp),
-        verticalAlignment = Alignment.CenterVertically, // WHY WON'T YOU CENTER
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Button(
             onClick = {
@@ -189,103 +186,25 @@ fun ColumnScope.LocalScannerFrag() {
                         )
                     }
 
-                    requestPermissions(
-                        context as Activity,
-                        arrayOf(MEDIA_PERMISSION_LEVEL), PackageManager.PERMISSION_GRANTED
-                    )
-
-                    mediaPermission = false
+                    (context as MainActivity).permissionLauncher.launch(MEDIA_PERMISSION_LEVEL)
                     return@Button
-                } else if (context.checkSelfPermission(MEDIA_PERMISSION_LEVEL)
-                    == PackageManager.PERMISSION_GRANTED
-                ) {
-                    mediaPermission = true
                 }
 
                 scannerFailure = false
 
-                playerConnection?.player?.pause()
-
-                coroutineScope.launch(lmScannerCoroutine) {
-                    if (scannerState > 0) {
-                        return@launch
+                coroutineScope.launch {
+                    try {
+                        com.vynce.app.triggerMediaScan(
+                            context = context,
+                            database = database,
+                            coroutineScope = coroutineScope,
+                            playerConnection = playerConnection,
+                            snackbarHostState = snackbarHostState,
+                            fullRescan = fullRescan
+                        )
+                    } catch (e: Exception) {
+                        scannerFailure = true
                     }
-                    // full rescan
-                    if (fullRescan) {
-                        try {
-                            val scanner = getScanner(context, scannerImpl, SCANNER_OWNER_LM)
-                            if (scannerImpl == ScannerImpl.MEDIASTORE) {
-                                scanner.fullMediaStoreSync(
-                                    context,
-                                    database,
-                                    uriListFromString(scanPaths),
-                                    uriListFromString(excludedScanPaths),
-                                    scannerSensitivity,
-                                    strictExtensions,
-                                    strictFilePaths,
-                                    true,
-                                )
-                            } else {
-                                val uris = scanner.scanLocal(context, scanPaths, excludedScanPaths)
-                                scanner.fullSync(context, database, uris, scannerSensitivity, strictExtensions, strictFilePaths)
-                            }
-
-                            delay(1000)
-                        } catch (e: ScannerAbortException) {
-                            scannerFailure = true
-
-                            snackbarHostState.showSnackbar(
-                                message = "$scannerScanFailText: ${e.message}",
-                                withDismissAction = true,
-                                duration = SnackbarDuration.Short
-                            )
-                        } finally {
-                            clearDtCache()
-                            destroyScanner(SCANNER_OWNER_LM)
-                        }
-                    } else {
-                        // quick scan
-                        try {
-                            val scanner = getScanner(context, scannerImpl, SCANNER_OWNER_LM)
-
-                            if (scannerImpl == ScannerImpl.MEDIASTORE) {
-                                scanner.fullMediaStoreSync(
-                                    context,
-                                    database,
-                                    uriListFromString(scanPaths),
-                                    uriListFromString(excludedScanPaths),
-                                    scannerSensitivity,
-                                    strictExtensions,
-                                    strictFilePaths,
-                                    false
-                                )
-                            } else {
-                                val uris = scanner.scanLocal(context, scanPaths, excludedScanPaths)
-                                scanner.quickSync(
-                                    context, database, uris, scannerSensitivity, strictExtensions,
-                                    strictFilePaths
-                                )
-                            }
-
-                            delay(1000)
-                        } catch (e: ScannerAbortException) {
-                            scannerFailure = true
-
-                            snackbarHostState.showSnackbar(
-                                message = "$scannerScanFailText: ${e.message}",
-                                withDismissAction = true,
-                                duration = SnackbarDuration.Short
-                            )
-                        } finally {
-                            clearDtCache()
-                            destroyScanner(SCANNER_OWNER_LM)
-                        }
-                    }
-
-                    // post scan actions
-                    playerConnection?.service?.initQueue()
-
-                    onLastLocalScanChange(LocalDateTime.now().toInstant(ZoneOffset.UTC).toEpochMilli())
                 }
             }
         ) {
@@ -296,7 +215,7 @@ fun ColumnScope.LocalScannerFrag() {
                     stringResource(R.string.scanner_scan_fail)
                 } else if (scannerState >= 4) {
                     stringResource(R.string.scanner_progress_complete)
-                } else if (!mediaPermission) {
+                } else if (context.checkSelfPermission(MEDIA_PERMISSION_LEVEL) != PackageManager.PERMISSION_GRANTED) {
                     stringResource(R.string.scanner_missing_storage_perm)
                 } else {
                     stringResource(R.string.scanner_btn_idle)

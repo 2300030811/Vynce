@@ -170,8 +170,8 @@ class MusicService : MediaLibraryService(),
 
     @Inject
     lateinit var database: MusicDatabase
-    private val scope = CoroutineScope(Dispatchers.Main)
-    private val offloadScope = CoroutineScope(Dispatchers.Default)
+    private val scope = CoroutineScope(Dispatchers.Main + kotlinx.coroutines.SupervisorJob())
+    private val offloadScope = CoroutineScope(Dispatchers.Default + kotlinx.coroutines.SupervisorJob())
 
     // Critical player components
     @Inject
@@ -464,8 +464,8 @@ class MusicService : MediaLibraryService(),
         queuePlaylistId = queue.playlistId
         var q: MultiQueueObject? = null
         val preloadItem = queue.preloadItem
-        // do not use scope.launch ... it breaks randomly... why is this bug back???
-        CoroutineScope(Dispatchers.Main).launch {
+        
+        scope.launch {
             Log.d(TAG, "playQueue: Resolving additional queue data...")
             try {
                 if (preloadItem != null) {
@@ -672,8 +672,13 @@ class MusicService : MediaLibraryService(),
                     }
 
                     // Fetch stream URL from JioSaavn API
-                    val song = runBlocking(Dispatchers.IO) {
-                        JioSaavn.getSong(saavnId)
+                    val song = try {
+                        runBlocking(Dispatchers.IO) {
+                            JioSaavn.getSong(saavnId)
+                        }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Failed to get JioSaavn song $saavnId", e)
+                        null
                     }
                     val streamUrl = with(JioSaavn) { song?.streamUrl() }
                         ?: throw java.io.IOException("Failed to resolve Saavn stream URL for $saavnId")

@@ -270,6 +270,8 @@ fun TextFieldDialog(
  * Dialog for user interaction
  *
  * @param title Title of prompt
+ * @param description Description of prompt
+ * @param confirmText Text for confirm button
  * @param titleBar Title of prompt. Specifying this will override title
  * @param onDismiss
  * @param onConfirm
@@ -282,6 +284,8 @@ fun TextFieldDialog(
 fun ActionPromptDialog(
     modifier: Modifier = Modifier,
     title: String? = null,
+    description: String? = null,
+    confirmText: String? = null,
     titleBar: @Composable (RowScope.() -> Unit)? = null,
     onDismiss: () -> Unit,
     onConfirm: () -> Unit,
@@ -320,6 +324,14 @@ fun ActionPromptDialog(
                     )
                 }
 
+                if (description != null) {
+                    Text(
+                        text = description,
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.padding(top = 8.dp)
+                    )
+                }
+
                 content() // body
             }
 
@@ -351,7 +363,7 @@ fun ActionPromptDialog(
                     onClick = { onConfirm() },
                     enabled = isInputValid
                 ) {
-                    Text(stringResource(android.R.string.ok))
+                    Text(confirmText ?: stringResource(android.R.string.ok))
                 }
             }
         }

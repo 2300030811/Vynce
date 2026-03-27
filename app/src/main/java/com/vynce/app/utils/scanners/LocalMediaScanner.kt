@@ -113,7 +113,7 @@ class LocalMediaScanner(scannerImpl: ScannerImpl) {
             return ffmpegData
         } catch (e: Exception) {
             when (e) {
-                is IOException, is IllegalArgumentException, is IllegalStateException -> {
+                is IOException, is IllegalArgumentException, is IllegalStateException, is SecurityException -> {
                     if (SCANNER_DEBUG) {
                         e.printStackTrace()
                     }
@@ -144,7 +144,6 @@ class LocalMediaScanner(scannerImpl: ScannerImpl) {
                 }
             }
         }
-
     }
 
 
@@ -701,13 +700,19 @@ class LocalMediaScanner(scannerImpl: ScannerImpl) {
         val selection = selectionBuilder.toString()
 
         // Query for audio files
-        val cursor = contentResolver.query(
-            MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
-            projection.toTypedArray(),
-            selection,
-            selectionArgs.toTypedArray(),
+        val cursor = try {
+            contentResolver.query(
+                MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
+                projection.toTypedArray(),
+                selection,
+                selectionArgs.toTypedArray(),
+                null
+            )
+        } catch (e: SecurityException) {
+            Log.e(TAG, "Permission denied for MediaStore query", e)
             null
-        )
+        }
+
         cursor?.use { cursor ->
             // Columns indices
             val nameColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DISPLAY_NAME)

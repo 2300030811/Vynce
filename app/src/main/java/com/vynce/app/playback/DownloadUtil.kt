@@ -264,9 +264,10 @@ class DownloadUtil @Inject constructor(
         val missingFiles =
             localMgr.getMissingFiles(dbDownloads.filterNot { it.song.dateDownload == null }).toMutableList()
         Log.d(TAG, "Found ${missingFiles.size}/${dbDownloads.size} songs not in custom download directories")
-        val cursor = downloadManager.downloadIndex.getDownloads()
-        while (cursor.moveToNext()) {
-            missingFiles.removeIf { it.id == cursor.download.request.id }
+        downloadManager.downloadIndex.getDownloads().use { cursor ->
+            while (cursor.moveToNext()) {
+                missingFiles.removeIf { it.id == cursor.download.request.id }
+            }
         }
         Log.d(
             TAG,
@@ -333,15 +334,16 @@ class DownloadUtil @Inject constructor(
         Log.d(TAG, "Registered ${availableFiles.size} files from custom downloads")
 
         // add internal downloads
-        val cursor = downloadManager.downloadIndex.getDownloads()
-        var count = 0
-        database.transaction {
-            while (cursor.moveToNext()) {
-                database.updateDownloadStatus(cursor.download.request.id, stateToLocalDateTime(cursor.download))
-                count ++
+        downloadManager.downloadIndex.getDownloads().use { cursor ->
+            var count = 0
+            database.transaction {
+                while (cursor.moveToNext()) {
+                    database.updateDownloadStatus(cursor.download.request.id, stateToLocalDateTime(cursor.download))
+                    count ++
+                }
             }
+            Log.d(TAG, "Registered $count files from internal downloads")
         }
-        Log.d(TAG, "Registered $count files from internal downloads")
         isProcessingDownloads.value = false
         Log.d(TAG, "Database registration complete, triggering map registry rebuild")
         rescanDownloads()

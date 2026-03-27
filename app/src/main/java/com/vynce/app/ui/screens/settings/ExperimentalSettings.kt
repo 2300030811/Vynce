@@ -80,6 +80,8 @@ import com.vynce.app.ui.dialog.CounterDialog
 import com.vynce.app.ui.utils.backToMain
 import com.vynce.app.utils.dataStore
 import com.vynce.app.utils.rememberPreference
+import com.vynce.app.ui.component.SettingsClickToReveal
+import com.vynce.app.ui.dialog.ActionPromptDialog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -112,6 +114,10 @@ fun ExperimentalSettings(
 
     var nukeEnabled by remember {
         mutableStateOf(false)
+    }
+
+    var showNukeDialog: (() -> Unit)? by remember {
+        mutableStateOf(null)
     }
 
     var showMaxQueuesDialog by remember {
@@ -162,6 +168,24 @@ fun ExperimentalSettings(
                     showMaxQueuesDialog = false
                 }
             )
+        }
+
+        if (showNukeDialog != null) {
+            ActionPromptDialog(
+                title = "Confirm Destruction",
+                onConfirm = {
+                    showNukeDialog?.invoke()
+                    showNukeDialog = null
+                },
+                onDismiss = { showNukeDialog = null },
+                onCancel = { showNukeDialog = null }
+            ) {
+                Text(
+                    text = "This action will permanently remove data from your local database. This cannot be undone.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(top = 8.dp)
+                )
+            }
         }
 
         PreferenceGroupTitle(
@@ -227,269 +251,248 @@ fun ExperimentalSettings(
 
 
             Spacer(Modifier.height(100.dp))
-            Row(
-                horizontalArrangement = Arrangement.Center,
-                modifier = Modifier
-                    .fillMaxWidth()
-            ) {
-                Text(
-                    text = "Material colours",
-                    fontWeight = FontWeight.ExtraBold,
-                )
-            }
-            Spacer(Modifier.height(20.dp))
+            SettingsClickToReveal(title = "Material colours") {
+                Column {
+                    ColorBox(
+                        sampleColor = MaterialTheme.colorScheme.onPrimary,
+                        backgroundColor = MaterialTheme.colorScheme.primary,
+                        text = "primary"
+                    )
+                    ColorBox(
+                        sampleColor = MaterialTheme.colorScheme.onSecondary,
+                        backgroundColor = MaterialTheme.colorScheme.secondary,
+                        text = "secondary"
+                    )
+                    ColorBox(
+                        sampleColor = MaterialTheme.colorScheme.onTertiary,
+                        backgroundColor = MaterialTheme.colorScheme.tertiary,
+                        text = "tertiary"
+                    )
+                    Spacer(Modifier.height(32.dp))
 
-            Column {
-                ColorBox(
-                    sampleColor = MaterialTheme.colorScheme.onPrimary,
-                    backgroundColor = MaterialTheme.colorScheme.primary,
-                    text = "primary"
-                )
-                ColorBox(
-                    sampleColor = MaterialTheme.colorScheme.onSecondary,
-                    backgroundColor = MaterialTheme.colorScheme.secondary,
-                    text = "secondary"
-                )
-                ColorBox(
-                    sampleColor = MaterialTheme.colorScheme.onTertiary,
-                    backgroundColor = MaterialTheme.colorScheme.tertiary,
-                    text = "tertiary"
-                )
-                Spacer(Modifier.height(60.dp))
+                    ColorBox(
+                        sampleColor = MaterialTheme.colorScheme.onSurface,
+                        backgroundColor = MaterialTheme.colorScheme.surface,
+                        text = "surface"
+                    )
+                    ColorBox(
+                        sampleColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        backgroundColor = MaterialTheme.colorScheme.surfaceVariant,
+                        text = "surfaceVariant"
+                    )
+                    ColorBox(
+                        sampleColor = MaterialTheme.colorScheme.inverseOnSurface,
+                        backgroundColor = MaterialTheme.colorScheme.inverseSurface,
+                        text = "inverseSurface"
+                    )
+                    Spacer(Modifier.height(32.dp))
 
-                ColorBox(
-                    sampleColor = MaterialTheme.colorScheme.onSurface,
-                    backgroundColor = MaterialTheme.colorScheme.surface,
-                    text = "surface"
-                )
-                ColorBox(
-                    sampleColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                    backgroundColor = MaterialTheme.colorScheme.surfaceVariant,
-                    text = "surfaceVariant"
-                )
-                ColorBox(
-                    sampleColor = MaterialTheme.colorScheme.inverseOnSurface,
-                    backgroundColor = MaterialTheme.colorScheme.inverseSurface,
-                    text = "inverseSurface"
-                )
-                Spacer(Modifier.height(60.dp))
+                    ColorBox(
+                        sampleColor = MaterialTheme.colorScheme.onSurface,
+                        backgroundColor = MaterialTheme.colorScheme.surfaceBright,
+                        text = "surfaceBright"
+                    )
+                    ColorBox(
+                        sampleColor = MaterialTheme.colorScheme.onSurface,
+                        backgroundColor = MaterialTheme.colorScheme.surfaceDim,
+                        text = "surfaceDim"
+                    )
+                    ColorBox(
+                        sampleColor = MaterialTheme.colorScheme.surfaceTint,
+                        backgroundColor = MaterialTheme.colorScheme.onSurface,
+                        text = "surfaceTint"
+                    )
+                    Spacer(Modifier.height(32.dp))
 
-                ColorBox(
-                    sampleColor = MaterialTheme.colorScheme.onSurface,
-                    backgroundColor = MaterialTheme.colorScheme.surfaceBright,
-                    text = "surfaceBright"
-                )
-                ColorBox(
-                    sampleColor = MaterialTheme.colorScheme.onSurface,
-                    backgroundColor = MaterialTheme.colorScheme.surfaceDim,
-                    text = "surfaceDim"
-                )
-                ColorBox(
-                    sampleColor = MaterialTheme.colorScheme.surfaceTint,
-                    backgroundColor = MaterialTheme.colorScheme.onSurface,
-                    text = "surfaceTint"
-                )
-                Spacer(Modifier.height(60.dp))
+                    ColorBox(
+                        sampleColor = MaterialTheme.colorScheme.onSurface,
+                        backgroundColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                        text = "surfaceContainerHighest"
+                    )
+                    ColorBox(
+                        sampleColor = MaterialTheme.colorScheme.onSurface,
+                        backgroundColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        text = "surfaceContainerHigh"
+                    )
+                    ColorBox(
+                        sampleColor = MaterialTheme.colorScheme.onSurface,
+                        backgroundColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                        text = "surfaceContainerLow"
+                    )
+                    ColorBox(
+                        sampleColor = MaterialTheme.colorScheme.onSurface,
+                        backgroundColor = MaterialTheme.colorScheme.surfaceContainerLowest,
+                        text = "surfaceContainerLowest"
+                    )
+                    Spacer(Modifier.height(32.dp))
+                    ColorBox(
+                        sampleColor = MaterialTheme.colorScheme.onPrimaryFixed,
+                        backgroundColor = MaterialTheme.colorScheme.primaryFixed,
+                        text = "primaryFixed"
+                    )
+                    ColorBox(
+                        sampleColor = MaterialTheme.colorScheme.onPrimaryFixedVariant,
+                        backgroundColor = MaterialTheme.colorScheme.primaryFixedDim,
+                        text = "primaryFixedDim / onPrimaryFixedVariant"
+                    )
+                    ColorBox(
+                        sampleColor = MaterialTheme.colorScheme.onSecondaryFixed,
+                        backgroundColor = MaterialTheme.colorScheme.secondaryFixed,
+                        text = "secondaryFixed"
+                    )
+                    ColorBox(
+                        sampleColor = MaterialTheme.colorScheme.onSecondaryFixedVariant,
+                        backgroundColor = MaterialTheme.colorScheme.secondaryFixedDim,
+                        text = "secondaryFixedDim / onSecondaryFixedVariant"
+                    )
+                    ColorBox(
+                        sampleColor = MaterialTheme.colorScheme.onTertiaryFixed,
+                        backgroundColor = MaterialTheme.colorScheme.tertiaryFixed,
+                        text = "tertiaryFixed"
+                    )
+                    ColorBox(
+                        sampleColor = MaterialTheme.colorScheme.onTertiaryFixedVariant,
+                        backgroundColor = MaterialTheme.colorScheme.tertiaryFixedDim,
+                        text = "tertiaryFixedDim / onTertiaryFixedVariant"
+                    )
+                    Spacer(Modifier.height(32.dp))
 
-                ColorBox(
-                    sampleColor = MaterialTheme.colorScheme.onSurface,
-                    backgroundColor = MaterialTheme.colorScheme.surfaceContainerHighest,
-                    text = "surfaceContainerHighest"
-                )
-                ColorBox(
-                    sampleColor = MaterialTheme.colorScheme.onSurface,
-                    backgroundColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                    text = "surfaceContainerHigh"
-                )
-                ColorBox(
-                    sampleColor = MaterialTheme.colorScheme.onSurface,
-                    backgroundColor = MaterialTheme.colorScheme.surfaceContainerLow,
-                    text = "surfaceContainerLow"
-                )
-                ColorBox(
-                    sampleColor = MaterialTheme.colorScheme.onSurface,
-                    backgroundColor = MaterialTheme.colorScheme.surfaceContainerLowest,
-                    text = "surfaceContainerLowest"
-                )
-                Spacer(Modifier.height(60.dp))
-                ColorBox(
-                    sampleColor = MaterialTheme.colorScheme.onPrimaryFixed,
-                    backgroundColor = MaterialTheme.colorScheme.primaryFixed,
-                    text = "primaryFixed"
-                )
-                ColorBox(
-                    sampleColor = MaterialTheme.colorScheme.onPrimaryFixedVariant,
-                    backgroundColor = MaterialTheme.colorScheme.primaryFixedDim,
-                    text = "primaryFixedDim / onPrimaryFixedVariant"
-                )
-                ColorBox(
-                    sampleColor = MaterialTheme.colorScheme.onSecondaryFixed,
-                    backgroundColor = MaterialTheme.colorScheme.secondaryFixed,
-                    text = "secondaryFixed"
-                )
-                ColorBox(
-                    sampleColor = MaterialTheme.colorScheme.onSecondaryFixedVariant,
-                    backgroundColor = MaterialTheme.colorScheme.secondaryFixedDim,
-                    text = "secondaryFixedDim / onSecondaryFixedVariant"
-                )
-                ColorBox(
-                    sampleColor = MaterialTheme.colorScheme.onTertiaryFixed,
-                    backgroundColor = MaterialTheme.colorScheme.tertiaryFixed,
-                    text = "tertiaryFixed"
-                )
-                ColorBox(
-                    sampleColor = MaterialTheme.colorScheme.onTertiaryFixedVariant,
-                    backgroundColor = MaterialTheme.colorScheme.tertiaryFixedDim,
-                    text = "tertiaryFixedDim / onTertiaryFixedVariant"
-                )
-                Spacer(Modifier.height(60.dp))
-
-                ColorBox(
-                    sampleColor = MaterialTheme.colorScheme.onErrorContainer,
-                    backgroundColor = MaterialTheme.colorScheme.errorContainer,
-                    text = "errorContainer"
-                )
-                ColorBox(
-                    sampleColor = MaterialTheme.colorScheme.scrim,
-                    backgroundColor = Color.Transparent,
-                    text = "scrim"
-                )
-                ColorBox(
-                    sampleColor = MaterialTheme.colorScheme.onBackground,
-                    backgroundColor = MaterialTheme.colorScheme.background,
-                    text = "background"
-                )
-                ColorBox(
-                    sampleColor = MaterialTheme.colorScheme.outline,
-                    backgroundColor = Color.Transparent,
-                    text = "outline"
-                )
-                ColorBox(
-                    sampleColor = MaterialTheme.colorScheme.outlineVariant,
-                    backgroundColor = Color.Transparent,
-                    text = "outlineVariant"
-                )
-
+                    ColorBox(
+                        sampleColor = MaterialTheme.colorScheme.onErrorContainer,
+                        backgroundColor = MaterialTheme.colorScheme.errorContainer,
+                        text = "errorContainer"
+                    )
+                    ColorBox(
+                        sampleColor = MaterialTheme.colorScheme.scrim,
+                        backgroundColor = Color.Transparent,
+                        text = "scrim"
+                    )
+                    ColorBox(
+                        sampleColor = MaterialTheme.colorScheme.onBackground,
+                        backgroundColor = MaterialTheme.colorScheme.background,
+                        text = "background"
+                    )
+                    ColorBox(
+                        sampleColor = MaterialTheme.colorScheme.outline,
+                        backgroundColor = Color.Transparent,
+                        text = "outline"
+                    )
+                    ColorBox(
+                        sampleColor = MaterialTheme.colorScheme.outlineVariant,
+                        backgroundColor = Color.Transparent,
+                        text = "outlineVariant"
+                    )
+                }
             }
 
-            Spacer(Modifier.height(60.dp))
-            Row(
-                horizontalArrangement = Arrangement.Center,
-                modifier = Modifier
-                    .fillMaxWidth()
-            ) {
-                Text(
-                    text = "Haptics test",
-                    fontWeight = FontWeight.ExtraBold,
-                )
-            }
-            Spacer(Modifier.height(20.dp))
-
-            Column {
-                HapticBox(
-                    sampleColor = MaterialTheme.colorScheme.onPrimary,
-                    backgroundColor = MaterialTheme.colorScheme.primary,
-                    text = "LongPress"
-                ) {
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                }
-                HapticBox(
-                    sampleColor = MaterialTheme.colorScheme.onPrimary,
-                    backgroundColor = MaterialTheme.colorScheme.primary,
-                    text = "TextHandleMove"
-                ) {
-                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                }
-                HapticBox(
-                    sampleColor = MaterialTheme.colorScheme.onPrimary,
-                    backgroundColor = MaterialTheme.colorScheme.primary,
-                    text = "ContextClick"
-                ) {
-                    haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
-                }
-                Spacer(Modifier.height(32.dp))
+            Spacer(Modifier.height(32.dp))
+            SettingsClickToReveal(title = "Haptics test") {
+                Column {
+                    HapticBox(
+                        sampleColor = MaterialTheme.colorScheme.onPrimary,
+                        backgroundColor = MaterialTheme.colorScheme.primary,
+                        text = "LongPress"
+                    ) {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    }
+                    HapticBox(
+                        sampleColor = MaterialTheme.colorScheme.onPrimary,
+                        backgroundColor = MaterialTheme.colorScheme.primary,
+                        text = "TextHandleMove"
+                    ) {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    }
+                    HapticBox(
+                        sampleColor = MaterialTheme.colorScheme.onPrimary,
+                        backgroundColor = MaterialTheme.colorScheme.primary,
+                        text = "ContextClick"
+                    ) {
+                        haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
+                    }
+                    Spacer(Modifier.height(16.dp))
 
 
-                HapticBox(
-                    sampleColor = MaterialTheme.colorScheme.onSecondary,
-                    backgroundColor = MaterialTheme.colorScheme.secondary,
-                    text = "SegmentTick"
-                ) {
-                    haptic.performHapticFeedback(HapticFeedbackType.SegmentTick)
-                }
-                HapticBox(
-                    sampleColor = MaterialTheme.colorScheme.onSecondary,
-                    backgroundColor = MaterialTheme.colorScheme.secondary,
-                    text = "SegmentFrequentTick"
-                ) {
-                    haptic.performHapticFeedback(HapticFeedbackType.SegmentFrequentTick)
-                }
-                Spacer(Modifier.height(32.dp))
+                    HapticBox(
+                        sampleColor = MaterialTheme.colorScheme.onSecondary,
+                        backgroundColor = MaterialTheme.colorScheme.secondary,
+                        text = "SegmentTick"
+                    ) {
+                        haptic.performHapticFeedback(HapticFeedbackType.SegmentTick)
+                    }
+                    HapticBox(
+                        sampleColor = MaterialTheme.colorScheme.onSecondary,
+                        backgroundColor = MaterialTheme.colorScheme.secondary,
+                        text = "SegmentFrequentTick"
+                    ) {
+                        haptic.performHapticFeedback(HapticFeedbackType.SegmentFrequentTick)
+                    }
+                    Spacer(Modifier.height(16.dp))
 
-                HapticBox(
-                    sampleColor = MaterialTheme.colorScheme.onTertiary,
-                    backgroundColor = MaterialTheme.colorScheme.tertiary,
-                    text = "Confirm"
-                ) {
-                    haptic.performHapticFeedback(HapticFeedbackType.Confirm)
-                }
-                HapticBox(
-                    sampleColor = MaterialTheme.colorScheme.onTertiary,
-                    backgroundColor = MaterialTheme.colorScheme.tertiary,
-                    text = "Reject"
-                ) {
-                    haptic.performHapticFeedback(HapticFeedbackType.Reject)
-                }
-                HapticBox(
-                    sampleColor = MaterialTheme.colorScheme.onTertiary,
-                    backgroundColor = MaterialTheme.colorScheme.tertiary,
-                    text = "ToggleOn"
-                ) {
-                    haptic.performHapticFeedback(HapticFeedbackType.ToggleOn)
-                }
-                HapticBox(
-                    sampleColor = MaterialTheme.colorScheme.onTertiary,
-                    backgroundColor = MaterialTheme.colorScheme.tertiary,
-                    text = "ToggleOff"
-                ) {
-                    haptic.performHapticFeedback(HapticFeedbackType.ToggleOff)
-                }
-                Spacer(Modifier.height(32.dp))
+                    HapticBox(
+                        sampleColor = MaterialTheme.colorScheme.onTertiary,
+                        backgroundColor = MaterialTheme.colorScheme.tertiary,
+                        text = "Confirm"
+                    ) {
+                        haptic.performHapticFeedback(HapticFeedbackType.Confirm)
+                    }
+                    HapticBox(
+                        sampleColor = MaterialTheme.colorScheme.onTertiary,
+                        backgroundColor = MaterialTheme.colorScheme.tertiary,
+                        text = "Reject"
+                    ) {
+                        haptic.performHapticFeedback(HapticFeedbackType.Reject)
+                    }
+                    HapticBox(
+                        sampleColor = MaterialTheme.colorScheme.onTertiary,
+                        backgroundColor = MaterialTheme.colorScheme.tertiary,
+                        text = "ToggleOn"
+                    ) {
+                        haptic.performHapticFeedback(HapticFeedbackType.ToggleOn)
+                    }
+                    HapticBox(
+                        sampleColor = MaterialTheme.colorScheme.onTertiary,
+                        backgroundColor = MaterialTheme.colorScheme.tertiary,
+                        text = "ToggleOff"
+                    ) {
+                        haptic.performHapticFeedback(HapticFeedbackType.ToggleOff)
+                    }
+                    Spacer(Modifier.height(16.dp))
 
-                HapticBox(
-                    sampleColor = MaterialTheme.colorScheme.onSurface,
-                    backgroundColor = MaterialTheme.colorScheme.surfaceContainerLow,
-                    text = "TextHandleMove"
-                ) {
-                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                }
-                HapticBox(
-                    sampleColor = MaterialTheme.colorScheme.onSurface,
-                    backgroundColor = MaterialTheme.colorScheme.surfaceContainerLow,
-                    text = "VirtualKey"
-                ) {
-                    haptic.performHapticFeedback(HapticFeedbackType.VirtualKey)
-                }
-                HapticBox(
-                    sampleColor = MaterialTheme.colorScheme.onSurface,
-                    backgroundColor = MaterialTheme.colorScheme.surfaceContainerLow,
-                    text = "GestureEnd"
-                ) {
-                    haptic.performHapticFeedback(HapticFeedbackType.GestureEnd)
-                }
-                HapticBox(
-                    sampleColor = MaterialTheme.colorScheme.onSurface,
-                    backgroundColor = MaterialTheme.colorScheme.surfaceContainerLow,
-                    text = "GestureThresholdActivate"
-                ) {
-                    haptic.performHapticFeedback(HapticFeedbackType.GestureThresholdActivate)
-                }
-                HapticBox(
-                    sampleColor = MaterialTheme.colorScheme.onSurface,
-                    backgroundColor = MaterialTheme.colorScheme.surfaceContainerLow,
-                    text = "KeyboardTap"
-                ) {
-                    haptic.performHapticFeedback(HapticFeedbackType.KeyboardTap)
+                    HapticBox(
+                        sampleColor = MaterialTheme.colorScheme.onSurface,
+                        backgroundColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                        text = "TextHandleMove"
+                    ) {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    }
+                    HapticBox(
+                        sampleColor = MaterialTheme.colorScheme.onSurface,
+                        backgroundColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                        text = "VirtualKey"
+                    ) {
+                        haptic.performHapticFeedback(HapticFeedbackType.VirtualKey)
+                    }
+                    HapticBox(
+                        sampleColor = MaterialTheme.colorScheme.onSurface,
+                        backgroundColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                        text = "GestureEnd"
+                    ) {
+                        haptic.performHapticFeedback(HapticFeedbackType.GestureEnd)
+                    }
+                    HapticBox(
+                        sampleColor = MaterialTheme.colorScheme.onSurface,
+                        backgroundColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                        text = "GestureThresholdActivate"
+                    ) {
+                        haptic.performHapticFeedback(HapticFeedbackType.GestureThresholdActivate)
+                    }
+                    HapticBox(
+                        sampleColor = MaterialTheme.colorScheme.onSurface,
+                        backgroundColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                        text = "KeyboardTap"
+                    ) {
+                        haptic.performHapticFeedback(HapticFeedbackType.KeyboardTap)
+                    }
                 }
             }
 
@@ -504,25 +507,15 @@ fun ExperimentalSettings(
             )
 
             if (nukeEnabled) {
-                Row(
-                    horizontalArrangement = Arrangement.Center,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                ) {
-                    Text(
-                        text = "WARNING: These options have NO confirmation and will apply immediately!",
-                        fontWeight = FontWeight.ExtraBold,
-                    )
-                }
-                Spacer(Modifier.height(20.dp))
-
                 PreferenceEntry(
                     title = { Text("DEBUG: Nuke local lib") },
                     icon = { Icon(Icons.Rounded.ErrorOutline, null) },
                     onClick = {
-                        Toast.makeText(context, "Nuking local files from database...", Toast.LENGTH_SHORT).show()
-                        coroutineScope.launch(Dispatchers.IO) {
-                            Log.i(SETTINGS_TAG, "Nuke database status:  ${database.nukeLocalData()}")
+                        showNukeDialog = {
+                            Toast.makeText(context, "Nuking local files from database...", Toast.LENGTH_SHORT).show()
+                            coroutineScope.launch(Dispatchers.IO) {
+                                Log.i(SETTINGS_TAG, "Nuke database status:  ${database.nukeLocalData()}")
+                            }
                         }
                     }
                 )
@@ -530,9 +523,11 @@ fun ExperimentalSettings(
                     title = { Text("DEBUG: Nuke local artists") },
                     icon = { Icon(Icons.Rounded.WarningAmber, null) },
                     onClick = {
-                        Toast.makeText(context, "Nuking local artists from database...", Toast.LENGTH_SHORT).show()
-                        coroutineScope.launch(Dispatchers.IO) {
-                            Log.i(SETTINGS_TAG, "Nuke database status:  ${database.nukeLocalArtists()}")
+                        showNukeDialog = {
+                            Toast.makeText(context, "Nuking local artists from database...", Toast.LENGTH_SHORT).show()
+                            coroutineScope.launch(Dispatchers.IO) {
+                                Log.i(SETTINGS_TAG, "Nuke database status:  ${database.nukeLocalArtists()}")
+                            }
                         }
                     }
                 )
@@ -540,10 +535,12 @@ fun ExperimentalSettings(
                     title = { Text("DEBUG: Nuke dangling format entities") },
                     icon = { Icon(Icons.Rounded.WarningAmber, null) },
                     onClick = {
-                        Toast.makeText(context, "Nuking dangling format entities from database...", Toast.LENGTH_SHORT)
-                            .show()
-                        coroutineScope.launch(Dispatchers.IO) {
-                            Log.i(SETTINGS_TAG, "Nuke database status:  ${database.nukeDanglingFormatEntities()}")
+                        showNukeDialog = {
+                            Toast.makeText(context, "Nuking dangling format entities from database...", Toast.LENGTH_SHORT)
+                                .show()
+                            coroutineScope.launch(Dispatchers.IO) {
+                                Log.i(SETTINGS_TAG, "Nuke database status:  ${database.nukeDanglingFormatEntities()}")
+                            }
                         }
                     }
                 )
@@ -551,9 +548,11 @@ fun ExperimentalSettings(
                     title = { Text("DEBUG: Nuke local db lyrics") },
                     icon = { Icon(Icons.Rounded.WarningAmber, null) },
                     onClick = {
-                        Toast.makeText(context, "Nuking local lyrics from database...", Toast.LENGTH_SHORT).show()
-                        coroutineScope.launch(Dispatchers.IO) {
-                            Log.i(SETTINGS_TAG, "Nuke database status:  ${database.nukeLocalLyrics()}")
+                        showNukeDialog = {
+                            Toast.makeText(context, "Nuking local lyrics from database...", Toast.LENGTH_SHORT).show()
+                            coroutineScope.launch(Dispatchers.IO) {
+                                Log.i(SETTINGS_TAG, "Nuke database status:  ${database.nukeLocalLyrics()}")
+                            }
                         }
                     }
                 )
@@ -561,9 +560,11 @@ fun ExperimentalSettings(
                     title = { Text("DEBUG: Nuke dangling db lyrics") },
                     icon = { Icon(Icons.Rounded.WarningAmber, null) },
                     onClick = {
-                        Toast.makeText(context, "Nuking dangling lyrics from database...", Toast.LENGTH_SHORT).show()
-                        coroutineScope.launch(Dispatchers.IO) {
-                            Log.i(SETTINGS_TAG, "Nuke database status:  ${database.nukeDanglingLyrics()}")
+                        showNukeDialog = {
+                            Toast.makeText(context, "Nuking dangling lyrics from database...", Toast.LENGTH_SHORT).show()
+                            coroutineScope.launch(Dispatchers.IO) {
+                                Log.i(SETTINGS_TAG, "Nuke database status:  ${database.nukeDanglingLyrics()}")
+                            }
                         }
                     }
                 )
@@ -571,9 +572,11 @@ fun ExperimentalSettings(
                     title = { Text("DEBUG: Nuke remote playlists") },
                     icon = { Icon(Icons.Rounded.WarningAmber, null) },
                     onClick = {
-                        Toast.makeText(context, "Nuking remote playlists from database...", Toast.LENGTH_SHORT).show()
-                        coroutineScope.launch(Dispatchers.IO) {
-                            Log.i(SETTINGS_TAG, "Nuke database status:  ${database.nukeRemotePlaylists()}")
+                        showNukeDialog = {
+                            Toast.makeText(context, "Nuking remote playlists from database...", Toast.LENGTH_SHORT).show()
+                            coroutineScope.launch(Dispatchers.IO) {
+                                Log.i(SETTINGS_TAG, "Nuke database status:  ${database.nukeRemotePlaylists()}")
+                            }
                         }
                     }
                 )

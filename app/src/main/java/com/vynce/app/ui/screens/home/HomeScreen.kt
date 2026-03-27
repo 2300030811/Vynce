@@ -162,28 +162,6 @@ fun HomeScreen(
                 }
             }
 
-            // ── LANGUAGE CHIPS ───────────────────────────────
-            item {
-                LazyRow(
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    items(languages) { lang ->
-                        FilterChip(
-                            selected = state.selectedLanguage == lang,
-                            onClick = { viewModel.setLanguage(lang) },
-                            label = { Text(lang) },
-                            shape = RoundedCornerShape(12.dp),
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = MaterialTheme.colorScheme.primary,
-                                selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
-                                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                            ),
-                            border = null
-                        )
-                    }
-                }
-            }
 
             // ── FEATURED ARTISTS ─────────────────────────────
             if (state.featuredArtists.isNotEmpty()) {
