@@ -1,5 +1,19 @@
 # Vynce Changelog
 
+
+## v1.1.1
+- Fixed compilation errors in `MainActivity` and `LocalMediaSettings`
+- Refactored `ActionPromptDialog` for more flexible UI
+- Cleaned up temporary files from the project root
+- Bumped version for release
+
+## v1.1.0
+- Optimized local media scanner for better reliability
+- Refactored `MusicService` for stable queue management
+- Cleaned up home screen UI (removed language chips)
+- Improved settings architecture and experimental features
+- Added confirmation dialogs for destructive "nuke" operations
+
 ## v1.0.0
 - Initial release
 - Material 3 dark theme with purple accent
