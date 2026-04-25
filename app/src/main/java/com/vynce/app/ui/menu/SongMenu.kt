@@ -223,15 +223,17 @@ fun SongMenu(
                     downloadUtil.download(song.toMediaMetadata())
                 },
                 onRemoveDownload = {
-                    if (song.song.localPath != null) {
-                        downloadUtil.delete(song)
-                    } else {
-                        DownloadService.sendRemoveDownload(
-                            context,
-                            ExoDownloadService::class.java,
-                            song.id,
-                            false
-                        )
+                    coroutineScope.launch {
+                        if (song.song.localPath != null) {
+                            downloadUtil.delete(song)
+                        } else {
+                            DownloadService.sendRemoveDownload(
+                                context,
+                                ExoDownloadService::class.java,
+                                song.id,
+                                false
+                            )
+                        }
                     }
                 }
             )

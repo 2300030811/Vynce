@@ -73,6 +73,15 @@ data class SaavnArtistInfo(
     val followerCount: String = "0"
 )
 
+sealed interface SaavnHomeModule {
+    val title: String
+    val subtitle: String
+}
+data class SaavnHomeSongModule(override val title: String, override val subtitle: String, val songs: List<SaavnSong>) : SaavnHomeModule
+data class SaavnHomePlaylistModule(override val title: String, override val subtitle: String, val playlists: List<SaavnPlaylistInfo>) : SaavnHomeModule
+data class SaavnHomeAlbumModule(override val title: String, override val subtitle: String, val albums: List<SaavnAlbumInfo>) : SaavnHomeModule
+
+
 object JioSaavn {
 
     private val json = Json { ignoreUnknownKeys = true; isLenient = true }
@@ -85,6 +94,66 @@ object JioSaavn {
         } else {
             @Suppress("DEPRECATION")
             Html.fromHtml(this).toString()
+        }
+    }
+
+    suspend fun getHome(languages: String = "hindi,english"): List<SaavnHomeModule> {
+        val url = "https://www.jiosaavn.com/api.php?__call=webapi.getLaunchData&api_version=4&_format=json&_marker=0&ctx=web6dot0&language=$languages"
+        try {
+            val response: HttpResponse = client.get(url)
+            val text = response.bodyAsText()
+            val root = json.parseToJsonElement(text).jsonObject
+            val modulesMap = root["modules"]?.jsonObject ?: return emptyList()
+            val result = mutableListOf<SaavnHomeModule>()
+
+            val sortedModules = modulesMap.entries.mapNotNull { (key, value) ->
+                val obj = value.jsonObject
+                val position = obj["position"]?.jsonPrimitive?.intOrNull ?: 999
+                val title = (obj["title"]?.jsonPrimitive?.content ?: "").decodeHtml()
+                val subtitle = (obj["subtitle"]?.jsonPrimitive?.content ?: "").decodeHtml()
+                Triple(key, position, title to subtitle)
+            }.sortedBy { it.second }
+
+            for ((key, _, titleSubtitle) in sortedModules) {
+                val (title, subtitle) = titleSubtitle
+                val array = root[key]?.jsonArray ?: continue
+                if (array.isEmpty()) continue
+
+                val songs = mutableListOf<SaavnSong>()
+                val playlists = mutableListOf<SaavnPlaylistInfo>()
+                val albums = mutableListOf<SaavnAlbumInfo>()
+
+                for (el in array) {
+                    val obj = el.jsonObject
+                    when (obj["type"]?.jsonPrimitive?.content) {
+                        "song" -> songs.add(SaavnSong(
+                            id = obj["id"]?.jsonPrimitive?.content ?: "",
+                            name = (obj["title"]?.jsonPrimitive?.content ?: "").decodeHtml(),
+                            primaryArtists = (obj["subtitle"]?.jsonPrimitive?.content ?: "").decodeHtml(),
+                            image = (obj["image"]?.jsonPrimitive?.content ?: "").replace("http://", "https://").replace("150x150", "500x500")
+                        ))
+                        "playlist" -> playlists.add(SaavnPlaylistInfo(
+                            id = obj["id"]?.jsonPrimitive?.content ?: "",
+                            name = (obj["title"]?.jsonPrimitive?.content ?: "").decodeHtml(),
+                            image = (obj["image"]?.jsonPrimitive?.content ?: "").replace("http://", "https://").replace("150x150", "500x500"),
+                            songCount = obj["more_info"]?.jsonObject?.get("song_count")?.jsonPrimitive?.content ?: "0"
+                        ))
+                        "album" -> albums.add(SaavnAlbumInfo(
+                            id = obj["id"]?.jsonPrimitive?.content ?: "",
+                            name = (obj["title"]?.jsonPrimitive?.content ?: "").decodeHtml(),
+                            image = (obj["image"]?.jsonPrimitive?.content ?: "").replace("http://", "https://").replace("150x150", "500x500"),
+                            year = obj["year"]?.jsonPrimitive?.content ?: ""
+                        ))
+                    }
+                }
+                if (songs.isNotEmpty()) result.add(SaavnHomeSongModule(if (albums.isNotEmpty()) "$title Songs" else title, subtitle, songs))
+                if (playlists.isNotEmpty()) result.add(SaavnHomePlaylistModule(title, subtitle, playlists))
+                if (albums.isNotEmpty()) result.add(SaavnHomeAlbumModule(if (songs.isNotEmpty()) "$title Albums" else title, subtitle, albums))
+            }
+            return result
+        } catch (e: Exception) {
+            println("JioSaavn getHome error: ${e.message}")
+            return emptyList()
         }
     }
 
@@ -259,7 +328,7 @@ object JioSaavn {
 
     // Playlist fetching by ID — this is the right way to get curated content
     suspend fun getPlaylist(id: String): Pair<SaavnPlaylistInfo, List<SaavnSong>> {
-        val obj = getJson("/api/playlists", mapOf("id" to id)) ?: 
+        val obj = getJson("/api/playlists", mapOf("id" to id, "limit" to "200")) ?: 
             return Pair(SaavnPlaylistInfo(), emptyList())
         return try {
             val data = obj["data"]?.jsonObject ?: return Pair(SaavnPlaylistInfo(), emptyList())
@@ -343,15 +412,4 @@ object JioSaavn {
         return Triple(artistInfo, songs, albums)
     }
 
-    // Search with playlist ID caching 
-    suspend fun findAndCachePlaylistId(name: String, prefs: android.content.SharedPreferences): String? {
-        val cached = prefs.getString("playlist_id_$name", null)
-            ?.takeIf { it.isNotBlank() && it != "null" }
-        if (cached != null) return cached
-        
-        val results = searchPlaylists(name)
-        val id = results.firstOrNull()?.id ?: return null
-        prefs.edit().putString("playlist_id_$name", id).apply()
-        return id
-    }
 }

@@ -32,7 +32,7 @@ fun SaavnSong.toMediaItem() = MediaItem.Builder()
 
 fun Song.toMediaItem() = MediaItem.Builder()
     .setMediaId(song.id)
-    .setUri(song.id)
+    .setUri(song.localPath?.let { "file://$it" } ?: song.id)
     .setCustomCacheKey(song.id)
     .setTag(toMediaMetadata())
     .setMediaMetadata(
@@ -50,7 +50,7 @@ fun Song.toMediaItem() = MediaItem.Builder()
 
 fun MediaMetadata.toMediaItem() = MediaItem.Builder()
     .setMediaId(id)
-    .setUri(id)
+    .setUri(localPath?.let { "file://$it" } ?: id)
     .setCustomCacheKey(id)
     .setTag(this)
     .setMediaMetadata(

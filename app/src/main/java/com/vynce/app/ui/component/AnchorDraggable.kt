@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025 O﻿ute﻿rTu﻿ne Project
+ * Copyright (C) 2025 Vynce Project
  *
  * SPDX-License-Identifier: GPL-3.0
  *
@@ -144,6 +144,10 @@ fun SwipeActionBox(
                     .draggable(
                         orientation = Orientation.Horizontal,
                         state = draggableState,
+                        // Do NOT start drag immediately — let child composables (e.g. combinedClickable)
+                        // receive the initial PointerDown event. Drag only begins once minimum touch slop
+                        // is exceeded horizontally, preventing tap interception.
+                        startDragImmediately = false,
                         onDragStopped = {
                             when {
                                 swipeOffset.floatValue >= secondThreshold -> {

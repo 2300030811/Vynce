@@ -8,13 +8,23 @@ import com.zionhuang.jiosaavn.JioSaavn
 import com.zionhuang.jiosaavn.SaavnSong
 
 /**
+ * Convert a Saavn image URL to high resolution HTTPS
+ */
+fun String.saavnHighResHttps(): String = 
+    replace("http://", "https://").replace("150x150", "500x500")
+
+/**
  * Convert a SaavnSong into the app's internal MediaMetadata format.
  */
 fun SaavnSong.toSaavnMediaMetadata(): MediaMetadata {
     with(JioSaavn) {
         return MediaMetadata(
             id = "saavn:${this@toSaavnMediaMetadata.id}",
-            title = this@toSaavnMediaMetadata.name.decodeHtml(),
+            title = this@toSaavnMediaMetadata.name.decodeHtml()
+                .replace(Regex("(?i)\\s*by\\s+.*"), "")
+                .replace(Regex("\\s*\\([^)]*\\)"), "")
+                .replace(Regex("\\s*\\[[^]]*\\]"), "")
+                .trim(),
             artists = this@toSaavnMediaMetadata.artistNames().split(", ").map { name ->
                 MediaMetadata.Artist(
                     id = null,

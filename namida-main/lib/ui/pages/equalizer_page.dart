@@ -1,0 +1,1201 @@
+import 'dart:async';
+import 'dart:math' as math;
+
+import 'package:flutter/material.dart';
+
+import 'package:just_audio/just_audio.dart';
+
+import 'package:namida/base/audio_handler.dart';
+import 'package:namida/controller/current_color.dart';
+import 'package:namida/controller/navigator_controller.dart';
+import 'package:namida/controller/platform/namida_channel/namida_channel.dart';
+import 'package:namida/controller/player_controller.dart';
+import 'package:namida/controller/settings_controller.dart';
+import 'package:namida/controller/vibrator_controller.dart';
+import 'package:namida/core/constants.dart';
+import 'package:namida/core/extensions.dart';
+import 'package:namida/core/functions.dart';
+import 'package:namida/core/icon_fonts/broken_icons.dart';
+import 'package:namida/core/namida_converter_ext.dart';
+import 'package:namida/core/translations/language.dart';
+import 'package:namida/core/utils.dart';
+import 'package:namida/ui/widgets/animated_widgets.dart';
+import 'package:namida/ui/widgets/custom_widgets.dart';
+import 'package:namida/ui/widgets/settings/playback_settings.dart';
+
+class EqualizerMainSlidersColumn extends StatelessWidget {
+  final double verticalInBetweenPadding;
+  final bool tapToUpdate;
+
+  const EqualizerMainSlidersColumn({
+    super.key,
+    required this.verticalInBetweenPadding,
+    required this.tapToUpdate,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = context.theme;
+    final textTheme = theme.textTheme;
+    final verticalPadding = SizedBox(height: verticalInBetweenPadding);
+    final pitchKey = GlobalKey<_CuteSliderState>();
+    final speedKey = GlobalKey<_CuteSliderState>();
+    final volumeKey = GlobalKey<_CuteSliderState>();
+
+    return Column(
+      children: [
+        verticalPadding,
+        ObxO(
+          rx: settings.player.useSemitones,
+          builder: (context, isSemitones) => ObxO(
+            rx: settings.player.linkSpeedPitch,
+            builder: (context, enabled) => AnimatedEnabled(
+              enabled: !enabled,
+              child: Obx(
+                (context) {
+                  final pitch = settings.player.pitch.valueR;
+                  const hz432Value = 432.0 / 440.0;
+                  final is432HzEnabled = pitch == hz432Value;
+                  return _SliderTextWidget(
+                    icon: Broken.airpods,
+                    min: isSemitones ? -12.0 : 0.0,
+                    max: isSemitones ? 12.0 : 2.0,
+                    title: lang.pitch,
+                    subtitle: isSemitones ? '(${lang.semitones})' : '(${lang.percentage})',
+                    onTap: () {
+                      settings.player.save(useSemitones: !settings.player.useSemitones.value);
+                    },
+                    value: pitch,
+                    valToText: isSemitones ? _SliderTextWidget.toSemitones : _SliderTextWidget.toPercentage,
+                    valueModifier: isSemitones ? _SliderTextWidget.ratioToSemitonesRound : null,
+                    restoreDefault: () {
+                      Player.inst.setPlayerPitch(1.0);
+                      settings.player.save(pitch: 1.0);
+                      pitchKey.currentState?.updateValExternal(1.0);
+                    },
+                    onManualChange: (convertedValue) {
+                      pitchKey.currentState?._updateValNoRound(convertedValue); // no conversion
+                    },
+                    featuredButton: NamidaInkWellButton(
+                      icon: null,
+                      text: '',
+                      borderRadius: 8.0,
+                      sizeMultiplier: 0.9,
+                      paddingMultiplier: 0.7,
+                      bgColor: theme.colorScheme.secondaryContainer.withOpacityExt(is432HzEnabled ? 0.5 : 0.2),
+                      onTap: () {
+                        final newValue = is432HzEnabled ? 1.0 : hz432Value;
+                        Player.inst.setPlayerPitch(newValue);
+                        settings.player.save(pitch: newValue);
+                        pitchKey.currentState?.updateValNoRoundExternal(newValue);
+                      },
+                      leading: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            '✓ ',
+                            style: textTheme.displaySmall,
+                          ).animateEntrance(
+                            showWhen: is432HzEnabled,
+                            allCurves: Curves.fastLinearToSlowEaseIn,
+                            durationMS: 300,
+                          ),
+                          Text(
+                            '432Hz',
+                            style: textTheme.displaySmall,
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+        ),
+        ObxO(
+          rx: settings.player.useSemitones,
+          builder: (context, isSemitones) => ObxO(
+            rx: settings.player.linkSpeedPitch,
+            builder: (context, enabled) => AnimatedEnabled(
+              enabled: !enabled,
+              child: isSemitones
+                  ? _CuteSlider<double>(
+                      key: pitchKey,
+                      min: -12.0,
+                      max: 12.0,
+                      divisions: 24, // 24 steps = 0.5 semitone steps from -12 to +12
+                      incremental: 0.5,
+                      valueListenable: settings.player.pitch,
+                      valueModifier: _SliderTextWidget.ratioToSemitones,
+                      onChanged: (semitones) {
+                        final ratio = _SliderTextWidget.semitonesToRatio(semitones);
+                        Player.inst.setPlayerPitch(ratio);
+                        settings.player.save(pitch: ratio);
+                      },
+                      tapToUpdate: tapToUpdate,
+                      valToText: _SliderTextWidget.toSemitones,
+                    )
+                  : _CuteSlider(
+                      key: pitchKey,
+                      valueListenable: settings.player.pitch,
+                      onChanged: (value) {
+                        Player.inst.setPlayerPitch(value);
+                        settings.player.save(pitch: value);
+                      },
+                      tapToUpdate: tapToUpdate,
+                    ),
+            ),
+          ),
+        ),
+        verticalPadding,
+        Obx(
+          (context) => _SliderTextWidget(
+            icon: Broken.forward,
+            title: lang.speed,
+            value: settings.player.speed.valueR,
+            onManualChange: (value) {
+              speedKey.currentState?.updateValNoRoundExternal(value);
+              if (settings.player.linkSpeedPitch.value) {
+                pitchKey.currentState?.updateValNoRoundExternal(value);
+              }
+            },
+            restoreDefault: () {
+              Player.inst.setPlayerSpeed(1.0);
+              settings.player.save(speed: 1.0);
+              speedKey.currentState?.updateValExternal(1.0);
+
+              if (settings.player.linkSpeedPitch.value) {
+                Player.inst.setPlayerPitch(1.0);
+                settings.player.save(pitch: 1.0);
+                pitchKey.currentState?.updateValExternal(1.0);
+              }
+            },
+            useMaxToLimitPreciseValue: false,
+            valToText: _SliderTextWidget.toXMultiplier,
+            featuredButton: ObxO(
+              rx: settings.player.linkSpeedPitch,
+              builder: (context, enabled) => NamidaInkWellButton(
+                icon: null,
+                text: '',
+                borderRadius: 8.0,
+                sizeMultiplier: 0.9,
+                paddingMultiplier: 0.7,
+                bgColor: theme.colorScheme.secondaryContainer.withOpacityExt(enabled ? 0.5 : 0.2),
+                onTap: () {
+                  final newLinkValue = !settings.player.linkSpeedPitch.value;
+                  final newValue = newLinkValue ? settings.player.speed.value : settings.player.pitch.value;
+                  Player.inst.setPlayerPitch(newValue);
+                  settings.player.save(pitch: newValue, linkSpeedPitch: newLinkValue);
+                  pitchKey.currentState?.updateValNoRoundExternal(newValue);
+                },
+                leading: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.only(right: 4.0),
+                      child: Icon(
+                        Broken.link_21,
+                        size: 12.0,
+                      ),
+                    ).animateEntrance(
+                      showWhen: enabled,
+                      allCurves: Curves.fastLinearToSlowEaseIn,
+                      durationMS: 300,
+                    ),
+                    Text(
+                      lang.pitch,
+                      style: textTheme.displaySmall,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+        _CuteSlider(
+          key: speedKey,
+          valueListenable: settings.player.speed,
+          onChanged: (value) {
+            Player.inst.setPlayerSpeed(value);
+            settings.player.save(speed: value);
+
+            if (settings.player.linkSpeedPitch.value) {
+              Player.inst.setPlayerPitch(value);
+              settings.player.save(pitch: value);
+            }
+          },
+          tapToUpdate: tapToUpdate,
+        ),
+        verticalPadding,
+        Obx(
+          (context) {
+            final normalVolume = settings.player.volume.valueR;
+            final replayGainLinear = Player.inst.replayGainLinearVolume.valueR;
+            final replayGainText = replayGainLinear == 1.0 ? '' : ' (N: ${_SliderTextWidget.toPercentage(normalVolume * replayGainLinear)})';
+            return _SliderTextWidget(
+              icon: normalVolume > 0 ? Broken.volume_up : Broken.volume_slash,
+              title: lang.volume,
+              value: normalVolume,
+              max: 1.0,
+              valToText: (val) => '${_SliderTextWidget.toPercentage(val)}$replayGainText',
+              onManualChange: (value) {
+                volumeKey.currentState?.updateValNoRoundExternal(value);
+              },
+              restoreDefault: () {
+                Player.inst.setPlayerVolume(1.0);
+                settings.player.save(volume: 1.0);
+                volumeKey.currentState?.updateValExternal(1.0);
+              },
+            );
+          },
+        ),
+        _CuteSlider(
+          key: volumeKey,
+          max: 1.0,
+          valueListenable: settings.player.volume,
+          onChanged: (value) {
+            Player.inst.setPlayerVolume(value);
+            settings.player.save(volume: value);
+          },
+          tapToUpdate: tapToUpdate,
+        ),
+      ],
+    );
+  }
+}
+
+class EqualizerPage extends StatefulWidget {
+  const EqualizerPage({super.key});
+
+  @override
+  EqualizerPageState createState() => EqualizerPageState();
+}
+
+class EqualizerPageState extends State<EqualizerPage> {
+  AndroidEqualizer get _equalizer => Player.inst.equalizer;
+  AndroidLoudnessEnhancerExtended get _loudnessEnhancer => Player.inst.loudnessEnhancer;
+
+  final _equalizerPresets = <String>[];
+  final _activePreset = ''.obs;
+  final _activePresetCustom = false.obs;
+
+  final _loudnessKey = GlobalKey<_CuteSliderState>();
+
+  @override
+  void initState() {
+    _fillPresets();
+    super.initState();
+  }
+
+  @override
+  void dispose() {
+    _activePreset.close();
+    _activePresetCustom.close();
+    super.dispose();
+  }
+
+  Future<void> _fillPresets() async {
+    final p = await _equalizer.presets;
+    if (!mounted) return;
+    setState(() => _equalizerPresets.addAll(p));
+    if (_equalizerPresets.isNotEmpty) {
+      final activePreset = await _equalizer.getCurrentPreset();
+      if (activePreset != null) {
+        try {
+          _activePreset.value = _equalizerPresets[activePreset];
+          _activePresetCustom.value = false;
+        } catch (_) {
+          _resetPreset(writeSettings: false);
+        }
+      } else {
+        _resetPreset(writeSettings: false);
+      }
+    }
+  }
+
+  void _resetPreset({bool writeSettings = true}) {
+    _activePresetCustom.value = true;
+    _activePreset.value = '';
+    _equalizer.setPreset(null);
+    if (writeSettings && settings.equalizer.preset != null) {
+      settings.equalizer.save(preset: null, resetPreset: true);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = context.theme;
+    final textTheme = theme.textTheme;
+    const verticalInBetweenPaddingH = 18.0;
+    const verticalInBetweenPadding = SizedBox(height: verticalInBetweenPaddingH);
+    late final loudnessEnhancerSliderWidget = ObxO(
+      rx: settings.equalizer.uiTapToUpdate,
+      builder: (context, uiTapToUpdate) => _CuteSlider(
+        key: _loudnessKey,
+        valueListenable: _loudnessEnhancer.targetGainUser,
+        min: AndroidLoudnessEnhancerExtended.kMinGain,
+        max: AndroidLoudnessEnhancerExtended.kMaxGain,
+        valToText: _SliderTextWidget.toDecibelMultiplier,
+        onChanged: (newVal) {
+          settings.equalizer.save(loudnessEnhancer: newVal);
+          _loudnessEnhancer.setTargetGainUser(newVal);
+        },
+        tapToUpdate: uiTapToUpdate,
+      ),
+    );
+    return AnimatedThemeOrTheme(
+      duration: const Duration(milliseconds: kThemeAnimationDurationMS),
+      data: theme,
+      child: BackgroundWrapper(
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(12.0),
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12.0.multipliedRadius),
+                color: theme.cardColor,
+              ),
+              child: SmoothSingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    verticalInBetweenPadding,
+                    Row(
+                      children: [
+                        const SizedBox(width: 6.0),
+                        NamidaIconButton(
+                          verticalPadding: 6.0,
+                          horizontalPadding: 12.0,
+                          icon: Broken.arrow_left_1,
+                          iconSize: 24.0,
+                          onPressed: NamidaNavigator.inst.popRoot,
+                        ),
+                        const SizedBox(width: 6.0),
+                        const Icon(Broken.sound),
+                        const SizedBox(width: 12.0),
+                        Expanded(
+                          child: Text(
+                            "${lang.configure} (${lang.beta})",
+                            style: textTheme.displayMedium,
+                          ),
+                        ),
+                        if (NamidaFeaturesVisibility.equalizerAvailable) ...[
+                          NamidaIconButton(
+                            horizontalPadding: 8.0,
+                            tooltip: () => lang.tapToSeek,
+                            icon: null,
+                            iconSize: 24.0,
+                            onPressed: () => settings.equalizer.save(uiTapToUpdate: !settings.equalizer.uiTapToUpdate.value),
+                            child: ObxO(
+                              rx: settings.equalizer.uiTapToUpdate,
+                              builder: (context, val) => StackedIcon(
+                                baseIcon: Broken.mouse_1,
+                                secondaryIcon: val ? Broken.tick_circle : Broken.close_circle,
+                                secondaryIconSize: 12.0,
+                                iconSize: 24.0,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12.0),
+                        ],
+                        const SizedBox(width: 8.0),
+                      ],
+                    ),
+                    const SizedBox(height: 6.0),
+                    if (NamidaFeaturesVisibility.equalizerAvailable) ...[
+                      StreamBuilder<bool>(
+                        initialData: _equalizer.enabled,
+                        stream: _equalizer.enabledStream,
+                        builder: (context, snapshot) {
+                          final enabled = snapshot.data ?? false;
+                          return NamidaInkWell(
+                            onTap: () {
+                              settings.equalizer.save(equalizerEnabled: !_equalizer.enabled);
+                              _equalizer.setEnabled(!_equalizer.enabled);
+                            },
+                            padding: const EdgeInsets.symmetric(vertical: 12.0),
+                            child: _SliderTextWidget(
+                              icon: Broken.chart_3,
+                              title: lang.equalizer,
+                              value: 0,
+                              displayValue: false,
+                              trailing: Row(
+                                children: [
+                                  if (NamidaFeaturesVisibility.methodSetMonoAudio) ...[
+                                    IconButton(
+                                      padding: EdgeInsets.zero,
+                                      visualDensity: VisualDensity.compact,
+                                      style: const ButtonStyle(tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+                                      tooltip: lang.setMonoAudio,
+                                      icon: Icon(
+                                        Broken.airpods,
+                                        size: 20.0,
+                                        color: context.defaultIconColor(),
+                                      ),
+                                      iconSize: 20.0,
+                                      onPressed: () => NamidaChannel.inst.setMonoAudio(null),
+                                    ),
+                                    const SizedBox(width: 2.0),
+                                  ],
+
+                                  if (NamidaFeaturesVisibility.methodOpenSystemEqualizer)
+                                    IconButton(
+                                      padding: EdgeInsets.zero,
+                                      visualDensity: VisualDensity.compact,
+                                      style: const ButtonStyle(tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+                                      tooltip: lang.openApp,
+                                      icon: Icon(
+                                        Broken.export_2,
+                                        size: 20.0,
+                                        color: context.defaultIconColor(),
+                                      ),
+                                      iconSize: 20.0,
+                                      onPressed: () => NamidaChannel.inst.openSystemEqualizer(Player.inst.androidSessionId),
+                                    ),
+                                  const SizedBox(width: 8.0),
+                                  CustomSwitch(
+                                    active: enabled,
+                                    passedColor: null,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 6.0),
+                      EqualizerControls(
+                        equalizer: _equalizer,
+                        onGainSetCallback: _resetPreset,
+                        tapToUpdate: () => settings.equalizer.uiTapToUpdate.value,
+                      ),
+                      verticalInBetweenPadding,
+                      if (_equalizerPresets.isNotEmpty) ...[
+                        SmoothSingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: Row(
+                            children: [
+                              const SizedBox(width: 8.0),
+                              Obx(
+                                (context) => NamidaInkWell(
+                                  animationDurationMS: 200,
+                                  borderRadius: 5.0,
+                                  margin: const EdgeInsets.symmetric(horizontal: 4.0),
+                                  padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+                                  bgColor: _activePresetCustom.valueR
+                                      ? Color.alphaBlend(CurrentColor.inst.color.withOpacityExt(0.9), theme.scaffoldBackgroundColor)
+                                      : theme.colorScheme.secondary.withOpacityExt(0.15),
+                                  onTap: _resetPreset,
+                                  child: Text(
+                                    lang.custom,
+                                    style: textTheme.displaySmall?.copyWith(
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 13.5,
+                                      color: _activePresetCustom.valueR ? Colors.white.withOpacityExt(0.7) : null,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              ..._equalizerPresets.asMap().entries.map(
+                                (e) => Obx(
+                                  (context) => NamidaInkWell(
+                                    animationDurationMS: 200,
+                                    borderRadius: 5.0,
+                                    margin: const EdgeInsets.symmetric(horizontal: 4.0),
+                                    padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+                                    bgColor: _activePreset.valueR == e.value
+                                        ? Color.alphaBlend(CurrentColor.inst.color.withOpacityExt(0.9), theme.scaffoldBackgroundColor)
+                                        : theme.colorScheme.secondary.withOpacityExt(0.15),
+                                    onTap: () async {
+                                      _activePreset.value = e.value;
+                                      _activePresetCustom.value = false;
+                                      settings.equalizer.save(preset: e.key);
+                                      final newPreset = await _equalizer.setPreset(e.key);
+                                      if (newPreset != e.key) snackyy(message: lang.error, top: false, isError: true);
+                                    },
+                                    child: Text(
+                                      e.value,
+                                      style: textTheme.displaySmall?.copyWith(
+                                        color: _activePreset.valueR == e.value ? Colors.white.withOpacityExt(0.7) : null,
+                                        fontWeight: FontWeight.w700,
+                                        fontSize: 13.5,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8.0),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 12.0),
+                      ],
+                    ],
+                    const PlaybackSettings().getNormalizeAudioWidget(),
+                    NamidaContainerDivider(
+                      margin: EdgeInsets.symmetric(
+                        horizontal: 12.0,
+                        vertical: verticalInBetweenPaddingH / 2,
+                      ),
+                    ),
+                    if (NamidaFeaturesVisibility.loudnessEnhancerAvailable) ...[
+                      ObxO(
+                        rx: _loudnessEnhancer.enabledUser,
+                        builder: (context, enabled) => ObxO(
+                          rx: _loudnessEnhancer.targetGainUser,
+                          builder: (context, targetGainUser) => ObxO(
+                            rx: _loudnessEnhancer.targetGainTrack,
+                            builder: (context, targetGainTrack) {
+                              final replayGainText = targetGainTrack == 0.0 ? '' : ' (N: ${_SliderTextWidget.toDecibelMultiplier(_loudnessEnhancer.getActualGain)})';
+                              return Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  NamidaInkWell(
+                                    onTap: () {
+                                      settings.equalizer.save(loudnessEnhancerEnabled: !_loudnessEnhancer.enabledUser.value);
+                                      _loudnessEnhancer.setEnabledUser(!_loudnessEnhancer.enabledUser.value);
+                                    },
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(vertical: 6.0),
+                                      child: _SliderTextWidget(
+                                        icon: targetGainUser > 0 ? Broken.volume_high : Broken.volume_low_1,
+                                        title: '${lang.loudnessEnhancer} (PreAmp)',
+                                        value: targetGainUser,
+                                        min: AndroidLoudnessEnhancerExtended.kMinGain,
+                                        max: AndroidLoudnessEnhancerExtended.kMaxGain,
+                                        valToText: (val) => '${_SliderTextWidget.toDecibelMultiplier(val)}$replayGainText',
+                                        onManualChange: (newVal) {
+                                          _loudnessKey.currentState?.updateValNoRoundExternal(newVal);
+                                        },
+                                        restoreDefault: () {
+                                          settings.equalizer.save(loudnessEnhancer: 0.0);
+                                          _loudnessEnhancer.setTargetGainUser(0.0);
+                                          _loudnessKey.currentState?.updateValExternal(0.0);
+                                        },
+                                        trailing: CustomSwitch(
+                                          active: enabled,
+                                          passedColor: null,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  loudnessEnhancerSliderWidget,
+                                ],
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                    ],
+                    ObxO(
+                      rx: settings.equalizer.uiTapToUpdate,
+                      builder: (context, uiTapToUpdate) => EqualizerMainSlidersColumn(
+                        verticalInBetweenPadding: verticalInBetweenPaddingH,
+                        tapToUpdate: uiTapToUpdate,
+                      ),
+                    ),
+                    verticalInBetweenPadding,
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SliderTextWidget extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String? subtitle;
+  final double value;
+  final double min;
+  final double max;
+  final bool useMaxToLimitPreciseValue;
+  final Widget? featuredButton;
+  final VoidCallback? restoreDefault;
+  final Widget? trailing;
+  final bool displayValue;
+  final String Function(double val) valToText;
+  final double Function(double val)? valueModifier;
+  final void Function(double convertedValue)? onManualChange;
+  final void Function()? onTap;
+
+  const _SliderTextWidget({
+    required this.icon,
+    required this.title,
+    this.subtitle,
+    required this.value,
+    this.min = 0.0,
+    this.max = 2.0,
+    this.useMaxToLimitPreciseValue = true,
+    this.featuredButton,
+    this.restoreDefault,
+    this.trailing,
+    this.displayValue = true,
+    this.valToText = toPercentage,
+    this.valueModifier,
+    this.onManualChange,
+    this.onTap,
+  });
+
+  static String toPercentageInt(double val) => "${(val * 100).toStringAsFixed(0)}%";
+  static String toPercentage(double val) => "${(val * 100).roundDecimals(2)}%";
+  static String toXMultiplier(double val) => "${val.toStringAsFixed(2)}x";
+  static String toDecibelMultiplier(double val) => "${val.toStringAsFixed(1)}dB";
+
+  static String toSemitones(double semitones) {
+    return '${semitones.toStringAsFixed(1)} st';
+  }
+
+  static double ratioToSemitonesRound(double ratio) {
+    return ratioToSemitones(ratio).roundDecimals(1);
+  }
+
+  static double ratioToSemitones(double ratio) {
+    if (ratio <= 0) return -12.0;
+    return 12.0 * math.log(ratio) / math.log(2);
+  }
+
+  static double semitonesToRatio(double semitones) {
+    return math.pow(2.0, semitones / 12.0).toDouble();
+  }
+
+  void _showPreciseValueConfig({required double initial, required void Function(double val) onChanged}) {
+    showNamidaBottomSheetWithTextField(
+      title: title,
+      textfieldConfig: BottomSheetTextFieldConfig(
+        hintText: initial.toString(),
+        labelText: title,
+        initalControllerText: initial.toString(),
+        validator: (text) {
+          if (text == null || text.isEmpty) {
+            return lang.emptyValue;
+          }
+          final doubleval = double.tryParse(text);
+          if (doubleval == null) return lang.nameContainsBadCharacter;
+          if (doubleval < min || (useMaxToLimitPreciseValue && doubleval > max)) return '$min | +$max';
+          return null;
+        },
+      ),
+      buttonText: lang.save,
+      onButtonTap: (text) {
+        final doubleval = double.tryParse(text);
+        if (doubleval == null) return false;
+        onChanged(doubleval);
+        return true;
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = context.textTheme;
+    final valueActual = valueModifier?.call(value) ?? value;
+    final subtitle = this.subtitle;
+    Widget child = Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12.0),
+      child: Row(
+        children: [
+          NamidaIconButton(
+            horizontalPadding: 6.0,
+            icon: icon,
+            onPressed: onManualChange == null
+                ? null
+                : () => _showPreciseValueConfig(
+                    initial: valueActual,
+                    onChanged: onManualChange!,
+                  ),
+          ),
+          const SizedBox(width: 6.0),
+          Flexible(
+            child: Row(
+              children: [
+                Flexible(
+                  child: Column(
+                    mainAxisSize: .min,
+                    crossAxisAlignment: .start,
+                    children: [
+                      Row(
+                        mainAxisSize: .min,
+                        children: [
+                          Flexible(
+                            child: Text(
+                              title,
+                              style: textTheme.displayLarge?.copyWith(fontSize: 16.0),
+                            ),
+                          ),
+
+                          if (onTap != null) const SizedBox(width: 4.0),
+                          if (onTap != null)
+                            Icon(
+                              Broken.arrange_circle_2,
+                              size: 12.0,
+                            ),
+                        ],
+                      ),
+
+                      if (subtitle != null && subtitle.isNotEmpty)
+                        Text(
+                          subtitle,
+                          style: textTheme.displaySmall?.copyWith(fontSize: 10.0),
+                        ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8.0),
+                if (displayValue)
+                  Text(
+                    valToText(valueActual),
+                    style: textTheme.displayMedium?.copyWith(fontSize: 13.5),
+                  ),
+              ],
+            ),
+          ),
+          if (featuredButton != null) const SizedBox(width: 2.0),
+          ?featuredButton,
+          const SizedBox(width: 6.0),
+          if (restoreDefault != null)
+            IconButton(
+              padding: EdgeInsets.zero,
+              visualDensity: VisualDensity.compact,
+              style: const ButtonStyle(tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+              tooltip: lang.restoreDefaults,
+              icon: Icon(
+                Broken.refresh,
+                size: 20.0,
+              ),
+              onPressed: restoreDefault,
+            ),
+          if (restoreDefault != null) const SizedBox(width: 8.0),
+          ?trailing,
+          const SizedBox(width: 8.0),
+          const SizedBox(width: 6.0),
+        ],
+      ),
+    );
+    if (onTap != null) {
+      child = NamidaInkWell(
+        borderRadius: 8.0,
+        padding: const EdgeInsetsGeometry.symmetric(vertical: 6.0),
+        onTap: onTap,
+        child: child,
+      );
+    }
+    return Padding(
+      padding: const EdgeInsetsGeometry.symmetric(vertical: 2.0),
+      child: child,
+    );
+  }
+}
+
+class _CuteSlider<T> extends StatefulWidget {
+  final double min;
+  final double max;
+  final RxBaseCore<double> valueListenable;
+  final void Function(double newValue) onChanged;
+  final String Function(double val) valToText;
+  final double Function(double val)? valueModifier;
+  final double incremental;
+  final int divisions;
+  final bool tapToUpdate;
+
+  const _CuteSlider({
+    required super.key,
+    this.min = 0.0,
+    this.max = 2.0,
+    this.divisions = 200,
+    required this.valueListenable,
+    required this.onChanged,
+    this.valueModifier,
+    this.valToText = _SliderTextWidget.toPercentageInt,
+    this.incremental = 0.01,
+    required this.tapToUpdate,
+  });
+
+  @override
+  State<_CuteSlider> createState() => _CuteSliderState();
+}
+
+class _CuteSliderState extends State<_CuteSlider> {
+  late double _currentVal;
+
+  @override
+  void initState() {
+    _currentVal = widget.valueModifier?.call(widget.valueListenable.value) ?? widget.valueListenable.value;
+    widget.valueListenable.addListener(_valueListener);
+    super.initState();
+  }
+
+  @override
+  void dispose() {
+    widget.valueListenable.removeListener(_valueListener);
+    super.dispose();
+  }
+
+  void updateValExternal(double newVal) {
+    final requiredValue = widget.valueModifier?.call(newVal) ?? newVal;
+    _updateVal(requiredValue);
+  }
+
+  void updateValNoRoundExternal(double newVal) {
+    final requiredValue = widget.valueModifier?.call(newVal) ?? newVal;
+    _updateValNoRound(requiredValue);
+  }
+
+  void _valueListener() {
+    final ratio = widget.valueListenable.value;
+    final requiredValue = widget.valueModifier?.call(ratio) ?? ratio;
+
+    if (requiredValue != _currentVal) {
+      setState(() => _currentVal = requiredValue);
+    }
+  }
+
+  @protected
+  void _updateVal(double newVal, {bool callOnChanged = true}) {
+    final finalVal = newVal.roundDecimals(4);
+    if (finalVal != _currentVal) {
+      setState(() {
+        _currentVal = finalVal;
+        if (callOnChanged) widget.onChanged(finalVal);
+      });
+    }
+  }
+
+  @protected
+  void _updateValNoRound(double newVal) {
+    final finalVal = newVal;
+    if (finalVal != _currentVal) {
+      setState(() {
+        _currentVal = finalVal;
+        widget.onChanged(finalVal);
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final incremental = widget.incremental;
+    final interaction = widget.tapToUpdate ? SliderInteraction.tapAndSlide : SliderInteraction.slideOnly;
+    return Row(
+      children: [
+        const SizedBox(width: 12.0),
+        _getArrowIcon(
+          icon: Broken.arrow_left_2,
+          callback: () {
+            final newVal = (_currentVal - incremental).withMinimum(widget.min);
+            _updateVal(newVal);
+          },
+        ),
+        Expanded(
+          child: Slider.adaptive(
+            min: widget.min,
+            max: widget.max,
+            value: _currentVal.withMaximum(widget.max), // cuz it can be more
+            onChanged: _updateVal,
+            divisions: widget.divisions,
+            label: widget.valToText(_currentVal),
+            allowedInteraction: interaction,
+          ),
+        ),
+        if (_currentVal > widget.max)
+          Icon(
+            Broken.flash,
+            size: 16.0,
+          ),
+        _getArrowIcon(
+          icon: Broken.arrow_right_3,
+          callback: () {
+            final newVal = (_currentVal + incremental).withMaximum(widget.max);
+            _updateVal(newVal);
+          },
+        ),
+        const SizedBox(width: 12.0),
+      ],
+    );
+  }
+}
+
+Timer? _longPressTimer;
+
+Widget _getArrowIcon({required IconData icon, required VoidCallback callback}) {
+  return NamidaIconButton(
+    verticalPadding: 4.0,
+    horizontalPadding: 4.0,
+    icon: icon,
+    iconSize: 20.0,
+    onPressed: () {
+      callback();
+    },
+    onLongPressStart: (_) {
+      callback();
+      _longPressTimer?.cancel();
+      _longPressTimer = Timer.periodic(const Duration(milliseconds: 100), (ticker) {
+        callback();
+      });
+    },
+    onLongPressFinish: () {
+      _longPressTimer?.cancel();
+    },
+  );
+}
+
+class EqualizerControls extends StatelessWidget {
+  final AndroidEqualizer equalizer;
+  final void Function() onGainSetCallback;
+  final bool Function() tapToUpdate;
+
+  const EqualizerControls({
+    super.key,
+    required this.equalizer,
+    required this.onGainSetCallback,
+    required this.tapToUpdate,
+  });
+
+  void _onGainSet(AndroidEqualizerBand band, AndroidEqualizerParameters parameters, double newValue) {
+    final newVal = newValue.clampDouble(parameters.minDecibels, parameters.maxDecibels).roundDecimals(4);
+    settings.equalizer.save(equalizerValue: MapEntry(band.centerFrequency, newVal));
+    band.setGain(newVal);
+    onGainSetCallback();
+  }
+
+  void _onGainSetNoClamp(AndroidEqualizerBand band, AndroidEqualizerParameters parameters, double newValue) {
+    final newVal = newValue.roundDecimals(4);
+    settings.equalizer.save(equalizerValue: MapEntry(band.centerFrequency, newVal));
+    band.setGain(newValue);
+    onGainSetCallback();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = context.theme;
+    final textTheme = theme.textTheme;
+    const incremental = 0.01;
+    return StreamBuilder<AndroidEqualizerParameters>(
+      stream: equalizer.parametersStream,
+      builder: (context, snapshot) {
+        final parameters = snapshot.data;
+        if (parameters == null) return const SizedBox();
+
+        final allBands = parameters.bands;
+        return SizedBox(
+          width: context.width,
+          height: context.height * 0.5,
+          child: Row(
+            mainAxisSize: MainAxisSize.max,
+            children: allBands
+                .map(
+                  (band) => Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                      child: Column(
+                        children: [
+                          Expanded(
+                            child: StreamBuilder<double>(
+                              initialData: band.gain,
+                              stream: band.gainStream,
+                              builder: (context, snapshot) {
+                                return Column(
+                                  children: [
+                                    _getArrowIcon(
+                                      icon: Broken.arrow_up_3,
+                                      callback: () => _onGainSet(band, parameters, band.gain + incremental),
+                                    ),
+                                    const SizedBox(height: 4.0),
+                                    Expanded(
+                                      child: VerticalSlider(
+                                        min: parameters.minDecibels,
+                                        max: parameters.maxDecibels,
+                                        value: band.gain,
+                                        onChanged: (value) => _onGainSetNoClamp(band, parameters, value),
+                                        circleWidth: (context.width / allBands.length * 0.7).clampDouble(8.0, 24.0),
+                                        tapToUpdate: tapToUpdate,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4.0),
+                                    _getArrowIcon(
+                                      icon: Broken.arrow_down_2,
+                                      callback: () => _onGainSet(band, parameters, band.gain - incremental),
+                                    ),
+                                    const SizedBox(height: 8.0),
+                                    FittedBox(
+                                      child: Text(
+                                        "${band.gain > 0 ? '+' : ''}${(band.gain).toStringAsFixed(2)}",
+                                        style: textTheme.displayMedium,
+                                      ),
+                                    ),
+                                  ],
+                                );
+                              },
+                            ),
+                          ),
+                          const SizedBox(height: 12.0),
+                          FittedBox(
+                            child: DecoratedBox(
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(4.0.multipliedRadius),
+                                color: theme.scaffoldBackgroundColor,
+                              ),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 2.0, horizontal: 4.0),
+                                child: Text(
+                                  band.centerFrequency >= 1000 ? '${(band.centerFrequency / 1000).round()} kHz' : '${band.centerFrequency.round()} hz',
+                                  style: textTheme.displaySmall,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                )
+                .toList(),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class VerticalSlider extends StatefulWidget {
+  final double value;
+  final double min;
+  final double max;
+  final double circleWidth;
+  final ValueChanged<double> onChanged;
+  final bool Function() tapToUpdate;
+
+  const VerticalSlider({
+    super.key,
+    required this.value,
+    this.min = 0.0,
+    this.max = 1.0,
+    required this.circleWidth,
+    required this.onChanged,
+    required this.tapToUpdate,
+  });
+
+  @override
+  State<VerticalSlider> createState() => _VerticalSliderState();
+}
+
+class _VerticalSliderState extends State<VerticalSlider> {
+  final _isPointerDown = false.obs;
+
+  @override
+  void dispose() {
+    _isPointerDown.close();
+    super.dispose();
+  }
+
+  void updateValExternalue(BoxConstraints constraints, double total, double dy) {
+    final inversePosition = constraints.maxHeight - dy;
+    final heightPerc = inversePosition / constraints.maxHeight;
+    final finalValue = (heightPerc * total + widget.min).clampDouble(widget.min, widget.max);
+    widget.onChanged(finalValue);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = context.theme;
+    const circleHeight = 32.0;
+    final circleWidth = widget.circleWidth;
+    final total = widget.min.abs() + widget.max;
+
+    final topButton = Positioned(
+      bottom: 0,
+      top: 0,
+      child: SizedBox(
+        width: 6.0,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: theme.colorScheme.secondary.withOpacityExt(0.2),
+            borderRadius: const BorderRadius.all(
+              Radius.circular(12.0),
+            ),
+          ),
+        ),
+      ),
+    );
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final finalVal = (widget.value - widget.min) / (widget.max - widget.min);
+        final height = constraints.maxHeight * finalVal;
+        return GestureDetector(
+          behavior: HitTestBehavior.translucent,
+          onTapDown: (details) {
+            if (widget.tapToUpdate()) updateValExternalue(constraints, total, details.localPosition.dy);
+            _isPointerDown.value = true;
+          },
+          onTapUp: (details) => _isPointerDown.value = false,
+          onVerticalDragEnd: (_) {
+            _isPointerDown.value = false;
+            if (widget.value.abs() <= 0.4) {
+              // -- clamp if near center
+              widget.onChanged(0);
+              VibratorController.high();
+            }
+          },
+          onVerticalDragCancel: () => _isPointerDown.value = false,
+          onVerticalDragStart: (details) {
+            updateValExternalue(constraints, total, details.localPosition.dy);
+          },
+          onVerticalDragUpdate: (details) {
+            updateValExternalue(constraints, total, details.localPosition.dy);
+          },
+          child: SizedBox(
+            width: circleWidth * 2,
+            child: Stack(
+              clipBehavior: Clip.none,
+              alignment: Alignment.center,
+              children: [
+                topButton,
+                Positioned(
+                  bottom: 0,
+                  child: AnimatedSizedBox(
+                    duration: const Duration(milliseconds: 50),
+                    height: height,
+                    width: 8.0,
+                    animateWidth: false,
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.primary.withOpacityExt(0.5),
+                      borderRadius: const BorderRadius.all(
+                        Radius.circular(12.0),
+                      ),
+                    ),
+                  ),
+                ),
+                AnimatedPositioned(
+                  duration: const Duration(milliseconds: 50),
+                  bottom: height - circleHeight / 2,
+                  child: Obx(
+                    (context) => AnimatedScale(
+                      duration: const Duration(milliseconds: 200),
+                      scale: _isPointerDown.valueR ? 1.2 : 1.0,
+                      child: Container(
+                        width: circleWidth,
+                        height: circleHeight,
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.primary,
+                          borderRadius: const BorderRadius.all(
+                            Radius.circular(12.0),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}

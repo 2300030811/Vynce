@@ -74,7 +74,7 @@ import org.akanework.gramophone.logic.utils.parseLrc
 
 @Composable
 fun LyricsMenu(
-    lyricsProvider: () -> LyricsEntity?,
+    lyricsEntity: LyricsEntity?,
     mediaMetadataProvider: () -> MediaMetadata,
     onDismiss: () -> Unit,
     viewModel: LyricsMenuViewModel = hiltViewModel(),
@@ -95,7 +95,7 @@ fun LyricsMenu(
             onDismiss = { showEditDialog = false },
             icon = { Icon(imageVector = Icons.Rounded.Edit, contentDescription = null) },
             title = { Text(text = mediaMetadataProvider().title) },
-            initialTextFieldValue = TextFieldValue(lyricsProvider()?.lyrics.orEmpty()),
+            initialTextFieldValue = TextFieldValue(lyricsEntity?.lyrics.orEmpty()),
             singleLine = false,
             onDone = {
                 database.query {
@@ -336,7 +336,7 @@ fun LyricsMenu(
                         showDeleteLyric = false
                         onDismiss()
 
-                        lyricsProvider()?.let {
+                        lyricsEntity?.let {
                             database.query {
                                 delete(it)
                             }
@@ -419,7 +419,7 @@ fun LyricsMenu(
         ) {
             showSearchDialog = true
         }
-        if (lyricsProvider() != null) {
+        if (lyricsEntity != null) {
             // TODO: hide this for when lrc exists and lyrics is not in the database
             GridMenuItem(
                 icon = Icons.Rounded.Delete,

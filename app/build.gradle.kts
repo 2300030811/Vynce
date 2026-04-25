@@ -16,10 +16,23 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
 }
 
+// Tell the Compose compiler which classes to treat as stable.
+// This enables recomposition skipping for composables that receive these types,
+// improving scroll and list rendering performance significantly.
+composeCompiler {
+    stabilityConfigurationFiles.add(project.layout.projectDirectory.file("compose_stability.conf"))
+}
+
 val keystorePropertiesFile = rootProject.file("keystore.properties")
 val keystoreProperties = Properties()
 if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(FileInputStream(keystorePropertiesFile))
+}
+
+val localPropertiesFile = rootProject.file("local.properties")
+val localProperties = Properties()
+if (localPropertiesFile.exists()) {
+    localProperties.load(FileInputStream(localPropertiesFile))
 }
 
 android {
@@ -34,6 +47,9 @@ android {
         versionName = "1.1.1"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         manifestPlaceholders["appAuthRedirectScheme"] = "com.vynce.app"
+        
+        buildConfigField("String", "LASTFM_API_KEY", "\"${localProperties.getProperty("LASTFM_API_KEY", "")}\"")
+        buildConfigField("String", "LASTFM_API_SECRET", "\"${localProperties.getProperty("LASTFM_API_SECRET", "")}\"")
     }
 
     signingConfigs {

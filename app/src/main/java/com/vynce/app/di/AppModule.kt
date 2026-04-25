@@ -18,6 +18,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Qualifier
 import javax.inject.Singleton
+import com.vynce.app.utils.NetworkConnectivityObserver
 
 @Qualifier
 @Retention(AnnotationRetention.BINARY)
@@ -44,29 +45,26 @@ object AppModule {
     @Provides
     @PlayerCache
     fun providePlayerCache(@ApplicationContext context: Context, databaseProvider: DatabaseProvider): SimpleCache {
-        val constructor = {
-            SimpleCache(
-                context.filesDir.resolve("exoplayer"),
-                when (val cacheSize = context.dataStore[MaxSongCacheSizeKey] ?: 0) {
-                    -1 -> NoOpCacheEvictor()
-                    else -> LeastRecentlyUsedCacheEvictor(cacheSize * 1024 * 1024L)
-                },
-                databaseProvider
-            )
-        }
-        constructor().release()
-        return constructor()
+        return SimpleCache(
+            context.filesDir.resolve("exoplayer"),
+            when (val cacheSize = context.dataStore[MaxSongCacheSizeKey] ?: 0) {
+                -1 -> NoOpCacheEvictor()
+                else -> LeastRecentlyUsedCacheEvictor(cacheSize * 1024 * 1024L)
+            },
+            databaseProvider
+        )
     }
 
     @Singleton
     @Provides
     @DownloadCache
     fun provideDownloadCache(@ApplicationContext context: Context, databaseProvider: DatabaseProvider): SimpleCache {
-        val constructor = {
-            SimpleCache(context.filesDir.resolve("download"), NoOpCacheEvictor(), databaseProvider)
-        }
-        constructor().release()
-        return constructor()
+        return SimpleCache(context.filesDir.resolve("download"), NoOpCacheEvictor(), databaseProvider)
     }
+
+    @Singleton
+    @Provides
+    fun provideNetworkConnectivityObserver(@ApplicationContext context: Context): NetworkConnectivityObserver =
+        NetworkConnectivityObserver(context)
 }
 

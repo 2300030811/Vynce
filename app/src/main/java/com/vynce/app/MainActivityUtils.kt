@@ -61,6 +61,32 @@ suspend fun scanInit(
     snackbarHostState: SnackbarHostState
 ) {
     val MAIN_TAG = "MainOtActivity"
+    try {
+        scanInitInternal(context, database, downloadUtil, coroutineScope, playerConnection, snackbarHostState)
+    } catch (e: Exception) {
+        Log.e(MAIN_TAG, "scanInit failed with unhandled exception - app will continue running", e)
+        reportException(e)
+        coroutineScope.launch {
+            try {
+                snackbarHostState.showSnackbar(
+                    message = "Auto-scan failed: ${e.message?.take(80)}",
+                    withDismissAction = true,
+                    duration = SnackbarDuration.Short
+                )
+            } catch (_: Exception) { /* ignore snackbar errors */ }
+        }
+    }
+}
+
+private suspend fun scanInitInternal(
+    context: Context,
+    database: MusicDatabase,
+    downloadUtil: DownloadUtil,
+    coroutineScope: CoroutineScope,
+    playerConnection: PlayerConnection?,
+    snackbarHostState: SnackbarHostState
+) {
+    val MAIN_TAG = "MainOtActivity"
     val oobeStatus = context.dataStore.get(OobeStatusKey, defaultValue = 0)
     val localLibEnable = context.dataStore.get(LocalLibraryEnableKey, defaultValue = true)
     val ds = context.dataStore.data.first()[ScannerSensitivityKey]
@@ -74,7 +100,7 @@ suspend fun scanInit(
     val scannerImpl by enumPreference(
         context = context,
         key = ScannerImplKey,
-        defaultValue = ScannerImpl.TAGLIB
+        defaultValue = ScannerImpl.MEDIASTORE
     )
     val scanPaths = context.dataStore.get(ScanPathsKey, defaultValue = "")
     val excludedScanPaths = context.dataStore.get(ExcludedScanPathsKey, defaultValue = "")
@@ -133,9 +159,7 @@ suspend fun scanInit(
         if (perms == PackageManager.PERMISSION_GRANTED) {
             // equivalent to (quick scan)
             try {
-                withContext(Dispatchers.Main) {
-                    playerConnection?.player?.pause()
-                }
+
                 val scanner = LocalMediaScanner.getScanner(
                     context, scannerImpl, SCANNER_OWNER_LM
                 )
@@ -206,7 +230,7 @@ suspend fun triggerMediaScan(
     val scannerImpl by enumPreference(
         context = context,
         key = ScannerImplKey,
-        defaultValue = ScannerImpl.TAGLIB
+        defaultValue = ScannerImpl.MEDIASTORE
     )
     val scanPaths = context.dataStore.get(ScanPathsKey, defaultValue = "")
     val excludedScanPaths = context.dataStore.get(ExcludedScanPathsKey, defaultValue = "")

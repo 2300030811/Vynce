@@ -38,6 +38,7 @@ import com.vynce.app.playback.DownloadUtil.Companion.STATE_INVALID
 import com.vynce.app.playback.downloadManager.DownloadDirectoryManagerOt
 import com.vynce.app.playback.downloadManager.DownloadManagerOt
 import com.vynce.app.utils.dataStore
+import com.vynce.app.utils.SaavnStreamResolver
 import com.vynce.app.utils.dlCoroutine
 import com.vynce.app.utils.enumPreference
 import com.vynce.app.utils.get
@@ -75,12 +76,12 @@ class DownloadUtil @Inject constructor(
     val databaseProvider: DatabaseProvider,
     @DownloadCache val downloadCache: SimpleCache,
     @PlayerCache val playerCache: SimpleCache,
+    val saavnStreamResolver: SaavnStreamResolver,
 ) {
     val TAG = DownloadUtil::class.simpleName.toString()
 
     private val connectivityManager = context.getSystemService<ConnectivityManager>()!!
     private val audioQuality by enumPreference(context, AudioQualityKey, AudioQuality.AUTO)
-    private val songUrlCache = HashMap<String, Pair<String, Long>>()
     private val dataSourceFactory = ResolvingDataSource.Factory(
         CacheDataSource.Factory()
             .setCache(playerCache)
@@ -97,19 +98,11 @@ class DownloadUtil @Inject constructor(
             return@Factory dataSpec
         }
 
-        songUrlCache[mediaId]?.takeIf { it.second > System.currentTimeMillis() }?.let {
-            return@Factory dataSpec.withUri(it.first.toUri())
-        }
-
         if (mediaId.startsWith("saavn:")) {
             val saavnId = mediaId.removePrefix("saavn:")
-            val song: SaavnSong? = runBlocking(Dispatchers.IO) {
-                JioSaavn.getSong(saavnId)
-            }
-            val streamUrl = with(JioSaavn) { song?.streamUrl() }
+            val streamUrl = saavnStreamResolver.resolve(saavnId)
                 ?: throw java.io.IOException("Failed to resolve Saavn stream URL for $saavnId")
             
-            songUrlCache[mediaId] = streamUrl to System.currentTimeMillis() + (24 * 60 * 60 * 1000L) // Cache for 24h
             return@Factory dataSpec.withUri(streamUrl.toUri())
         }
 
@@ -176,16 +169,15 @@ class DownloadUtil @Inject constructor(
 
 // Deletes from custom dl
 
-    fun delete(song: PlaylistSong) = deleteSong(song.song.id)
+    suspend fun delete(song: PlaylistSong) = deleteSong(song.song.id)
 
+    suspend fun delete(song: Song) = deleteSong(song.song.id)
 
-    fun delete(song: Song) = deleteSong(song.song.id)
+    suspend fun delete(song: SongEntity) = deleteSong(song.id)
 
-    fun delete(song: SongEntity) = deleteSong(song.id)
+    suspend fun delete(song: MediaMetadata) = deleteSong(song.id)
 
-    fun delete(song: MediaMetadata) = deleteSong(song.id)
-
-    private fun deleteSong(id: String): Boolean {
+    private suspend fun deleteSong(id: String): Boolean {
         val deleted = localMgr.deleteFile(id)
         if (!deleted) return false
         downloads.update { map ->
@@ -194,10 +186,7 @@ class DownloadUtil @Inject constructor(
             }
         }
 
-        runBlocking {
-            database.song(id).first()?.song?.copy(localPath = null)
-            database.updateDownloadStatus(id, null)
-        }
+        database.removeDownloadSong(id)
         return true
     }
 
@@ -260,10 +249,15 @@ class DownloadUtil @Inject constructor(
         val dbDownloads = database.downloadedOrQueuedSongs().first()
         val result = mutableMapOf<String, LocalDateTime>()
 
-        // get missing files not in custom downloads or in internal downloads, remove them
-        val missingFiles =
-            localMgr.getMissingFiles(dbDownloads.filterNot { it.song.dateDownload == null }).toMutableList()
-        Log.d(TAG, "Found ${missingFiles.size}/${dbDownloads.size} songs not in custom download directories")
+        // Only check for missing files among songs that were explicitly saved to the custom
+        // download directory (i.e., have a non-null localPath). Streaming songs (saavn: prefixed
+        // IDs with no localPath) are NOT stored on disk and must never be removed here.
+        val customDownloadCandidates = dbDownloads.filter { it.song.dateDownload != null && it.song.localPath != null }
+        val missingFiles = localMgr.getMissingFiles(customDownloadCandidates).toMutableList()
+        Log.d(TAG, "Found ${missingFiles.size}/${customDownloadCandidates.size} custom-download files missing from disk")
+
+        // Also check ExoPlayer internal cache: if the song is in the internal download index
+        // it is NOT missing even if it isn't in the custom folder.
         downloadManager.downloadIndex.getDownloads().use { cursor ->
             while (cursor.moveToNext()) {
                 missingFiles.removeIf { it.id == cursor.download.request.id }
@@ -271,7 +265,7 @@ class DownloadUtil @Inject constructor(
         }
         Log.d(
             TAG,
-            "Found ${missingFiles.size}/${dbDownloads.size} song not in custom download directories + internal cache. Removing these files now"
+            "Found ${missingFiles.size} songs truly missing (not in custom dir or internal cache). Removing these now."
         )
 
         database.transaction {
@@ -281,10 +275,13 @@ class DownloadUtil @Inject constructor(
             }
         }
 
-        // new files
-        val availableDownloads = dbDownloads.minus(missingFiles)
-        availableDownloads.forEach { s ->
-            result[s.song.id] = s.song.dateDownload!! // sql should cover our butts
+        // Build the in-memory map for all songs still considered downloaded.
+        // Include streaming songs (no localPath) — they track their download date in DB.
+        val removedIds = missingFiles.map { it.id }.toSet()
+        dbDownloads.forEach { s ->
+            if (s.song.dateDownload != null && s.song.id !in removedIds) {
+                result[s.song.id] = s.song.dateDownload!!
+            }
         }
 
         downloads.value = result

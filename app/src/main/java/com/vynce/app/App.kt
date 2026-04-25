@@ -73,11 +73,13 @@ class App : Application(), SingletonImageLoader.Factory {
                     add(CoilBitmapLoader.Factory(this@App))
                     add(LocalArtworkPathKeyer())
                 }
-                .crossfade(true)
-                .allowHardware(false)
+                .crossfade(150)
+                // allowHardware MUST be true for fast GPU-accelerated rendering in LazyLists.
+                // Only disable if you read raw bitmap pixels (e.g. palette extraction from Bitmap).
+                .allowHardware(true)
                 .memoryCache {
                     MemoryCache.Builder()
-                        .maxSizePercent(context, 0.3)
+                        .maxSizePercent(context, 0.4)
                         .build()
                 }
                 .diskCachePolicy(CachePolicy.DISABLED)
@@ -89,11 +91,11 @@ class App : Application(), SingletonImageLoader.Factory {
                 add(CoilBitmapLoader.Factory(this@App))
                 add(LocalArtworkPathKeyer())
             }
-            .crossfade(true)
-            .allowHardware(false)
+            .crossfade(150)
+            .allowHardware(true)
             .memoryCache {
                 MemoryCache.Builder()
-                    .maxSizePercent(context, 0.3)
+                    .maxSizePercent(context, 0.4)
                     .build()
             }
             .diskCache(

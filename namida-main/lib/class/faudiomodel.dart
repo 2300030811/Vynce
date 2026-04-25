@@ -1,0 +1,396 @@
+import 'dart:async';
+import 'dart:io';
+import 'dart:typed_data';
+
+import 'package:namida/class/replay_gain_data.dart';
+import 'package:namida/core/extensions.dart';
+
+class FArtwork {
+  /// if specified directory to save in.
+  /// or to save a new artwork when writing tags.
+  File? file;
+
+  /// if no directory to save in was specified.
+  Uint8List? bytes;
+
+  int? size;
+
+  bool get hasArtwork => file != null || bytes != null;
+
+  FutureOr<int?> get sizeActual => bytes?.length ?? file?.fileSize();
+
+  FArtwork({
+    this.file,
+    this.bytes,
+    this.size,
+  });
+
+  FArtwork.dummy() : file = null, bytes = null, size = null;
+
+  factory FArtwork.fromMap(Map<String, dynamic> map) {
+    final art = map["artwork"];
+    return FArtwork(
+      file: art is String ? File(art) : null,
+      bytes: art is Uint8List ? art : null,
+      size: map["artworkLength"],
+    );
+  }
+
+  dynamic toMapValue() => file?.path ?? bytes;
+
+  @override
+  String toString() {
+    return file?.toString() ?? bytes?.length.toString() ?? 'null';
+  }
+}
+
+class FTags {
+  bool get isValid =>
+      title?.isNotEmpty == true || //
+      album?.isNotEmpty == true ||
+      artist?.isNotEmpty == true ||
+      albumArtist?.isNotEmpty == true;
+
+  /// Used for bulk extractions.
+  final String path;
+  final FArtwork artwork;
+  final String? title;
+  final String? album;
+  final String? albumArtist;
+  final String? artist;
+  final String? composer;
+  final String? genre;
+  final String? trackNumber;
+  final String? trackTotal;
+  final String? discNumber;
+  final String? discTotal;
+  final String? lyrics;
+  final String? comment;
+  final String? description;
+  final String? synopsis;
+  final String? year;
+  final String? language;
+  final String? lyricist;
+  final String? djmixer;
+  final String? mixer;
+  final String? mood;
+  final String? rating;
+  final String? remixer;
+  final String? tags;
+  final String? tempo;
+  final String? country;
+  final String? recordLabel;
+
+  final double? ratingPercentage;
+  final ReplayGainData? gainData;
+  final FTagsSortInfo? sortInfo;
+
+  const FTags({
+    required this.path,
+    required this.artwork,
+    this.title,
+    this.album,
+    this.albumArtist,
+    this.artist,
+    this.composer,
+    this.genre,
+    this.trackNumber,
+    this.trackTotal,
+    this.discNumber,
+    this.discTotal,
+    this.lyrics,
+    this.comment,
+    this.description,
+    this.synopsis,
+    this.year,
+    this.language,
+    this.lyricist,
+    this.djmixer,
+    this.mixer,
+    this.mood,
+    this.rating,
+    this.remixer,
+    this.tags,
+    this.tempo,
+    this.country,
+    this.recordLabel,
+    this.ratingPercentage,
+    this.gainData,
+    this.sortInfo,
+  });
+
+  static String? _listToString(dynamic list) {
+    if (list is! List || list.isEmpty) return null;
+    if (list.length == 1) return list[0];
+    return list.join('; ');
+  }
+
+  static double? ratingUnsignedIntToPercentage(String? rating) {
+    if (rating == null) return null;
+    final unsignedInt = int.tryParse(rating);
+    if (unsignedInt == null) return null;
+    return unsignedInt / 255;
+  }
+
+  static int ratingPercentageToUnsignedInt(double ratingPercentage) {
+    return (ratingPercentage * 255).round();
+  }
+
+  // -- upper cased are the ones extracted manually.
+  factory FTags.fromMap(Map<String, dynamic> map) {
+    var lyricsList = map["lyrics"] as List?;
+    if (map["LYRICS"] is String) {
+      // -- recreating bcz its fixed length.
+      lyricsList = [
+        map["LYRICS"] as String,
+        ...?lyricsList,
+      ];
+    }
+
+    final ratingString = map["rating"] ?? map["RATING"];
+
+    return FTags(
+      path: map["path"],
+      artwork: FArtwork.fromMap(map),
+      title: _listToString(map["title"]) ?? map["TITLE"],
+      album: map["album"] ?? map["ALBUM"],
+      albumArtist: map["albumArtist"] ?? map["ALBUMARTIST"],
+      artist: _listToString(map["artist"]) ?? map["ARTIST"],
+      composer: _listToString(map["composer"]) ?? map["COMPOSER"],
+      genre: _listToString(map["genre"]) ?? map["GENRE"],
+      trackNumber: map["trackNumber"] ?? map["TRACKNUMBER"],
+      trackTotal: map["trackTotal"] ?? map["TRACKTOTAL"],
+      discNumber: map["discNumber"] ?? map["DISCNUMBER"],
+      discTotal: map["discTotal"] ?? map["DISCTOTAL"],
+      lyrics: lyricsList?.firstWhereEff((e) => e is String ? e.isValidLRC() : false) ?? lyricsList?.firstOrNull,
+      comment: _listToString(map["comment"]) ?? map["COMMENT"],
+      description: map["description"] ?? map["desc"] ?? map["DESCRIPTION"] ?? map["DESC"],
+      synopsis: _listToString(map["synopsis"]) ?? map["synopsis"] ?? map["SYNOPSIS"],
+      year: map["year"] ?? map["YEAR"],
+      language: _listToString(map["language"]) ?? map["LANGUAGE"],
+      lyricist: _listToString(map["lyricist"]) ?? map["LYRICIST"],
+      djmixer: _listToString(map["djmixer"]) ?? map["DJMIXER"],
+      mixer: _listToString(map["mixer"]) ?? map["MIXER"],
+      mood: _listToString(map["mood"]) ?? map["MOOD"],
+      rating: ratingString,
+      remixer: _listToString(map["remixer"]) ?? map["REMIXER"],
+      tags: _listToString(map["tags"]) ?? map["TAGS"],
+      tempo: _listToString(map["tempo"]) ?? map["TEMPO"],
+      country: _listToString(map["country"]) ?? map["COUNTRY"],
+      recordLabel: _listToString(map["recordLabel"]) ?? map["RECORDLABEL"] ?? map["label"] ?? map["LABEL"],
+      ratingPercentage: ratingUnsignedIntToPercentage(ratingString),
+      gainData: ReplayGainData.fromAndroidMap(map),
+      sortInfo: FTagsSortInfo.fromAndroidMap(map),
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return <String, dynamic>{
+      "path": path,
+      "artwork": artwork.toMapValue(),
+      "title": title,
+      "album": album,
+      "albumArtist": albumArtist,
+      "artist": artist,
+      "composer": composer,
+      "genre": genre,
+      "comment": comment,
+      "description": description,
+      "synopsis": synopsis,
+      "year": year,
+      "trackNumber": trackNumber,
+      "trackTotal": trackTotal,
+      "discNumber": discNumber,
+      "discTotal": discTotal,
+      "lyrics": lyrics,
+      "lyricist": lyricist,
+      "djmixer": djmixer,
+      "mixer": mixer,
+      "mood": mood,
+      "rating": ratingPercentage != null ? "${ratingPercentageToUnsignedInt(ratingPercentage!)}" : rating,
+      "remixer": remixer,
+      "tags": tags,
+      "tempo": tempo,
+      "country": country,
+      "recordLabel": recordLabel,
+      "language": language,
+      "gainData": gainData?.toMap(),
+      "sortInfo": sortInfo?.toMap(),
+    };
+  }
+}
+
+class FTagsSortInfo {
+  final String? title, album, albumArtist, artist, composer;
+
+  const FTagsSortInfo._({
+    required this.title,
+    required this.album,
+    required this.albumArtist,
+    required this.artist,
+    required this.composer,
+  });
+
+  static FTagsSortInfo? orNull({
+    String? title,
+    String? album,
+    String? albumArtist,
+    String? artist,
+    String? composer,
+  }) {
+    if (title == null && album == null && albumArtist == null && artist == null && composer == null) {
+      return null;
+    }
+    return FTagsSortInfo._(
+      title: title,
+      album: album,
+      albumArtist: albumArtist,
+      artist: artist,
+      composer: composer,
+    );
+  }
+
+  static String? _sortKeyJoinerValue(Map tags, String part1, String part2, [String? part3]) {
+    final keys = [
+      '$part1$part2${part3 ?? ''}',
+      '$part1-$part2${part3 == null ? '' : '-$part3'}',
+      '${part1.toUpperCase()}${part2.toUpperCase()}${part3?.toUpperCase() ?? ''}',
+      '${part1}_$part2${part3 == null ? '' : '_$part3'}',
+    ];
+    for (final key in keys) {
+      final val = tags[key];
+      if (val != null) return val;
+    }
+    return null;
+  }
+
+  static FTagsSortInfo? fromFFmpegMap(Map? map) {
+    final tags = map?["tags"] as Map? ?? map;
+    if (tags == null) return null;
+
+    return FTagsSortInfo.orNull(
+      title: _sortKeyJoinerValue(tags, 'title', 'sort'),
+      album: _sortKeyJoinerValue(tags, 'album', 'sort'),
+      albumArtist: _sortKeyJoinerValue(tags, 'album', 'artist', 'sort') ?? _sortKeyJoinerValue(tags, 'album', 'artists', 'sort'),
+      artist: _sortKeyJoinerValue(tags, 'artist', 'sort') ?? _sortKeyJoinerValue(tags, 'artists', 'sort'),
+      composer: _sortKeyJoinerValue(tags, 'composer', 'sort'),
+    );
+  }
+
+  static FTagsSortInfo? fromAndroidMap(Map? map) {
+    final sort = map?["sortInfo"] as Map?;
+    if (sort == null) return null;
+    return FTagsSortInfo.orNull(
+      title: sort["title"],
+      album: sort["album"],
+      albumArtist: sort["albumArtist"],
+      artist: sort["artist"],
+      composer: sort["composer"],
+    );
+  }
+
+  static FTagsSortInfo? fromMap(Map map) {
+    return FTagsSortInfo.orNull(
+      title: map["title"],
+      album: map["album"],
+      albumArtist: map["albumArtist"],
+      artist: map["artist"],
+      composer: map["composer"],
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return <String, dynamic>{
+      'title': ?title,
+      'album': ?album,
+      'albumArtist': ?albumArtist,
+      'artist': ?artist,
+      'composer': ?composer,
+    };
+  }
+}
+
+class FAudioModel {
+  final FTags tags;
+  final int? durationMS;
+  final int? bitRate;
+  final String? channels;
+  final String? encodingType;
+  final String? format;
+  final int? sampleRate;
+  final int? bits;
+  final bool? isVariableBitRate;
+  final bool? isLossless;
+  final bool hasError;
+  final Map<String, String> errorsMap;
+
+  const FAudioModel({
+    required this.tags,
+    this.durationMS,
+    this.bitRate,
+    this.channels,
+    this.encodingType,
+    this.format,
+    this.sampleRate,
+    this.bits,
+    this.isVariableBitRate,
+    this.isLossless,
+    this.hasError = false,
+    this.errorsMap = const {},
+  });
+
+  factory FAudioModel.dummy(String? path, FArtwork? artwork) {
+    return FAudioModel(
+      tags: FTags(path: path ?? '', artwork: artwork ?? FArtwork(size: 0)),
+      hasError: true,
+    );
+  }
+
+  factory FAudioModel.fromMap(Map<String, dynamic> map) {
+    String? format = map["format"];
+    if (format != null && format.isNotEmpty) format = format.replaceFirst(RegExp('flac', caseSensitive: false), 'FLAC');
+    return FAudioModel(
+      tags: FTags.fromMap(map),
+      durationMS: map["durationMS"],
+      bitRate: map["bitRate"],
+      channels: map["channels"],
+      encodingType: map["encodingType"],
+      format: format,
+      sampleRate: map["sampleRate"],
+      bits: map["bits"],
+      isVariableBitRate: map["isVariableBitRate"],
+      isLossless: map["isLossless"],
+      hasError: map["ERROR_FAULTY"] == true,
+      errorsMap: (map["ERRORS"] as Map?)?.cast() ?? {},
+    );
+  }
+
+  Map<String, dynamic> _toMapMini() {
+    final tagsMap = tags.toMap();
+    tagsMap.addAll(<String, dynamic>{
+      "durationMS": durationMS,
+      "bitRate": bitRate,
+      "channels": channels,
+      "encodingType": encodingType,
+      "format": format,
+      "sampleRate": sampleRate,
+      "bits": bits,
+      "isVariableBitRate": isVariableBitRate,
+      "isLossless": isLossless,
+    });
+    return tagsMap;
+  }
+
+  Map<String, dynamic> toMap() {
+    final map = _toMapMini();
+    map["artwork"] = tags.artwork.toMapValue();
+    return map;
+  }
+
+  @override
+  String toString() {
+    final map = _toMapMini();
+    map["artworkDetails"] = tags.artwork.toString();
+    return map.toString();
+  }
+}

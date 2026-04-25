@@ -87,6 +87,9 @@ interface QueueDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     fun insert(queueSong: QueueSongMap)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    fun insert(queueSongs: List<QueueSongMap>)
     // endregion
 
     // region Updates
@@ -109,13 +112,11 @@ interface QueueDao {
     }
 
     @Transaction
-    fun updateAllQueues(mqs: List<MultiQueueObject>) {
-        val mqs = mqs.toList() // please no more ConcurrentModificationException I beg you
-        mqs.forEachIndexed { index, q -> q.index = index }
-        CoroutineScope(Dispatchers.IO).launch {
-            nukeAliens(mqs.map { it.id })
-            mqs.forEach { updateQueue(it) }
-        }
+    suspend fun updateAllQueues(mqs: List<MultiQueueObject>) {
+        val mqsList = mqs.toList() // please no more ConcurrentModificationException I beg you
+        mqsList.forEachIndexed { index, q -> q.index = index }
+        nukeAliens(mqsList.map { it.id })
+        mqsList.forEach { updateQueue(it) }
     }
 
     // endregion

@@ -81,7 +81,6 @@ import com.vynce.app.constants.MediaSessionConstants.CommandToggleRepeatMode
 import com.vynce.app.constants.MediaSessionConstants.CommandToggleShuffle
 import com.vynce.app.constants.MediaSessionConstants.CommandToggleStartRadio
 import com.vynce.app.constants.PauseListenHistoryKey
-import com.vynce.app.constants.PauseListenHistoryKey
 import com.vynce.app.constants.PersistentQueueKey
 import com.vynce.app.constants.LastFmScrobblingEnabledKey
 import com.vynce.app.constants.PlayerVolumeKey
@@ -146,6 +145,7 @@ import com.vynce.app.utils.get
 import com.vynce.app.utils.LastFmScrobbler
 import com.vynce.app.utils.NetworkConnectivityObserver
 import com.vynce.app.utils.CoilBitmapLoader
+import com.vynce.app.utils.SaavnStreamResolver
 import com.vynce.app.playback.SleepTimer
 import com.google.common.util.concurrent.MoreExecutors
 import java.io.File
@@ -203,7 +203,10 @@ class MusicService : MediaLibraryService(),
 
     // Player components
 
-    private val streamUrlCache = mutableMapOf<String, String>()
+    @Inject
+    lateinit var saavnStreamResolver: SaavnStreamResolver
+
+    @Inject
     lateinit var connectivityObserver: NetworkConnectivityObserver
     val waitingForNetworkConnection = MutableStateFlow(false)
     private val isNetworkConnected = MutableStateFlow(true)
@@ -252,9 +255,9 @@ class MusicService : MediaLibraryService(),
 
     private val normalizeFactor = MutableStateFlow(1f)
 
-    private val audioDecoder = dataStore.get(AudioDecoderPreferenceKey, DefaultRenderersFactory.EXTENSION_RENDERER_MODE_OFF)
-    private val isGaplessOffloadAllowed = dataStore.get(AudioGaplessOffloadPreferenceKey, false)
-    val playerVolume = MutableStateFlow(dataStore.get(PlayerVolumeKey, 1f).coerceIn(0f, 1f))
+    private val audioDecoder by lazy { dataStore.get(AudioDecoderPreferenceKey, DefaultRenderersFactory.EXTENSION_RENDERER_MODE_OFF) }
+    private val isGaplessOffloadAllowed by lazy { dataStore.get(AudioGaplessOffloadPreferenceKey, false) }
+    val playerVolume = MutableStateFlow(1f)
 
     private var isAudioEffectSessionOpened = false
 
@@ -263,6 +266,8 @@ class MusicService : MediaLibraryService(),
     override fun onCreate() {
         Log.i(TAG, "Starting MusicService")
         super.onCreate()
+
+        playerVolume.value = dataStore.get(PlayerVolumeKey, 1f).coerceIn(0f, 1f)
 
         player = ExoPlayer.Builder(this)
             .setMediaSourceFactory(DefaultMediaSourceFactory(createDataSourceFactory()))
@@ -292,7 +297,7 @@ class MusicService : MediaLibraryService(),
         mediaLibrarySessionCallback.apply {
             service = this@MusicService
             toggleLike = ::toggleLike
-            toggleStartRadio = ::toggleStartRadio
+            toggleStartRadio = { /* Radio disabled — was YouTube-based */ }
             toggleLibrary = ::toggleLibrary
         }
 
@@ -381,12 +386,10 @@ class MusicService : MediaLibraryService(),
 
 
             // network connectivity
-            try {
-                connectivityObserver.unregister()
-            } catch (e: UninitializedPropertyAccessException) {
-                // lol
+            if (::connectivityObserver.isInitialized) {
+                // Not unregistering because it's a singleton provided by Dagger
+                // connectivityObserver.unregister()
             }
-            connectivityObserver = NetworkConnectivityObserver(this@MusicService)
 
             offloadScope.launch {
                 connectivityObserver.networkStatus.collect { isConnected: Boolean ->
@@ -420,17 +423,10 @@ class MusicService : MediaLibraryService(),
             currentSong.value?.let {
                 val song = it.song.toggleLike()
                 update(song)
-
-                if (!song.isLocal) {
-//                    syncUtils.likeSong(song)
-                }
             }
         }
     }
 
-    fun toggleStartRadio() {
-        // Radio is disabled as it was YouTube-based
-    }
 
 
 // Queue
@@ -454,18 +450,15 @@ class MusicService : MediaLibraryService(),
         isRadio: Boolean = false,
         title: String? = null
     ) {
-        if (!qbInit.value) {
-            runBlocking(Dispatchers.IO) {
-                initQueue()
-            }
-        }
-
         var queueTitle = title
         queuePlaylistId = queue.playlistId
         var q: MultiQueueObject? = null
         val preloadItem = queue.preloadItem
-        
+
         scope.launch {
+            if (!qbInit.value) {
+                initQueue()
+            }
             Log.d(TAG, "playQueue: Resolving additional queue data...")
             try {
                 if (preloadItem != null) {
@@ -585,12 +578,16 @@ class MusicService : MediaLibraryService(),
 
     fun deInitQueue() {
         Log.i(TAG, "+deInitQueue()")
-        val pos = player.currentPosition
-        queueBoard.value.shutdown()
-        if (dataStore.get(PersistentQueueKey, true)) {
-            runBlocking(Dispatchers.IO) {
-                saveQueueToDisk(pos)
+        try {
+            val pos = player.currentPosition
+            queueBoard.value.shutdown()
+            if (dataStore.get(PersistentQueueKey, true)) {
+                runBlocking(Dispatchers.IO) {
+                    saveQueueToDisk(pos)
+                }
             }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error during deInitQueue", e)
         }
         // do not replace the object. Can lead to entire queue being deleted even though it is supposed to be saved already
         qbInit.value = false
@@ -598,9 +595,17 @@ class MusicService : MediaLibraryService(),
     }
 
     suspend fun saveQueueToDisk(currentPosition: Long) {
-        val data = queueBoard.value.getAllQueues()
-        data.last().lastSongPos = currentPosition
-        database.updateAllQueues(data)
+        try {
+            val data = queueBoard.value.getAllQueues()
+            if (data.isNotEmpty()) {
+                data.last().lastSongPos = currentPosition
+                database.updateAllQueues(data)
+            } else {
+                Log.w(TAG, "No queues to save to disk")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to save queue to disk", e)
+        }
     }
 
 
@@ -666,24 +671,9 @@ class MusicService : MediaLibraryService(),
                 // JioSaavn songs: resolve saavn:ID to actual stream URL
                 if (uri.startsWith("saavn:")) {
                     val saavnId = uri.removePrefix("saavn:")
-                    val cachedUrl = streamUrlCache[saavnId]
-                    if (cachedUrl != null) {
-                        return@Factory dataSpec.withUri(cachedUrl.toUri())
-                    }
-
-                    // Fetch stream URL from JioSaavn API
-                    val song = try {
-                        runBlocking(Dispatchers.IO) {
-                            JioSaavn.getSong(saavnId)
-                        }
-                    } catch (e: Exception) {
-                        Log.e(TAG, "Failed to get JioSaavn song $saavnId", e)
-                        null
-                    }
-                    val streamUrl = with(JioSaavn) { song?.streamUrl() }
+                    val streamUrl = saavnStreamResolver.resolve(saavnId)
                         ?: throw java.io.IOException("Failed to resolve Saavn stream URL for $saavnId")
 
-                    streamUrlCache[saavnId] = streamUrl
                     return@Factory dataSpec.withUri(streamUrl.toUri())
                 }
 
@@ -819,9 +809,17 @@ class MusicService : MediaLibraryService(),
     override fun onPlayerError(error: PlaybackException) {
         super.onPlayerError(error)
 
-        // wait for reconnection
-        val isConnectionError = (error.cause?.cause is PlaybackException)
-                && (error.cause?.cause as PlaybackException).errorCode == PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED
+        // Detect network/connection errors by walking the cause chain.
+        // ExoPlayer wraps IO errors in a MediaSourceException; the real cause is typically
+        // UnknownHostException, ConnectException, SocketTimeoutException, or similar.
+        val rootCause = generateSequence<Throwable>(error) { it.cause }
+        val isConnectionError = rootCause.any { cause ->
+            cause is java.net.UnknownHostException ||
+            cause is java.net.ConnectException ||
+            cause is java.net.SocketTimeoutException ||
+            cause is java.io.IOException && !isNetworkConnected.value
+        }
+
         if (!isNetworkConnected.value || isConnectionError) {
             waitOnNetworkError()
             return
@@ -852,8 +850,7 @@ class MusicService : MediaLibraryService(),
     override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
         super.onMediaItemTransition(mediaItem, reason)
 
-        // Clear cache on song change
-        streamUrlCache.clear()
+        // Cache is managed by LRU, no need to clear
         previousMediaId = mediaItem?.mediaId
         // +2 when and error happens, and -1 when transition. Thus when error, number increments by 1, else doesn't change
         if (consecutivePlaybackErr > 0) {
@@ -954,18 +951,16 @@ class MusicService : MediaLibraryService(),
                 playbackStats.totalPlayTimeMs.toFloat() / ((mediaItem.metadata?.duration?.times(1000)) ?: -1)
             Log.d(TAG, "Playback ratio: $playRatio Min threshold: $minPlaybackDur")
             if (playRatio >= minPlaybackDur && !dataStore.get(PauseListenHistoryKey, false)) {
-                database.query {
-                    incrementPlayCount(mediaItem.mediaId)
-                    try {
-                        insert(
-                            Event(
-                                songId = mediaItem.mediaId,
-                                timestamp = LocalDateTime.now(),
-                                playTime = playbackStats.totalPlayTimeMs
-                            )
+                database.incrementPlayCount(mediaItem.mediaId)
+                try {
+                    database.insert(
+                        Event(
+                            songId = mediaItem.mediaId,
+                            timestamp = LocalDateTime.now(),
+                            playTime = playbackStats.totalPlayTimeMs
                         )
-                    } catch (_: SQLException) {
-                    }
+                    )
+                } catch (_: SQLException) {
                 }
 
                 // Remote history registration removed (YouTube/JioSaavn)
@@ -977,7 +972,7 @@ class MusicService : MediaLibraryService(),
         updateNotification()
         offloadScope.launch {
             dataStore.edit { settings ->
-                settings[RepeatModeKey] = repeatMode as Int
+                settings[RepeatModeKey] = repeatMode
             }
         }
     }
@@ -994,10 +989,10 @@ class MusicService : MediaLibraryService(),
         session: MediaSession,
         startInForegroundRequired: Boolean,
     ) {
-        // FG keep alive
-        if (player.isPlaying || !dataStore.get(KeepAliveKey, false)) {
-            super.onUpdateNotification(session, startInForegroundRequired)
-        }
+        // Always call super to keep the foreground service notification alive.
+        // Previously this returned early when KeepAlive was true and the player was stopped,
+        // which could cause the OS to kill the foreground service without a notification.
+        super.onUpdateNotification(session, startInForegroundRequired)
     }
 
     override fun onDestroy() {

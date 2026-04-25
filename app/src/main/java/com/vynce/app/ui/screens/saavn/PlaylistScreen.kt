@@ -19,11 +19,12 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import coil3.compose.AsyncImage
+import com.vynce.app.models.MediaMetadata
 import com.vynce.app.playback.PlayerConnection
+import com.vynce.app.playback.queues.ListQueue
 import com.zionhuang.jiosaavn.JioSaavn
 import com.zionhuang.jiosaavn.SaavnPlaylistInfo
 import com.zionhuang.jiosaavn.SaavnSong
-import com.vynce.app.utils.playJioSaavnSong
 
 @Composable
 fun PlaylistScreen(
@@ -68,7 +69,31 @@ fun PlaylistScreen(
             with(JioSaavn) {
                 Row(
                     modifier = Modifier.fillMaxWidth()
-                        .clickable { playJioSaavnSong(song, playerConnection) }
+                        .clickable {
+                            // Play the whole playlist starting from the tapped song,
+                            // not just the single song — consistent with LocalPlaylistScreen.
+                            playerConnection ?: return@clickable
+                            val metadataList = songs.map { s ->
+                                MediaMetadata(
+                                    id = "saavn:${s.id}",
+                                    title = s.name,
+                                    artists = s.artistNames().split(", ").map { name ->
+                                        MediaMetadata.Artist(id = null, name = name.trim())
+                                    },
+                                    duration = s.duration.toIntOrNull() ?: -1,
+                                    thumbnailUrl = s.thumbnailUrl()?.replace("http://", "https://"),
+                                    album = null,
+                                    genre = null
+                                )
+                            }
+                            playerConnection.playQueue(
+                                ListQueue(
+                                    title = playlistInfo.name,
+                                    items = metadataList,
+                                    startIndex = index
+                                )
+                            )
+                        }
                         .padding(horizontal = 16.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {

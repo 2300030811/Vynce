@@ -1,0 +1,6 @@
+[submodule "external/language"]
+	path = external/language
+	url = https://github.com/namidaco/namida-translations.git
+[submodule "external/ffmpeg_build"]
+	path = external/ffmpeg_build
+	url = https://github.com/MSOB7YY/ffmpeg_build/

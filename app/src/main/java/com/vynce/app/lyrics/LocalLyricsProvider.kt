@@ -25,7 +25,7 @@ object LocalLyricsProvider : LyricsProvider {
         artist: String,
         duration: Int,
     ): Result<String> {
-        throw NotImplementedError()
+        return Result.failure(UnsupportedOperationException("Local provider requires getLyricsNew() with a file path"))
     }
 
     fun getLyricsNew(

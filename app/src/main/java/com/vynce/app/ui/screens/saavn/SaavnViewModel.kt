@@ -44,7 +44,11 @@ class SaavnViewModel @Inject constructor() : ViewModel() {
 
     private fun loadCharts() {
         viewModelScope.launch {
-            _charts.value = JioSaavn.getCharts()
+            try {
+                _charts.value = JioSaavn.getCharts()
+            } catch (e: Exception) {
+                android.util.Log.w("SaavnVM", "Failed to load charts: ${e.message}")
+            }
         }
     }
 }

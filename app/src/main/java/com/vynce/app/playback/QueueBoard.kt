@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025 O⁠ute⁠rTu⁠ne Project
+ * Copyright (C) 2025 Vynce Project
  *
  * SPDX-License-Identifier: GPL-3.0
  *
@@ -163,7 +163,7 @@ class QueueBoard(
 
         val match = masterQueues.firstOrNull { it.title == title } // look for matching queue. Title is uid
         if (match != null) { // found an existing queue
-            // Titles ending in "+​" (u200B) signify a extension queue
+            // Titles ending in "+" (u200B) signify a extension queue
             val anyExts = masterQueues.firstOrNull { it.title == match.title + " +\u200B" }
             if (replace) { // force replace
                 if (QUEUE_DEBUG)
@@ -451,7 +451,7 @@ class QueueBoard(
                 masterIndex = -1
             }
 
-            CoroutineScope(Dispatchers.IO).launch {
+            coroutineScope.launch {
                 player.database.deleteQueue(match.id)
             }
         } else {
@@ -853,9 +853,7 @@ class QueueBoard(
 
         jobActive.withLock {
             while (queueEntity.isNotEmpty() || queueSongMap.isNotEmpty()) {
-                runBlocking {
-                    delay(5000L)
-                }
+                delay(5000L)
                 Log.d(TAG, "Running database save task")
 
                 // saving songs nukes the queue entity in the process, about it shouldn't matter since are same queue object
@@ -890,7 +888,7 @@ class QueueBoard(
                     }
                 )
             )
-            CoroutineScope(Dispatchers.IO).launch {
+            coroutineScope.launch {
                 databaseDispatcher()
             }
         }

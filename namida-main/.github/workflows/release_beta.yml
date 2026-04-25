@@ -1,0 +1,390 @@
+# This workflow uses actions that are not certified by GitHub.
+# They are provided by a third-party and are governed by
+# separate terms of service, privacy policy, and support
+# documentation.
+
+name: release_beta
+
+on:
+  workflow_dispatch:
+    inputs:
+      is_beta:
+        type: boolean
+        default: true
+  workflow_call:
+    inputs:
+      is_beta:
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+
+jobs:
+  create_release:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.extract_version.outputs.version }}
+      version_name: ${{ steps.extract_version.outputs.version_name }}
+      target_repo: ${{ steps.set_vars.outputs.target_repo }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.PAT }}
+          fetch-depth: ${{ inputs.is_beta && 200 || 0 }} # fetch less commits for beta
+
+      - name: Extract version from pubspec.yaml
+        id: extract_version
+        run: |
+          VERSION=$(grep -o 'version:.*' pubspec.yaml | awk '{print $2}')
+          VERSION_NAME=$(echo $VERSION | cut -d'+' -f1)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "version_name=$VERSION_NAME" >> $GITHUB_OUTPUT
+
+      - name: Set variables
+        id: set_vars
+        run: |
+          if [ "${{ inputs.is_beta }}" = "false" ]; then
+            echo "target_repo=${{ github.repository }}" >> $GITHUB_OUTPUT
+          else
+            echo "target_repo=namidaco/namida-snapshots" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Generate Changelog
+        run: |
+          bash scripts/gen_beta_changelog.sh ${{ steps.set_vars.outputs.target_repo }}
+          cat ./beta_changelog.md
+
+      - name: Generate Downloads Table
+        run: |
+          bash scripts/gen_downloads_table.sh \
+            "${{ steps.extract_version.outputs.version }}" \
+            "${{ steps.set_vars.outputs.target_repo }}" \
+            "${{ inputs.is_beta }}" \
+            > downloads_table.md
+          cat beta_changelog.md downloads_table.md > combined.md
+          mv combined.md beta_changelog.md
+
+      - name: Create Release with Changelog
+        uses: softprops/action-gh-release@v2
+        with:
+          repository: ${{ steps.set_vars.outputs.target_repo }}
+          make_latest: true
+          draft: true
+          tag_name: ${{ steps.extract_version.outputs.version }}
+          body_path: ./beta_changelog.md
+          token: ${{ inputs.is_beta && secrets.SNAPSHOTS_REPO_SECRET || secrets.GITHUB_TOKEN }}
+
+  setup_matrix:
+    runs-on: ubuntu-22.04
+    outputs:
+      matrix: ${{ steps.set.outputs.matrix }}
+    steps:
+      - id: set
+        run: |
+          if [ "${{ inputs.is_beta }}" = "true" ]; then
+            echo 'matrix={"include":[{"is_clone":false,"apk_suffix":""},{"is_clone":true,"apk_suffix":"-clone"}]}' >> $GITHUB_OUTPUT
+          else
+            echo 'matrix={"include":[{"is_clone":false,"apk_suffix":""}]}' >> $GITHUB_OUTPUT
+          fi
+
+  build_android:
+    needs: [create_release, setup_matrix]
+    runs-on: ubuntu-22.04
+    continue-on-error: ${{ matrix.is_clone }}
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.setup_matrix.outputs.matrix) }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.PAT }}
+          submodules: recursive
+          fetch-depth: 0 # all history for changelog
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version-file: pubspec.yaml
+
+      - name: free disk space
+        continue-on-error: true
+        run: |
+          sudo swapoff -a
+          sudo rm -f /swapfile
+          sudo apt clean
+          docker rmi $(docker image ls -aq)
+          df -h
+
+      - name: remove unused SDKs
+        continue-on-error: true
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /usr/local/share/boost
+          sudo rm -rf /usr/local/share/chromium
+          sudo rm -rf /usr/local/share/vcpkg
+          sudo rm -rf /usr/local/share/miniconda
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /opt/hostedtoolcache/CodeQL
+          sudo rm -rf /opt/hostedtoolcache/go
+          sudo rm -rf /opt/hostedtoolcache/Python
+          sudo rm -rf /opt/hostedtoolcache/node
+          sudo rm -rf /opt/hostedtoolcache/R
+          sudo rm -rf /opt/hostedtoolcache/LLVM
+          sudo rm -rf /opt/hostedtoolcache/Swift
+          sudo rm -rf /opt/hostedtoolcache/Php
+          sudo rm -rf /opt/hostedtoolcache/Perl
+          sudo rm -rf /opt/hostedtoolcache/Scala
+          sudo rm -rf /opt/hostedtoolcache/Julia
+          sudo rm -rf /opt/hostedtoolcache/Mono
+          sudo rm -rf /opt/hostedtoolcache/Crystal
+          sudo rm -rf /opt/hostedtoolcache/Elixir
+          sudo rm -rf /opt/hostedtoolcache/Erlang
+          sudo rm -rf /opt/hostedtoolcache/FSharp
+          sudo rm -rf /opt/hostedtoolcache/Haskell
+          sudo rm -rf /opt/hostedtoolcache/OCaml
+          sudo rm -rf /opt/hostedtoolcache/Rust
+          sudo rm -rf /opt/hostedtoolcache/Sbt
+          sudo rm -rf /opt/hostedtoolcache/Solidity
+          sudo rm -rf /opt/hostedtoolcache/VisualStudio
+          sudo rm -rf /opt/hostedtoolcache/WinAppDriver
+          sudo rm -rf /opt/hostedtoolcache/Xamarin
+          sudo rm -rf /opt/hostedtoolcache/Yarn
+          sudo rm -rf /opt/hostedtoolcache/Zephyr
+          sudo rm -rf /opt/hostedtoolcache/zig
+          sudo rm -rf /opt/hostedtoolcache/azcopy
+
+      - name: setup credentials
+        run: |
+          git config --global url.https://${{ secrets.PAT_ORG }}@github.com/namidaco/.insteadOf https://github.com/namidaco/
+          git config --global url.https://${{ secrets.PAT }}@github.com/MSOB7YY/.insteadOf https://github.com/MSOB7YY/
+
+      - name: Setup dependencies
+        run: |
+          flutter clean
+          flutter pub upgrade
+          git submodule update --init --remote --recursive
+
+      - uses: actions/setup-java@v1
+        with:
+          java-version: "17"
+
+      - name: Create keystore & key.properties
+        run: |
+          echo ${{ secrets.ANDROID_SIGNING_KEYSTORE }} | base64 --decode > android/app/keystore.jks
+          echo ${{ secrets.ANDROID_SIGNING_KEY_PROPERTIES }} | base64 --decode > android/key.properties
+
+      - name: Patch package ID for clone
+        if: matrix.is_clone
+        run: find ./ -type f -exec sed -i -e 's/com.msob7y.namida/com.msob7y.namida.snapshot/g' {} \;
+
+      - name: Build APKs
+        run: |
+          mkdir -p build_final
+          flutter build apk --target-platform android-arm64 --release
+          mv build/app/outputs/flutter-apk/app-arm64-v8a-release.apk \
+            build_final/namida-v${{ needs.create_release.outputs.version_name }}${{ matrix.apk_suffix }}-arm64-v8a.apk
+          flutter build apk --target-platform android-arm --release
+          mv build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk \
+            build_final/namida-v${{ needs.create_release.outputs.version_name }}${{ matrix.apk_suffix }}-armeabi-v7a.apk
+
+      - name: Creating Snapshot Release at ${{ needs.create_release.outputs.target_repo }}
+        uses: softprops/action-gh-release@v2
+        with:
+          repository: ${{ needs.create_release.outputs.target_repo }}
+          make_latest: true
+          draft: ${{ !inputs.is_beta }}
+          tag_name: ${{ needs.create_release.outputs.version }}
+          files: build_final/*
+          token: ${{ inputs.is_beta && secrets.SNAPSHOTS_REPO_SECRET || secrets.GITHUB_TOKEN }}
+
+  build_windows:
+    needs: create_release
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.PAT }}
+          submodules: recursive
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version-file: pubspec.yaml
+
+      - name: Setup credentials
+        run: |
+          git config --global url.https://${{ secrets.PAT_ORG }}@github.com/namidaco/.insteadOf https://github.com/namidaco/
+          git config --global url.https://${{ secrets.PAT }}@github.com/MSOB7YY/.insteadOf https://github.com/MSOB7YY/
+
+      - name: Setup dependencies
+        run: |
+          flutter clean
+          flutter pub upgrade
+          git submodule update --init --remote --recursive
+
+      - name: Build Windows App
+        run: |
+          flutter config --enable-windows-desktop
+          flutter build windows --release
+
+      - name: Build iss script
+        run: dart run inno_bundle:build --no-app --release --no-installer
+
+      - name: Fix ISS script languages
+        run: |
+          $issPath = "./build/windows/x64/installer/Release/inno-script.iss"
+          $content = Get-Content $issPath -Raw
+          # Remove any language line whose .isl file doesn't exist on disk
+          $lines = Get-Content $issPath
+          $fixed = $lines | Where-Object {
+            if ($_ -match '\.isl"') {
+              $match = [regex]::Match($_, '"([^"]+\.isl)"')
+              if ($match.Success) {
+                $path = $match.Groups[1].Value
+                Test-Path $path  # only keep line if file actually exists
+              } else { $true }
+            } else { $true }
+          }
+          $fixed | Set-Content $issPath
+          Write-Host "Final languages in ISS:"
+          $fixed | Where-Object { $_ -match '\.isl' }
+
+      - name: Build installer
+        uses: C0rn3j/Inno-Setup-Action@v1.2.8
+        with:
+          path: ./build/windows/x64/installer/Release/inno-script.iss
+
+      - name: Move Windows installer
+        run: |
+          mkdir -p build_final
+          $installer = Get-ChildItem "./build/windows/x64/installer/Release/" -Filter "*.exe" | Select-Object -First 1
+          Move-Item $installer.FullName "build_final/Namida-x86_64-${{ needs.create_release.outputs.version_name }}-Installer.exe"
+
+      - name: Upload installer to Snapshot Release
+        uses: softprops/action-gh-release@v2
+        with:
+          repository: ${{ needs.create_release.outputs.target_repo }}
+          make_latest: true
+          draft: ${{ !inputs.is_beta }}
+          tag_name: ${{ needs.create_release.outputs.version }}
+          files: |
+            build_final/*
+          token: ${{ inputs.is_beta && secrets.SNAPSHOTS_REPO_SECRET || secrets.GITHUB_TOKEN }}
+
+  build_linux:
+    if: ${{ inputs.is_beta }}
+    needs: create_release
+    runs-on: ubuntu-latest
+    container:
+      image: archlinux:latest
+
+    steps:
+      - name: Install base dependencies
+        run: |
+          pacman-key --init
+          pacman-key --populate archlinux
+          pacman -Sy --noconfirm archlinux-keyring
+          pacman -Su --noconfirm
+          pacman -S --noconfirm \
+            base-devel git curl wget jq openssh unzip xz \
+            clang cmake ninja pkgconf gcc gtk3 libstdc++ \
+            alsa-lib libx11 libxrender libxext mesa libgl \
+            libepoxy libdrm wayland libxkbcommon glibc binutils \
+            mpv wpewebkit dpkg rpm-tools
+          pacman -Scc --noconfirm
+
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.PAT }}
+          submodules: recursive
+
+      - name: Fix git ownership
+        run: git config --global --add safe.directory /__w/namida/namida
+
+      - name: Setup Git credentials
+        run: |
+          git config --global url.https://${{ secrets.PAT_ORG }}@github.com/namidaco/.insteadOf https://github.com/namidaco/
+          git config --global url.https://${{ secrets.PAT }}@github.com/MSOB7YY/.insteadOf https://github.com/MSOB7YY/
+          # needed for AUR cloning
+          git config --global user.name "MSOB7YY"
+          git config --global user.email "${{ secrets.EMAIL }}"
+
+      - name: Install Flutter
+        run: |
+          FLUTTER_VERSION=$(grep 'flutter:' pubspec.yaml | grep -v '#' | head -1 | awk '{print $2}' || echo "")
+          git clone https://github.com/flutter/flutter.git /opt/flutter --depth 1 ${FLUTTER_VERSION:+-b $FLUTTER_VERSION}
+          export PATH="/opt/flutter/bin:$PATH"
+          echo "PATH=/opt/flutter/bin:$PATH" >> $GITHUB_ENV
+          flutter precache --linux
+          flutter config --no-analytics
+
+      - name: Install Rust via rustup
+        run: |
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable
+          echo "PATH=$HOME/.cargo/bin:$PATH" >> $GITHUB_ENV
+          source $HOME/.cargo/env
+          rustup show
+
+      - name: Setup Flutter dependencies
+        run: |
+          export PATH="/opt/flutter/bin:/opt/dart-sdk/bin:$PATH"
+          flutter clean
+          flutter pub upgrade
+          git submodule update --init --remote --recursive
+
+      - name: Install fastforge
+        run: |
+          export PATH="/opt/flutter/bin:/opt/dart-sdk/bin:$PATH"
+          dart pub global deactivate fastforge_workspace || true
+          dart pub global deactivate fastforge || true
+          dart pub global activate --source git https://github.com/MSOB7YY/fastforge.git
+          dart pub global activate --source git https://github.com/MSOB7YY/fastforge.git --git-path "packages/fastforge"
+          echo "PATH=$HOME/.pub-cache/bin:$PATH" >> $GITHUB_ENV
+
+      - name: Build Linux deb/rpm/tar.gz
+        run: |
+          export PATH="/opt/flutter/bin:/opt/dart-sdk/bin:$HOME/.pub-cache/bin:$PATH"
+          dart ./scripts/bundle.dart --no-aur
+          dart ./scripts/bundle.dart --no-aur --no-clean --bundle-wpe
+          mkdir -p build_final
+          mv ./scripts/bundle_output/* build_final/ || echo "No files to move"
+          mv ./scripts/bundle_output_wpe/* build_final/ || echo "No files to move"
+
+      - name: Upload files to Snapshot Release
+        uses: softprops/action-gh-release@v2
+        with:
+          repository: ${{ needs.create_release.outputs.target_repo }}
+          make_latest: true
+          draft: ${{ !inputs.is_beta }}
+          tag_name: ${{ needs.create_release.outputs.version }}
+          files: |
+            build_final/*
+          token: ${{ inputs.is_beta && secrets.SNAPSHOTS_REPO_SECRET || secrets.GITHUB_TOKEN }}
+
+      - name: Install SSH key for AUR
+        uses: shimataro/ssh-key-action@v2
+        with:
+          key: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
+          known_hosts: ${{ secrets.AUR_KNOWN_HOSTS }}
+          name: id_ed25519
+
+      - name: Publish to AUR
+        run: |
+          # Parse version string (e.g. 5.6.5-beta+260114196)
+          FULL_VERSION="${{ needs.create_release.outputs.version }}"
+          PKGVER=$(echo "$FULL_VERSION" | sed 's/[-+].*//')
+          BUILDNUMBER=$(echo "$FULL_VERSION" | sed 's/.*+//')
+          TARBALL=$(find "$(pwd)/build_final" -name "*.tar.gz" ! -name "*_login*" | head -1)
+          if [ -z "$TARBALL" ]; then
+            echo "No tarball found in build_final:"
+            ls -la build_final/
+            exit 1
+          fi
+
+          # Clone and Publish AUR package
+          git clone ssh://aur@aur.archlinux.org/namida-bin.git namida-bin
+          cd namida-bin
+          # disable root user check for makepkg, very annoying
+          sed -i 's/if (( EUID == 0 ))/if (( EUID == -1 ))/' $(which makepkg)
+          bash bump.sh "$PKGVER" "$BUILDNUMBER" "$TARBALL"

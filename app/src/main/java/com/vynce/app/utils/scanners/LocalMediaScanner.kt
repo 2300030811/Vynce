@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025 O‌ute‌rTu‌ne Project
+ * Copyright (C) 2025 Vynce Project
  *
  * SPDX-License-Identifier: GPL-3.0
  *
@@ -59,8 +59,9 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileNotFoundException
 import java.io.IOException
@@ -70,16 +71,37 @@ import java.time.ZoneOffset
 
 class LocalMediaScanner(scannerImpl: ScannerImpl) {
     private val TAG = LocalMediaScanner::class.simpleName.toString()
-    private var advancedScannerImpl: MetadataScanner = when (scannerImpl) {
-        ScannerImpl.TAGLIB -> TagLibScanner()
-        ScannerImpl.FFMPEG_EXT -> if (ENABLE_FFMETADATAEX) FFmpegScanner() else TagLibScanner()
-        ScannerImpl.MEDIASTORE -> MediaStoreExtractor() // unused
-    }
+    val actualImpl: ScannerImpl
+    private var advancedScannerImpl: MetadataScanner
 
     init {
+        // Auto-fallback: if TagLib/FFmpeg native libs aren't available, use MediaStore
+        val resolvedImpl = when (scannerImpl) {
+            ScannerImpl.TAGLIB -> {
+                if (TagLibScanner.isAvailable()) ScannerImpl.TAGLIB
+                else {
+                    Log.w(TAG, "TagLib native libs not available, falling back to MEDIASTORE")
+                    ScannerImpl.MEDIASTORE
+                }
+            }
+            ScannerImpl.FFMPEG_EXT -> {
+                if (ENABLE_FFMETADATAEX) ScannerImpl.FFMPEG_EXT
+                else {
+                    Log.w(TAG, "FFmpeg not available, falling back to MEDIASTORE")
+                    ScannerImpl.MEDIASTORE
+                }
+            }
+            ScannerImpl.MEDIASTORE -> ScannerImpl.MEDIASTORE
+        }
+        actualImpl = resolvedImpl
+        advancedScannerImpl = when (resolvedImpl) {
+            ScannerImpl.TAGLIB -> TagLibScanner()
+            ScannerImpl.FFMPEG_EXT -> FFmpegScanner()
+            ScannerImpl.MEDIASTORE -> MediaStoreExtractor()
+        }
         Log.i(
             TAG,
-            "Creating scanner instance with scannerImpl:  ${advancedScannerImpl.javaClass.name}, requested: $scannerImpl"
+            "Creating scanner instance with scannerImpl: ${advancedScannerImpl.javaClass.name}, requested: $scannerImpl, resolved: $resolvedImpl"
         )
     }
 
@@ -103,16 +125,67 @@ class LocalMediaScanner(scannerImpl: ScannerImpl) {
             if (!file.exists()) throw IOException("File not found")
 
             // decide which scanner to use
-            val ffmpegData =
-                if (advancedScannerImpl is TagLibScanner || (ENABLE_FFMETADATAEX && advancedScannerImpl is FFmpegScanner)) {
-                    advancedScannerImpl.getAllMetadataFromFile(file)
-                } else {
-                    throw RuntimeException("Unsupported extractor")
+            val ffmpegData = when {
+                advancedScannerImpl is MediaStoreExtractor -> {
+                    // MediaStore extractor doesn't use advancedScan - return basic metadata
+                    return SongTempData(
+                        Song(
+                            SongEntity(
+                                SongEntity.generateSongId(),
+                                path.substringAfterLast('/'),
+                                thumbnailUrl = null,
+                                isLocal = true,
+                                inLibrary = LocalDateTime.now(),
+                                localPath = path
+                            ),
+                            artists = ArrayList()
+                        ),
+                        null
+                    )
                 }
+                advancedScannerImpl is TagLibScanner || (ENABLE_FFMETADATAEX && advancedScannerImpl is FFmpegScanner) -> {
+                    advancedScannerImpl.getAllMetadataFromFile(file)
+                }
+                else -> {
+                    Log.w(TAG, "Unsupported extractor for: $path, returning basic metadata")
+                    return SongTempData(
+                        Song(
+                            SongEntity(
+                                SongEntity.generateSongId(),
+                                path.substringAfterLast('/'),
+                                thumbnailUrl = null,
+                                isLocal = true,
+                                inLibrary = LocalDateTime.now(),
+                                localPath = path
+                            ),
+                            artists = ArrayList()
+                        ),
+                        null
+                    )
+                }
+            }
 
             return ffmpegData
         } catch (e: Exception) {
             when (e) {
+                is UnavailableScannerException -> {
+                    // Scanner implementation not available — return basic metadata instead of crashing
+                    Log.w(TAG, "Scanner unavailable, returning basic metadata for: $path")
+                    return SongTempData(
+                        Song(
+                            SongEntity(
+                                SongEntity.generateSongId(),
+                                path.substringAfterLast('/'),
+                                thumbnailUrl = null,
+                                isLocal = true,
+                                inLibrary = LocalDateTime.now(),
+                                localPath = path
+                            ),
+                            artists = ArrayList()
+                        ),
+                        null
+                    )
+                }
                 is IOException, is IllegalArgumentException, is IllegalStateException, is SecurityException -> {
                     if (SCANNER_DEBUG) {
                         e.printStackTrace()
@@ -253,6 +326,7 @@ class LocalMediaScanner(scannerImpl: ScannerImpl) {
 
             database.runInTransaction {
                 chunk.forEach { songData ->
+                    try {
                     val song = songData.song
                     runs++
                     if (runs % mod == 0) {
@@ -362,6 +436,10 @@ class LocalMediaScanner(scannerImpl: ScannerImpl) {
                             upsert(it.copy(id = song.song.id))
                         }
                     }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error syncing song: ${songData.song.song.title}", e)
+                        // Continue processing other songs
+                    }
                 }
             }
         }
@@ -424,19 +502,19 @@ class LocalMediaScanner(scannerImpl: ScannerImpl) {
         val scannerJobs = ArrayList<Deferred<SongTempData?>>()
 
         // Get song basic metadata
-        delta.forEach { s ->
-            if (scannerRequestCancel) {
-                Log.i(TAG, "WARNING: Requested to cancel. Aborting.")
-                throw ScannerAbortException("Scanner canceled during Quick (additive delta) Library Sync")
-            }
+        coroutineScope {
+            delta.forEach { s ->
+                if (scannerRequestCancel) {
+                    Log.i(TAG, "WARNING: Requested to cancel. Aborting.")
+                    throw ScannerAbortException("Scanner canceled during Quick (additive delta) Library Sync")
+                }
 
-            if (SCANNER_DEBUG) {
-                Log.v(TAG, "PATH: $s")
-            }
+                if (SCANNER_DEBUG) {
+                    Log.v(TAG, "PATH: $s")
+                }
 
-            if (!SYNC_SCANNER) {
-                // use async scanner
-                runBlocking {
+                if (!SYNC_SCANNER) {
+                    // use async scanner
                     scannerJobs.add(
                         async(lmScannerCoroutine) {
                             var ret: SongTempData?
@@ -462,23 +540,23 @@ class LocalMediaScanner(scannerImpl: ScannerImpl) {
                             ret
                         }
                     )
-                }
-            } else {
-                if (scannerRequestCancel) {
-                    Log.i(TAG, "WARNING: Requested to cancel. Aborting.")
-                    throw ScannerAbortException("Scanner canceled during Quick (additive delta) Library Sync")
-                }
-                // force synchronous scanning of songs. Do not catch errors
-                finalSongs.add(advancedScan(File(s)))
-                scannerProgressProbe.value++
-                if (SCANNER_DEBUG && scannerProgressProbe.value % 5 == 0) {
-                    Log.d(
-                        TAG,
-                        "------------ SCAN: Full Scanner: ${scannerProgressProbe.value} discovered ------------"
-                    )
-                }
-                if (scannerProgressProbe.value % 5 == 0) {
-                    scannerProgressCurrent.value = scannerProgressProbe.value
+                } else {
+                    if (scannerRequestCancel) {
+                        Log.i(TAG, "WARNING: Requested to cancel. Aborting.")
+                        throw ScannerAbortException("Scanner canceled during Quick (additive delta) Library Sync")
+                    }
+                    // force synchronous scanning of songs. Do not catch errors
+                    finalSongs.add(advancedScan(File(s)))
+                    scannerProgressProbe.value++
+                    if (SCANNER_DEBUG && scannerProgressProbe.value % 5 == 0) {
+                        Log.d(
+                            TAG,
+                            "------------ SCAN: Full Scanner: ${scannerProgressProbe.value} discovered ------------"
+                        )
+                    }
+                    if (scannerProgressProbe.value % 5 == 0) {
+                        scannerProgressCurrent.value = scannerProgressProbe.value
+                    }
                 }
             }
         }
@@ -552,18 +630,18 @@ class LocalMediaScanner(scannerImpl: ScannerImpl) {
         val scannerJobs = ArrayList<Deferred<SongTempData?>>()
 
         // Get song basic metadata
-        newSongs.forEach { uri ->
-            if (scannerRequestCancel) {
-                Log.i(TAG, "WARNING: Requested to cancel. Aborting.")
-                throw ScannerAbortException("Scanner canceled during FULL Library Sync")
-            }
+        coroutineScope {
+            newSongs.forEach { uri ->
+                if (scannerRequestCancel) {
+                    Log.i(TAG, "WARNING: Requested to cancel. Aborting.")
+                    throw ScannerAbortException("Scanner canceled during FULL Library Sync")
+                }
 
-            if (SCANNER_DEBUG)
-                Log.d(TAG, "PATH: $uri")
+                if (SCANNER_DEBUG)
+                    Log.d(TAG, "PATH: $uri")
 
-            if (!SYNC_SCANNER) {
-                // use async scanner
-                runBlocking {
+                if (!SYNC_SCANNER) {
+                    // use async scanner
                     scannerJobs.add(
                         async(lmScannerCoroutine) {
                             if (scannerRequestCancel) {
@@ -588,10 +666,10 @@ class LocalMediaScanner(scannerImpl: ScannerImpl) {
                             }
                         }
                     )
+                } else {
+                    // force synchronous scanning of songs. Do not catch errors
+                    finalSongs.add(advancedScan(context, uri))
                 }
-            } else {
-                // force synchronous scanning of songs. Do not catch errors
-                finalSongs.add(advancedScan(context, uri))
             }
         }
 
@@ -1044,25 +1122,32 @@ class LocalMediaScanner(scannerImpl: ScannerImpl) {
         fun getScanner(context: Context, scannerImpl: ScannerImpl, owner: Int): LocalMediaScanner {
 
             if (localScanner == null) {
-                // reset to taglib if ffMetadataEx disappears
-                if (scannerImpl == ScannerImpl.FFMPEG_EXT && !ENABLE_FFMETADATAEX) {
-                    CoroutineScope(lmScannerCoroutine).launch {
-                        context.dataStore.edit { settings ->
-                            settings[ScannerImplKey] = ScannerImpl.TAGLIB.toString()
-                            settings[AutomaticScannerKey] = false
-                            runBlocking(Dispatchers.Main) {
-                                // TODO: string resource (but will anyone even notice this...)
-                                Toast.makeText(context, "FFmpeg extractors are missing", Toast.LENGTH_SHORT).show()
-                                Toast.makeText(
-                                    context,
-                                    "Auto scanner has been disabled to prevent data conflicts. You will need to enable this in local media settings again if you want automatic scanning.",
-                                    Toast.LENGTH_LONG
-                                ).show()
+                // Determine the best available scanner implementation
+                val effectiveImpl = when {
+                    scannerImpl == ScannerImpl.FFMPEG_EXT && !ENABLE_FFMETADATAEX -> {
+                        Log.w(TAG, "FFmpeg extractors missing, falling back to MEDIASTORE")
+                        CoroutineScope(lmScannerCoroutine).launch {
+                            context.dataStore.edit { settings ->
+                                settings[ScannerImplKey] = ScannerImpl.MEDIASTORE.toString()
+                            }
+                            withContext(Dispatchers.Main) {
+                                Toast.makeText(context, "FFmpeg extractors are missing, using MediaStore scanner", Toast.LENGTH_SHORT).show()
                             }
                         }
+                        ScannerImpl.MEDIASTORE
                     }
+                    scannerImpl == ScannerImpl.TAGLIB && !TagLibScanner.isAvailable() -> {
+                        Log.w(TAG, "TagLib native libs missing, falling back to MEDIASTORE")
+                        CoroutineScope(lmScannerCoroutine).launch {
+                            context.dataStore.edit { settings ->
+                                settings[ScannerImplKey] = ScannerImpl.MEDIASTORE.toString()
+                            }
+                        }
+                        ScannerImpl.MEDIASTORE
+                    }
+                    else -> scannerImpl
                 }
-                localScanner = LocalMediaScanner(scannerImpl)
+                localScanner = LocalMediaScanner(effectiveImpl)
                 scannerProgressTotal.value = 0
                 scannerProgressCurrent.value = -1
                 scannerProgressProbe.value = 0
@@ -1137,8 +1222,14 @@ class LocalMediaScanner(scannerImpl: ScannerImpl) {
                         }.map { it.uri })
                     }
                 } catch (e: FileNotFoundException) {
-                    e.printStackTrace()
-                    throw Exception("oh well idk man this should never happen")
+                    Log.w(TAG, "Scan path not found, skipping: ${path}", e)
+                    // Skip inaccessible paths instead of crashing
+                } catch (e: SecurityException) {
+                    Log.w(TAG, "Permission denied for scan path: ${path}", e)
+                    // Skip paths we don't have permission to access
+                } catch (e: Exception) {
+                    Log.e(TAG, "Unexpected error scanning path: ${path}", e)
+                    reportException(e)
                 }
             }
 

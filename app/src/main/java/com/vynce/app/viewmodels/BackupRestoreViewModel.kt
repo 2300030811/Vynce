@@ -6,6 +6,7 @@ import android.net.Uri
 import android.util.Log
 import android.widget.Toast
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.vynce.app.MainActivity
 import com.vynce.app.R
 import com.vynce.app.db.InternalDatabase
@@ -18,7 +19,8 @@ import com.vynce.app.utils.reportException
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.util.zip.Deflater
@@ -34,102 +36,112 @@ class BackupRestoreViewModel @Inject constructor(
 ) : ViewModel() {
     val TAG = BackupRestoreViewModel::class.simpleName.toString()
     fun backup(uri: Uri) {
-        runCatching {
-            context.applicationContext.contentResolver.openOutputStream(uri)?.use {
-                it.buffered().zipOutputStream().use { outputStream ->
-                    outputStream.setLevel(Deflater.BEST_COMPRESSION)
-                    (context.filesDir / "datastore" / SETTINGS_FILENAME).inputStream().buffered().use { inputStream ->
-                        outputStream.putNextEntry(ZipEntry(SETTINGS_FILENAME))
-                        inputStream.copyTo(outputStream)
-                    }
-                    runBlocking(Dispatchers.IO) {
+        viewModelScope.launch(Dispatchers.IO) {
+            runCatching {
+                context.applicationContext.contentResolver.openOutputStream(uri)?.use {
+                    it.buffered().zipOutputStream().use { outputStream ->
+                        outputStream.setLevel(Deflater.BEST_COMPRESSION)
+                        (context.filesDir / "datastore" / SETTINGS_FILENAME).inputStream().buffered().use { inputStream ->
+                            outputStream.putNextEntry(ZipEntry(SETTINGS_FILENAME))
+                            inputStream.copyTo(outputStream)
+                        }
                         database.checkpoint()
-                    }
-                    FileInputStream(database.openHelper.writableDatabase.path).use { inputStream ->
-                        outputStream.putNextEntry(ZipEntry(InternalDatabase.DB_NAME))
-                        inputStream.copyTo(outputStream)
+                        FileInputStream(database.openHelper.writableDatabase.path).use { inputStream ->
+                            outputStream.putNextEntry(ZipEntry(InternalDatabase.DB_NAME))
+                            inputStream.copyTo(outputStream)
+                        }
                     }
                 }
+            }.onSuccess {
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(context, R.string.backup_create_success, Toast.LENGTH_SHORT).show()
+                }
+            }.onFailure {
+                reportException(it)
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(context, R.string.backup_create_failed, Toast.LENGTH_SHORT).show()
+                }
             }
-        }.onSuccess {
-            Toast.makeText(context, R.string.backup_create_success, Toast.LENGTH_SHORT).show()
-        }.onFailure {
-            reportException(it)
-            Toast.makeText(context, R.string.backup_create_failed, Toast.LENGTH_SHORT).show()
         }
     }
 
     fun restore(uri: Uri) {
-        runCatching {
-            context.applicationContext.contentResolver.openInputStream(uri)?.use {
-                it.zipInputStream().use { inputStream ->
-                    var entry = inputStream.nextEntry
-                    while (entry != null) {
-                        when (entry.name) {
-                            SETTINGS_FILENAME -> {
-                                (context.filesDir / "datastore" / SETTINGS_FILENAME).outputStream()
-                                    .use { outputStream ->
-                                        inputStream.copyTo(outputStream)
-                                    }
-                            }
-
-                            InternalDatabase.DB_NAME -> {
-                                Log.i(TAG, "Starting database restore")
-                                runBlocking(Dispatchers.IO) {
-                                    database.checkpoint()
-                                }
-                                database.close()
-
-                                Log.i(TAG, "Testing new database for compatibility...")
-                                val destFile = context.getDatabasePath(InternalDatabase.TEST_DB_NAME)
-                                destFile.parentFile?.apply {
-                                    if (!exists()) mkdirs()
-                                }
-                                FileOutputStream(destFile).use { outputStream ->
-                                    inputStream.copyTo(outputStream)
-                                }
-
-                                val status = try {
-                                    val t = InternalDatabase.newTestInstance(context, InternalDatabase.TEST_DB_NAME)
-                                    t.openHelper.writableDatabase.isDatabaseIntegrityOk
-                                    t.close()
-                                    true
-                                } catch (e: Exception) {
-                                    Log.e(TAG, "DB validation failed", e)
-                                    false
-                                }
-
-                                if (status) {
-                                    Log.i(TAG, "Found valid database, proceeding with restore")
-                                    destFile.inputStream().use { inputStream ->
-                                        FileOutputStream(database.openHelper.writableDatabase.path).use { outputStream ->
+        viewModelScope.launch(Dispatchers.IO) {
+            runCatching {
+                context.applicationContext.contentResolver.openInputStream(uri)?.use {
+                    it.zipInputStream().use { inputStream ->
+                        var entry = inputStream.nextEntry
+                        while (entry != null) {
+                            when (entry.name) {
+                                SETTINGS_FILENAME -> {
+                                    (context.filesDir / "datastore" / SETTINGS_FILENAME).outputStream()
+                                        .use { outputStream ->
                                             inputStream.copyTo(outputStream)
                                         }
+                                }
+
+                                InternalDatabase.DB_NAME -> {
+                                    Log.i(TAG, "Starting database restore")
+                                    database.checkpoint()
+                                    database.close()
+
+                                    Log.i(TAG, "Testing new database for compatibility...")
+                                    val destFile = context.getDatabasePath(InternalDatabase.TEST_DB_NAME)
+                                    destFile.parentFile?.apply {
+                                        if (!exists()) mkdirs()
                                     }
-                                } else {
-                                    Log.e(TAG, "Incompatible database, aborting restore")
-                                    Toast.makeText(
-                                        context,
-                                        context.getString(R.string.err_restore_incompatible_database),
-                                        Toast.LENGTH_SHORT
-                                    ).show()
+                                    FileOutputStream(destFile).use { outputStream ->
+                                        inputStream.copyTo(outputStream)
+                                    }
+
+                                    val status = try {
+                                        val t = InternalDatabase.newTestInstance(context, InternalDatabase.TEST_DB_NAME)
+                                        val integrity = t.openHelper.writableDatabase.isDatabaseIntegrityOk
+                                        t.close()
+                                        integrity
+                                    } catch (e: Exception) {
+                                        Log.e(TAG, "DB validation failed", e)
+                                        false
+                                    }
+
+                                    if (status) {
+                                        Log.i(TAG, "Found valid database, proceeding with restore")
+                                        destFile.inputStream().use { inputStream ->
+                                            FileOutputStream(database.openHelper.writableDatabase.path).use { outputStream ->
+                                                inputStream.copyTo(outputStream)
+                                            }
+                                        }
+                                    } else {
+                                        Log.e(TAG, "Incompatible database, aborting restore")
+                                        withContext(Dispatchers.Main) {
+                                            Toast.makeText(
+                                                context,
+                                                context.getString(R.string.err_restore_incompatible_database),
+                                                Toast.LENGTH_SHORT
+                                            ).show()
+                                        }
+                                    }
                                 }
                             }
+                            entry = inputStream.nextEntry
                         }
-                        entry = inputStream.nextEntry
                     }
                 }
-            }
 
-            val stopIntent = Intent(context, MusicService::class.java)
-            context.stopService(stopIntent)
-            val startIntent = Intent(context, MainActivity::class.java)
-            startIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            context.startActivity(startIntent)
-            exitProcess(0)
-        }.onFailure {
-            reportException(it)
-            Toast.makeText(context, it.message, Toast.LENGTH_SHORT).show()
+                withContext(Dispatchers.Main) {
+                    val stopIntent = Intent(context, MusicService::class.java)
+                    context.stopService(stopIntent)
+                    val startIntent = Intent(context, MainActivity::class.java)
+                    startIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    context.startActivity(startIntent)
+                    exitProcess(0)
+                }
+            }.onFailure {
+                reportException(it)
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(context, it.message, Toast.LENGTH_SHORT).show()
+                }
+            }
         }
     }
 

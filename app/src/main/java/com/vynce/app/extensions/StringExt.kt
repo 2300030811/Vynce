@@ -22,3 +22,12 @@ fun String.toInetSocketAddress(): InetSocketAddress {
     val (host, port) = split(":")
     return createUnresolved(host, port.toInt())
 }
+
+fun String.toSaavnImageUrl(size: Int? = null): String {
+    val url = this.replace("http://", "https://")
+    return if (size != null) {
+        url.replace("50x50", "${size}x${size}")
+            .replace("150x150", "${size}x${size}")
+            .replace("500x500", "${size}x${size}")
+    } else url
+}

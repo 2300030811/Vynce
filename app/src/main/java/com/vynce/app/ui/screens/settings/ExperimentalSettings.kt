@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025 O​u​t​er​Tu​ne Project
+ * Copyright (C) 2025 Vynce Project
  *
  * SPDX-License-Identifier: GPL-3.0
  *
@@ -241,11 +241,11 @@ fun ExperimentalSettings(
                 title = { Text("Enter configurator") },
                 icon = { Icon(Icons.Rounded.ConfirmationNumber, null) },
                 onClick = {
-                    onOobeStatusChange(0)
-                    runBlocking { // hax. page loads before pref updates
+                    coroutineScope.launch {
+                        onOobeStatusChange(0)
                         delay(500)
+                        navController.navigate("setup_wizard")
                     }
-                    navController.navigate("setup_wizard")
                 }
             )
 

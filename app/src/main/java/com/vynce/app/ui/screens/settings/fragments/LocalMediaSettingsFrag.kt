@@ -131,7 +131,7 @@ fun ColumnScope.LocalScannerFrag() {
     )
     val scannerImpl by rememberEnumPreference(
         key = ScannerImplKey,
-        defaultValue = ScannerImpl.TAGLIB
+        defaultValue = ScannerImpl.MEDIASTORE
     )
     var scannerFailure by remember { mutableStateOf(false) }
 
@@ -488,7 +488,7 @@ fun ColumnScope.LocalScannerExtraFrag() {
     )
     val (scannerImpl, onScannerImplChange) = rememberEnumPreference(
         key = ScannerImplKey,
-        defaultValue = ScannerImpl.TAGLIB
+        defaultValue = ScannerImpl.MEDIASTORE
     )
     val (strictExtensions, onStrictExtensionsChange) = rememberPreference(ScannerStrictExtKey, defaultValue = false)
     val (strictFilePaths, onStrictFilePathsChange) = rememberPreference(ScannerStrictFilePathsKey, defaultValue = false)
@@ -539,7 +539,10 @@ fun ColumnScope.LocalScannerExtraFrag() {
                 ScannerImpl.FFMPEG_EXT -> stringResource(R.string.scanner_type_ffmpeg_ext)
             }
         },
-        disabled = { it == ScannerImpl.FFMPEG_EXT && !ENABLE_FFMETADATAEX && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R },
+        disabled = { 
+            (it == ScannerImpl.FFMPEG_EXT && !ENABLE_FFMETADATAEX && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) ||
+            (it == ScannerImpl.TAGLIB && !com.vynce.app.utils.scanners.TagLibScanner.isAvailable())
+        },
         values = ScannerImpl.entries,
     )
     InfoLabel(stringResource(R.string.scanner_type_tooltip))

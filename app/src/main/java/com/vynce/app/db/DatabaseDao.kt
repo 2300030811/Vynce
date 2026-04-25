@@ -262,20 +262,17 @@ interface DatabaseDao : SongsDao, AlbumsDao, ArtistsDao, PlaylistsDao, QueueDao 
         deleteAllQueueSongs(mq.id)
         // insert songs
 
-        // why does kotlin not have for i loop???
-        var i = 0
-        while (i < mq.getSize()) {
-            insert(mq.queue[i]) // make sure song exists
-            insert(
-                QueueSongMap(
-                    queueId = mq.id,
-                    songId = mq.queue[i].id,
-                    index = i.toLong(),
-                    shuffledIndex = mq.queue[i].shuffleIndex.toLong()
-                )
+        // Batch insert songs and their mappings
+        val queueSongs = mq.queue.mapIndexed { i, mediaMetadata ->
+            insert(mediaMetadata) // ensure song exists
+            QueueSongMap(
+                queueId = mq.id,
+                songId = mediaMetadata.id,
+                index = i.toLong(),
+                shuffledIndex = mediaMetadata.shuffleIndex.toLong()
             )
-            i ++
         }
+        insert(queueSongs)
     }
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)

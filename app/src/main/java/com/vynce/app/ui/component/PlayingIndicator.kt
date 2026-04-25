@@ -1,7 +1,11 @@
 package com.vynce.app.ui.component
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -14,8 +18,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
@@ -26,11 +29,12 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.vynce.app.R
 import com.vynce.app.constants.ThumbnailCornerRadius
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import kotlin.random.Random
 
-
+/**
+ * Efficient playing indicator using a single InfiniteTransition shared across all bars,
+ * with staggered phase offsets. Replaces the previous per-bar Animatable + coroutine loop
+ * (which created 3 coroutines firing every 50ms per visible list item).
+ */
 @Composable
 fun PlayingIndicator(
     color: Color,
@@ -40,23 +44,26 @@ fun PlayingIndicator(
     cornerRadius: Dp = ThumbnailCornerRadius,
     isPlaying: Boolean = true
 ) {
-    val animatables = remember {
-        List(bars) {
-            Animatable(0.1f)
-        }
-    }
+    // Use a single InfiniteTransition for all bars — much cheaper than N separate Animatables.
+    val transition = rememberInfiniteTransition(label = "playing_indicator")
 
-    LaunchedEffect(isPlaying) {
-        animatables.forEach { animatable ->
-            launch {
-                while (true) {
-                    if (isPlaying)
-                        animatable.animateTo(Random.nextFloat() * 0.9f + 0.1f)
-                    else
-                        animatable.animateTo(0.15f)
-                    delay(50)
-                }
-            }
+    // Bar heights as animated floats with staggered delays for a natural wave look.
+    val barHeights = List(bars) { i ->
+        val durationMs = 600 + i * 150 // stagger: 600ms, 750ms, 900ms
+        val startVal = 0.15f + i * 0.1f
+        if (isPlaying) {
+            val height by transition.animateFloat(
+                initialValue = startVal,
+                targetValue = 0.9f - i * 0.1f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(durationMs, easing = LinearEasing),
+                    repeatMode = RepeatMode.Reverse
+                ),
+                label = "bar_$i"
+            )
+            height
+        } else {
+            0.15f
         }
     }
 
@@ -65,7 +72,7 @@ fun PlayingIndicator(
         verticalAlignment = Alignment.Bottom,
         modifier = modifier
     ) {
-        animatables.forEach { animatable ->
+        barHeights.forEach { heightFraction ->
             Canvas(
                 modifier = Modifier
                     .fillMaxHeight()
@@ -73,8 +80,8 @@ fun PlayingIndicator(
             ) {
                 drawRoundRect(
                     color = color,
-                    topLeft = Offset(x = 0f, y = size.height * (1 - animatable.value)),
-                    size = size.copy(height = animatable.value * size.height),
+                    topLeft = Offset(x = 0f, y = size.height * (1f - heightFraction)),
+                    size = size.copy(height = heightFraction * size.height),
                     cornerRadius = CornerRadius(cornerRadius.toPx())
                 )
             }
@@ -91,8 +98,8 @@ fun PlayingIndicatorBox(
 ) {
     AnimatedVisibility(
         visible = isActive,
-        enter = fadeIn(tween(500)),
-        exit = fadeOut(tween(500))
+        enter = fadeIn(tween(300)),
+        exit = fadeOut(tween(300))
     ) {
         Box(
             contentAlignment = Alignment.Center,
@@ -113,4 +120,3 @@ fun PlayingIndicatorBox(
         }
     }
 }
-

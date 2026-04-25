@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2024 z-huang/InnerTune
- * Copyright (C) 2025 O​u​t​er​Tu​ne Project
+ * Copyright (C) 2025 Vynce Project
  *
  * SPDX-License-Identifier: GPL-3.0
  *
@@ -186,6 +186,7 @@ import com.vynce.app.utils.rememberEnumPreference
 import com.vynce.app.utils.rememberPreference
 import com.valentinilk.shimmer.LocalShimmerTheme
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -202,6 +203,7 @@ class MainActivity : ComponentActivity() {
 
 
     lateinit var activityLauncher: ActivityLauncherHelper
+    @Inject
     lateinit var connectivityObserver: NetworkConnectivityObserver
 
     private var playerConnection by mutableStateOf<PlayerConnection?>(null)
@@ -291,7 +293,7 @@ class MainActivity : ComponentActivity() {
             var filter by rememberEnumPreference(LibraryFilterKey, Screens.LibraryFilter.ALL)
             val (slimNav) = rememberPreference(SlimNavBarKey, defaultValue = false)
             val (enabledTabs) = rememberPreference(EnabledTabsKey, defaultValue = DEFAULT_ENABLED_TABS)
-            val navigationItems = remember {
+            val navigationItems = remember(enabledTabs) {
                 Screens.getScreens(enabledTabs)
             }
             val (defaultOpenTab, onDefaultOpenTabChange) = rememberPreference(
@@ -304,7 +306,8 @@ class MainActivity : ComponentActivity() {
 
             LaunchedEffect(Unit) {
                 // local media & download folders auto scan
-                coroutineScope.launch(lmScannerCoroutine) {
+                // Use SupervisorJob so scanner crashes don't kill the Compose scope
+                coroutineScope.launch(SupervisorJob() + lmScannerCoroutine) {
                     scanInit(
                         this@MainActivity, database, downloadUtil, coroutineScope, playerConnection,
                         snackbarHostState
@@ -316,13 +319,12 @@ class MainActivity : ComponentActivity() {
             LaunchedEffect(useDarkTheme) {
                 setSystemBarAppearance(useDarkTheme)
             }
-            try {
-                connectivityObserver.unregister()
-            } catch (e: UninitializedPropertyAccessException) {
-                // lol
+
+            // Initialize connectivity observer safely
+            val connectivityObs = remember {
+                connectivityObserver
             }
-            connectivityObserver = NetworkConnectivityObserver(this@MainActivity)
-            val isNetworkConnected by connectivityObserver.networkStatus.collectAsState(true)
+            val isNetworkConnected by connectivityObs.networkStatus.collectAsState(true)
 
 
             VynceTheme(
@@ -435,7 +437,7 @@ class MainActivity : ComponentActivity() {
                         if (showPermissionRationale) {
                             com.vynce.app.ui.dialog.ActionPromptDialog(
                                 title = stringResource(R.string.scanner_missing_storage_perm),
-                                description = "Vynce needs access to your audio files to build your local library. Please grant the permission to continue.",
+                                description = stringResource(R.string.scanner_missing_storage_perm_desc),
                                 confirmText = stringResource(R.string.action_next),
                                 onConfirm = {
                                     showPermissionRationale = false
@@ -447,9 +449,9 @@ class MainActivity : ComponentActivity() {
 
                         if (showSettingsRedirect) {
                             com.vynce.app.ui.dialog.ActionPromptDialog(
-                                title = "Permission Required",
-                                description = "Storage access has been denied permanently. Please enable it in Settings to use the local library feature.",
-                                confirmText = "Open Settings",
+                                title = stringResource(R.string.permission_required),
+                                description = stringResource(R.string.storage_access_denied_permanently),
+                                confirmText = stringResource(R.string.open_settings),
                                 onConfirm = {
                                     showSettingsRedirect = false
                                     val intent = Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
@@ -468,205 +470,14 @@ class MainActivity : ComponentActivity() {
 
 
                             val navHost: @Composable() (() -> Unit) = @Composable {
-                                NavHost(
+                                com.vynce.app.ui.navigation.VynceNavHost(
                                     navController = navController,
-                                    startDestination = (Screens.getAllScreens()
-                                        .find { it.route == defaultOpenTab })?.route
-                                        ?: Screens.Home.route,
-                                    enterTransition = {
-                                        val currentRouteIndex = navigationItems.indexOfFirst {
-                                            it.route == targetState.destination.route
-                                        }
-                                        val previousRouteIndex = navigationItems.indexOfFirst {
-                                            it.route == initialState.destination.route
-                                        }
-
-                                        if (currentRouteIndex == -1 || currentRouteIndex > previousRouteIndex)
-                                            slideInHorizontally { it / 8 } + fadeIn(tween(200))
-                                        else
-                                            slideInHorizontally { -it / 8 } + fadeIn(tween(200))
-                                    },
-                                    exitTransition = {
-                                        val currentRouteIndex = navigationItems.indexOfFirst {
-                                            it.route == initialState.destination.route
-                                        }
-                                        val targetRouteIndex = navigationItems.indexOfFirst {
-                                            it.route == targetState.destination.route
-                                        }
-
-                                        if (targetRouteIndex == -1 || targetRouteIndex > currentRouteIndex)
-                                            slideOutHorizontally { -it / 8 } + fadeOut(tween(100))
-                                        else
-                                            slideOutHorizontally { it / 8 } + fadeOut(tween(100))
-                                    },
-                                    popEnterTransition = {
-                                        val currentRouteIndex = navigationItems.indexOfFirst {
-                                            it.route == targetState.destination.route
-                                        }
-                                        val previousRouteIndex = navigationItems.indexOfFirst {
-                                            it.route == initialState.destination.route
-                                        }
-
-                                        if (previousRouteIndex != -1 && previousRouteIndex < currentRouteIndex)
-                                            slideInHorizontally { it / 8 } + fadeIn(tween(200))
-                                        else
-                                            slideInHorizontally { -it / 8 } + fadeIn(tween(200))
-                                    },
-                                    popExitTransition = {
-                                        val currentRouteIndex = navigationItems.indexOfFirst {
-                                            it.route == initialState.destination.route
-                                        }
-                                        val targetRouteIndex = navigationItems.indexOfFirst {
-                                            it.route == targetState.destination.route
-                                        }
-
-                                        if (currentRouteIndex != -1 && currentRouteIndex < targetRouteIndex)
-                                            slideOutHorizontally { -it / 8 } + fadeOut(tween(100))
-                                        else
-                                            slideOutHorizontally { it / 8 } + fadeOut(tween(100))
-                                    },
-                                    modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection)
+                                    defaultOpenTab = defaultOpenTab,
+                                    navigationItems = navigationItems,
+                                    scrollBehavior = scrollBehavior,
+                                    playerConnection = playerConnection,
+                                    getNavPadding = { getNavPadding() }
                                 )
-                                {
-                                    composable(Screens.Home.route) {
-                                        HomeScreen(navController, playerConnection)
-                                    }
-                                    composable(Screens.Songs.route) {
-                                        LibrarySongsScreen(navController)
-                                    }
-                                    composable(Screens.History.route) {
-                                        LibrarySongsScreen(navController, initialFilter = SongFilter.HISTORY)
-                                    }
-                                    composable(Screens.Liked.route) {
-                                        LibrarySongsScreen(navController, initialFilter = SongFilter.LIKED)
-                                    }
-                                    composable(Screens.Folders.route) {
-                                        LibraryFoldersScreen(navController, scrollBehavior)
-                                    }
-                                    composable(
-                                        route = "${Screens.Folders.route}/{path}",
-                                        arguments = listOf(
-                                            navArgument("path") {
-                                                type = NavType.StringType
-                                            }
-                                        )
-                                    ) {
-                                        FolderScreen(navController, scrollBehavior)
-                                    }
-                                    composable(Screens.Artists.route) {
-                                        LibraryArtistsScreen(navController)
-                                    }
-                                    composable(Screens.Albums.route) {
-                                        LibraryAlbumsScreen(navController)
-                                    }
-                                    composable(Screens.Playlists.route) {
-                                        LibraryPlaylistsScreen(navController)
-                                    }
-                                    composable(Screens.Library.route) {
-                                        LibraryScreen(navController, scrollBehavior)
-                                    }
-                                    composable(Screens.Player.route) {
-                                        PlayerScreen(navController, bottomPadding = getNavPadding())
-                                    }
-                                    composable(Screens.Stats.route) {
-                                        StatsScreen(navController)
-                                    }
-
-                                    composable(
-                                        route = "search",
-                                    ) {
-                                        SearchBarContainer(navController, scrollBehavior)
-                                    }
-                                    composable(
-                                        route = "search/{query}",
-                                        arguments = listOf(
-                                            navArgument("query") {
-                                                type = NavType.StringType
-                                            }
-                                        )
-                                    ) {
-                                        OnlineSearchResult(navController)
-                                    }
-                                    composable(
-                                        route = "local_playlist/{playlistId}",
-                                        arguments = listOf(
-                                            navArgument("playlistId") {
-                                                type = NavType.StringType
-                                            }
-                                        )
-                                    ) {
-                                        LocalPlaylistScreen(navController, scrollBehavior)
-                                    }
-                                    composable(
-                                        route = "auto_playlist/{playlistId}",
-                                        arguments = listOf(
-                                            navArgument("playlistId") {
-                                                type = NavType.StringType
-                                            }
-                                        )
-                                    ) {
-                                        AutoPlaylistScreen(navController, scrollBehavior)
-                                    }
-                                    composable("settings") {
-                                        SettingsScreen(navController, scrollBehavior)
-                                    }
-                                    composable("settings/appearance") {
-                                        AppearanceSettings(navController, scrollBehavior)
-                                    }
-                                    composable("settings/interface") {
-                                        InterfaceSettings(navController, scrollBehavior)
-                                    }
-                                    composable("settings/library") {
-                                        LibrarySettings(navController, scrollBehavior)
-                                    }
-                                    composable("settings/library/lyrics") {
-                                        LyricsSettings(navController, scrollBehavior)
-                                    }
-                                    composable("settings/account_sync") {
-                                        AccountSyncSettings(navController, scrollBehavior)
-                                    }
-                                    composable("settings/player") {
-                                        PlayerSettings(navController, scrollBehavior)
-                                    }
-                                    composable("settings/storage") {
-                                        StorageSettings(navController, scrollBehavior)
-                                    }
-                                    composable("settings/backup_restore") {
-                                        BackupAndRestore(navController, scrollBehavior)
-                                    }
-                                    composable("settings/local") {
-                                        LocalPlayerSettings(navController, scrollBehavior)
-                                    }
-                                    composable("settings/experimental") {
-                                        ExperimentalSettings(navController, scrollBehavior)
-                                    }
-                                    composable("settings/about") {
-                                        AboutScreen(navController, scrollBehavior)
-                                    }
-                                    composable("settings/about/attribution") {
-                                        AttributionScreen(navController, scrollBehavior)
-                                    }
-                                    composable("settings/about/oss_licenses") {
-                                        LibrariesScreen(navController, scrollBehavior)
-                                    }
-
-                                    composable("setup_wizard") {
-                                        SetupWizard(navController)
-                                    }
-
-                                    composable("album/{albumId}") { backStack ->
-                                        val albumId = backStack.arguments?.getString("albumId") ?: return@composable
-                                        AlbumScreen(albumId = albumId, navController = navController, playerConnection = playerConnection)
-                                    }
-                                    composable("artist/{artistId}") { backStack ->
-                                        val artistId = backStack.arguments?.getString("artistId") ?: return@composable
-                                        ArtistScreen(artistId = artistId, navController = navController, playerConnection = playerConnection)
-                                    }
-                                    composable("playlist/{playlistId}") { backStack ->
-                                        val playlistId = backStack.arguments?.getString("playlistId") ?: return@composable
-                                        PlaylistScreen(playlistId = playlistId, navController = navController, playerConnection = playerConnection)
-                                    }
-                                }
                             }
 
                             val navbar: @Composable() (() -> Unit) = @Composable {
@@ -704,15 +515,12 @@ class MainActivity : ComponentActivity() {
                                 ) {
                                     navigationItems.fastForEach { screen ->
                                         // TODO: display selection when based on root page user entered
-//                                        val isSelected = navBackStackEntry?.destination?.hierarchy?.any {
-//                                            it.route?.substringBefore("?")?.substringBefore("/") == screen.route
-//                                        } == true
                                         NavigationBarItem(
                                             selected = navBackStackEntry?.destination?.hierarchy?.any { it.route == screen.route } == true,
                                             icon = {
                                                 Icon(
                                                     screen.icon,
-                                                    contentDescription = null
+                                                    contentDescription = stringResource(screen.titleId)
                                                 )
                                             },
                                             label = {
@@ -805,15 +613,12 @@ class MainActivity : ComponentActivity() {
                                 ) {
                                     navigationItems.fastForEach { screen ->
                                         // TODO: display selection when based on root page user entered
-//                                                val isSelected = navBackStackEntry?.destination?.hierarchy?.any {
-//                                                    it.route?.substringBefore("?")?.substringBefore("/") == screen.route
-//                                                } == true
                                         NavigationRailItem(
                                             selected = navBackStackEntry?.destination?.hierarchy?.any { it.route == screen.route } == true,
                                             icon = {
                                                 Icon(
                                                     screen.icon,
-                                                    contentDescription = null
+                                                    contentDescription = stringResource(screen.titleId)
                                                 )
                                             },
                                             label = {

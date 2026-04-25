@@ -1,0 +1,304 @@
+// ignore_for_file: use_build_context_synchronously
+
+part of 'yt_utils.dart';
+
+class _YTUtilsCommentActions {
+  const _YTUtilsCommentActions();
+
+  Future<void> createComment({
+    required String videoId,
+    required YoutiPieVideoPageResult? videoPage,
+    required RxBaseCore<YoutiPieCommentResult?>? mainList,
+  }) async {
+    return _createEditCommentOrReply(
+      isEdit: false,
+      isReply: false,
+      subtitle: await YoutubeInfoController.utils.getVideoName(videoId) ?? '?',
+      initialComment: null,
+      onButtonConfirm: (commentText) async {
+        final newComment = await YoutubeInfoController.commentAction.createComment(
+          mainList: mainList?.value ?? await YoutiPie.cacheBuilder.forComments(videoId: videoId).read(),
+          createCommentParams: mainList?.value?.createParams ?? videoPage?.commentResult.createParams,
+          content: commentText,
+        );
+
+        if (newComment != null) {
+          mainList?.refresh();
+          return true;
+        }
+        _showError();
+        return false;
+      },
+    );
+  }
+
+  Future<void> editComment({
+    required String videoId,
+    required CommentInfoItem comment,
+    required RxBaseCore<YoutiPieCommentResult?> mainList,
+    required RxBaseCore<YoutiPieCommentReplyResult?>? mainRepliesList,
+    required void Function(CommentInfoItem editedComment)? onEdited,
+  }) async {
+    return _createEditCommentOrReply(
+      isEdit: true,
+      isReply: false,
+      subtitle: null,
+      initialComment: comment.content.rawText ?? '',
+      onButtonConfirm: (commentText) async {
+        final editedComment = await YoutubeInfoController.commentAction.editComment(
+          mainList: mainList.value ?? await YoutiPie.cacheBuilder.forComments(videoId: videoId).read(),
+          comment: comment,
+          content: commentText,
+        );
+        if (editedComment != null) {
+          mainList.refresh();
+          mainRepliesList?.refresh();
+          onEdited?.call(editedComment);
+          return true;
+        }
+        _showError();
+        return false;
+      },
+    );
+  }
+
+  Future<bool> deleteComment({
+    required String videoId,
+    required CommentInfoItem comment,
+    required RxBaseCore<YoutiPieCommentResult?> mainList,
+    required RxBaseCore<YoutiPieCommentReplyResult?>? mainRepliesList,
+    required void Function()? onDeleted,
+  }) async {
+    return await _confirmRemoveCommentOrReply(
+          lang.comment,
+          comment.content.rawText ?? '',
+          () async {
+            final didDelete = await YoutubeInfoController.commentAction.deleteComment(
+              comment: comment,
+              mainList: mainList.value ?? await YoutiPie.cacheBuilder.forComments(videoId: videoId).read(),
+            );
+            if (didDelete == true) {
+              mainList.refresh();
+              mainRepliesList?.refresh();
+              onDeleted?.call();
+              return true;
+            } else {
+              _showError();
+              return false;
+            }
+          },
+        ) ??
+        false;
+  }
+
+  Future<void> createReply({
+    required String videoId,
+    required CommentInfoItemBase mainComment,
+    required CommentInfoItemBase replyingTo,
+    required RxBaseCore<YoutiPieCommentReplyResult?>? mainList,
+  }) async {
+    final authorHandler = mainComment.author?.displayName;
+    return _createEditCommentOrReply(
+      isEdit: false,
+      isReply: true,
+      subtitle: authorHandler ?? '?',
+      initialComment: authorHandler == null ? null : '$authorHandler ',
+      onButtonConfirm: (replyText) async {
+        final newComment = await YoutubeInfoController.commentAction.createReply(
+          mainList: mainList?.value ?? await YoutiPie.cacheBuilder.forCommentReplies(commentId: mainComment.commentId).read(),
+          createReplyParams: replyingTo.engagement.createReplyParams,
+          content: replyText,
+        );
+
+        if (newComment != null) {
+          mainList?.refresh();
+          return true;
+        }
+        _showError();
+        return false;
+      },
+    );
+  }
+
+  Future<void> editReply({
+    required String videoId,
+    required CommentInfoItem mainComment,
+    required CommentInfoItemBase reply,
+    required RxBaseCore<YoutiPieCommentReplyResult?>? mainList,
+  }) async {
+    return _createEditCommentOrReply(
+      isEdit: true,
+      isReply: true,
+      // subtitle: mainComment.author?.displayName ?? '?',
+      subtitle: null,
+      initialComment: reply.content.rawText ?? '',
+      onButtonConfirm: (replyText) async {
+        final editedComment = await YoutubeInfoController.commentAction.editReply(
+          mainList: mainList?.value ?? await YoutiPie.cacheBuilder.forCommentReplies(commentId: mainComment.commentId).read(),
+          reply: reply,
+          content: replyText,
+        );
+        if (editedComment != null) {
+          mainList?.refresh();
+          return true;
+        }
+        _showError();
+        return false;
+      },
+    );
+  }
+
+  Future<bool> deleteReply({
+    required String videoId,
+    required CommentInfoItem mainComment,
+    required CommentInfoItemBase reply,
+    required RxBaseCore<YoutiPieCommentReplyResult?>? mainList,
+  }) async {
+    return await _confirmRemoveCommentOrReply(
+          lang.reply,
+          reply.content.rawText ?? '',
+          () async {
+            final didDelete = await YoutubeInfoController.commentAction.deleteReply(
+              reply: reply,
+              mainList: mainList?.value ?? await YoutiPie.cacheBuilder.forCommentReplies(commentId: mainComment.commentId).read(),
+            );
+            if (didDelete == true) {
+              mainList?.refresh();
+              return true;
+            } else {
+              _showError();
+              return false;
+            }
+          },
+        ) ??
+        false;
+  }
+
+  Future<void> _createEditCommentOrReply({
+    required bool isEdit,
+    required bool isReply,
+    required String? subtitle,
+    required String? initialComment,
+    required Future<bool> Function(String commentText) onButtonConfirm,
+  }) async {
+    String? author = _getCurrentAutorIfActive();
+    if (author == null) return;
+
+    await showNamidaBottomSheetWithTextField(
+      displayAccountThumbnail: true,
+      title: author,
+      subtitle: subtitle == null ? null : '-> $subtitle',
+      textfieldConfig: BottomSheetTextFieldConfig(
+        hintText: initialComment ?? '',
+        initalControllerText: initialComment,
+        labelText: isReply ? lang.reply : lang.comment,
+        validator: (value) {
+          if (value == null || value.isEmpty) return lang.emptyValue;
+          return null;
+        },
+      ),
+      buttonText: isEdit ? lang.save : lang.add,
+      onButtonTap: (commentText) async {
+        if (commentText.isEmpty) return false;
+        return onButtonConfirm(commentText);
+      },
+    );
+  }
+
+  void _showError() {
+    snackyy(message: lang.failed, isError: true);
+  }
+
+  String? _getCurrentAutorIfActive() {
+    final activeChannel = YoutubeAccountController.current.activeAccountChannel.value;
+    if (activeChannel == null) {
+      const YoutubeAccountManagePage().navigate();
+      return null;
+    }
+
+    String? author = activeChannel.title;
+    if (author?.isEmpty ?? true) author = activeChannel.handler;
+    return author;
+  }
+
+  Future<T?> _confirmRemoveCommentOrReply<T>(String title, String content, Future<T> Function()? onConfirm) async {
+    String? author = _getCurrentAutorIfActive();
+    if (author == null) return null;
+
+    final activeAccountChannel = YoutubeAccountController.current.activeAccountChannel.value;
+    if (activeAccountChannel == null) return null;
+
+    T? res;
+    final isDoingStuff = false.obs;
+    await NamidaNavigator.inst.navigateDialog(
+      tapToDismiss: () => !isDoingStuff.value,
+      onDisposing: () {
+        isDoingStuff.close();
+      },
+      dialog: CustomBlurryDialog(
+        isWarning: true,
+        normalTitleStyle: true,
+        title: "${lang.delete}: $title?",
+        actions: [
+          CancelButtonDisabled(
+            disabledRx: isDoingStuff,
+          ),
+          ObxO(
+            rx: isDoingStuff,
+            builder: (context, doing) => NamidaButton(
+              enabled: !doing,
+              isLoading: doing,
+              colorScheme: Colors.red,
+              text: lang.delete.toUpperCase(),
+              onTap: () async {
+                isDoingStuff.value = true;
+                res = await onConfirm!();
+                isDoingStuff.value = false;
+                NamidaNavigator.inst.closeDialog();
+              },
+            ),
+          ),
+        ],
+        child: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const SizedBox(width: 12.0),
+                  YoutubeThumbnail(
+                    type: ThumbnailType.channel,
+                    key: Key(activeAccountChannel.id),
+                    width: 32.0,
+                    forceSquared: false,
+                    isImportantInCache: true,
+                    customUrl: activeAccountChannel.thumbnails.pick()?.url,
+                    isCircle: true,
+                  ),
+                  const SizedBox(width: 12.0),
+                  Text(
+                    author,
+                    style: namida.textTheme.displayMedium,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6.0),
+              const NamidaContainerDivider(margin: EdgeInsets.symmetric(horizontal: 12.0)),
+              const SizedBox(height: 6.0),
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Text(
+                  content,
+                  style: namida.textTheme.displayMedium,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    return res;
+  }
+}

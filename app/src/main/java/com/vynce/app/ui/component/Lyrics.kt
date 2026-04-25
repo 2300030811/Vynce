@@ -99,7 +99,8 @@ import com.vynce.app.utils.rememberEnumPreference
 import com.vynce.app.utils.rememberPreference
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.runBlocking
 import org.akanework.gramophone.logic.utils.LrcUtils
@@ -140,6 +141,23 @@ fun Lyrics(
 
     val isSynced = remember(lyricsModel) {
         lyricsModel is SemanticLyrics.SyncedLyrics
+    }
+
+    val dbLyrics by remember(mediaMetadata) {
+        mediaMetadata?.id?.let { id ->
+            playerConnection.service.database.lyrics(id)
+        } ?: flowOf(null)
+    }.collectAsState(initial = null)
+
+    val currentDbLyrics = remember(dbLyrics, mediaMetadata) {
+        var lyrics = dbLyrics
+        val metadata = mediaMetadata
+        if (lyrics == null && metadata?.localPath != null) {
+            LrcUtils.loadLyricsFile(File(metadata.localPath!!))?.let {
+                lyrics = LyricsEntity(metadata.id, it)
+            }
+        }
+        lyrics
     }
 
     LaunchedEffect(playerLyrics) {
@@ -452,21 +470,8 @@ fun Lyrics(
                     onClick = {
                         menuState.show {
                             LyricsMenu(
-                                lyricsProvider = {
-                                    var dbLyric = runBlocking(Dispatchers.IO) {
-                                        playerConnection.service.database.lyrics(mediaMetadata.id).first()
-                                    }
-
-                                    // eye bleach to try to load local file for editor
-                                    if (dbLyric == null && mediaMetadata.localPath != null) {
-                                        LrcUtils.loadLyricsFile(File(mediaMetadata.localPath))?.let {
-                                            dbLyric = LyricsEntity(mediaMetadata.id, it)
-                                        }
-                                    }
-
-                                    dbLyric
-                                },
-                                mediaMetadataProvider = { mediaMetadata },
+                                lyricsEntity = currentDbLyrics,
+                                mediaMetadataProvider = { mediaMetadata!! },
                                 onRefreshRequest = { lyricsModel = it },
                                 onDismiss = menuState::dismiss,
                             )

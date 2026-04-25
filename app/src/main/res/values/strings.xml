@@ -136,6 +136,12 @@ We recycle translations from upstream, they are pulled periodically. -->
     <string name="unknown">Unknown</string>
     <string name="copied">Copied to clipboard</string>
 
+    <string name="scanner_missing_storage_perm_desc">Vynce needs access to your audio files to build your local library. Please grant the permission to continue.</string>
+    <string name="permission_required">Permission Required</string>
+    <string name="storage_access_denied_permanently">Storage access has been denied permanently. Please enable it in Settings to use the local library feature.</string>
+    <string name="open_settings">Open Settings</string>
+    <string name="ready_to_vibe_today">Ready to vibe today?</string>
+
     <string name="edit_lyrics">Edit lyrics</string>
     <string name="search_lyrics">Search lyrics</string>
 

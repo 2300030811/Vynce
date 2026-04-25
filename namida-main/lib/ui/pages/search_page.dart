@@ -1,0 +1,683 @@
+import 'package:flutter/material.dart';
+
+import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
+
+import 'package:namida/class/folder.dart';
+import 'package:namida/class/route.dart';
+import 'package:namida/class/track.dart';
+import 'package:namida/class/video.dart';
+import 'package:namida/controller/clipboard_controller.dart';
+import 'package:namida/controller/folders_controller.dart';
+import 'package:namida/controller/playlist_controller.dart';
+import 'package:namida/controller/scroll_search_controller.dart';
+import 'package:namida/controller/search_sort_controller.dart';
+import 'package:namida/controller/settings_controller.dart';
+import 'package:namida/core/dimensions.dart';
+import 'package:namida/core/enums.dart';
+import 'package:namida/core/extensions.dart';
+import 'package:namida/core/functions.dart';
+import 'package:namida/core/icon_fonts/broken_icons.dart';
+import 'package:namida/core/namida_converter_ext.dart';
+import 'package:namida/core/translations/language.dart';
+import 'package:namida/core/utils.dart';
+import 'package:namida/ui/dialogs/common_dialogs.dart';
+import 'package:namida/ui/pages/main_page.dart';
+import 'package:namida/ui/widgets/artwork.dart';
+import 'package:namida/ui/widgets/custom_widgets.dart';
+import 'package:namida/ui/widgets/library/album_card.dart';
+import 'package:namida/ui/widgets/library/artist_card.dart';
+import 'package:namida/ui/widgets/library/multi_artwork_card.dart';
+import 'package:namida/ui/widgets/library/track_tile.dart';
+import 'package:namida/ui/widgets/sort_by_button.dart';
+import 'package:namida/youtube/pages/yt_search_results_page.dart';
+
+class SearchPage extends StatelessWidget {
+  const SearchPage({super.key});
+
+  SliverToBoxAdapter _horizontalSliverList<T>({
+    required double height,
+    required double? itemExtent,
+    required List<T> list,
+    required Widget Function(T item) builder,
+  }) {
+    return SliverToBoxAdapter(
+      child: SizedBox(
+        height: height + 24.0,
+        child: SuperSmoothListView.builder(
+          clipBehavior: Clip.none,
+          padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 8.0),
+          scrollDirection: Axis.horizontal,
+          itemExtent: itemExtent,
+          itemCount: list.length,
+          itemBuilder: (context, i) {
+            return builder(list[i]);
+          },
+        ),
+      ),
+    );
+  }
+
+  List<Widget> _getArtistSection({
+    required String title,
+    required IconData icon,
+    required List<String> list,
+    required RxList<String> Function() rxList,
+    required MediaType type,
+    required List<Track> Function(String item) getTracks,
+  }) {
+    return [
+      SliverToBoxAdapter(
+        child: SearchPageTitleRow(
+          title: title,
+          icon: icon,
+          trailing: NamidaButton(
+            colors: .mid,
+            icon: Broken.category,
+            text: lang.viewAll,
+            onTap: ArtistSearchResultsPage(artists: rxList(), type: type).navigate,
+          ),
+        ),
+      ),
+      _horizontalSliverList(
+        height: 100.0,
+        itemExtent: 92.0,
+        list: list,
+        builder: (itemName) {
+          final tracks = getTracks(itemName);
+          return Container(
+            width: 90.0,
+            margin: const EdgeInsets.only(left: 2.0),
+            child: ArtistCard(
+              name: itemName,
+              artist: tracks,
+              type: type,
+            ),
+          );
+        },
+      ),
+    ];
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = context.theme;
+    final textTheme = theme.textTheme;
+
+    final filterIChipsTypes = MediaType.values.toList();
+    filterIChipsTypes.remove(MediaType.track);
+    filterIChipsTypes.remove(MediaType.folder);
+
+    final filterChipsChildren = <Widget>[];
+
+    filterChipsChildren.add(
+      Obx(
+        (context) {
+          final trSearchTypes = settings.activeTrSearch.valueR;
+          final isActive = trSearchTypes[TrackTypeSearch.tr] ?? true;
+          final isForcelyEnabled = isActive && trSearchTypes[TrackTypeSearch.v] != true;
+          return _FilterChip(
+            isForcelyEnabled: isForcelyEnabled,
+            isActive: isActive,
+            type: MediaType.track,
+            title: lang.tracks,
+            customOnTap: () {
+              settings.updateActiveTrSearch(TrackTypeSearch.tr, !isActive);
+              SearchSortController.inst.searchAll(ScrollSearchController.inst.searchTextEditingController.text);
+            },
+          );
+        },
+      ),
+    );
+    filterChipsChildren.add(
+      Obx(
+        (context) {
+          final trSearchTypes = settings.activeTrSearch.valueR;
+          final isActive = trSearchTypes[TrackTypeSearch.v] ?? true;
+          final isForcelyEnabled = isActive && trSearchTypes[TrackTypeSearch.tr] != true;
+          return _FilterChip(
+            isForcelyEnabled: isForcelyEnabled,
+            isActive: isActive,
+            type: MediaType.track,
+            title: lang.videos,
+            customOnTap: () {
+              settings.updateActiveTrSearch(TrackTypeSearch.v, !isActive);
+              SearchSortController.inst.searchAll(ScrollSearchController.inst.searchTextEditingController.text);
+            },
+          );
+        },
+      ),
+    );
+
+    for (final e in filterIChipsTypes) {
+      final child = Obx(
+        (context) {
+          final list = settings.activeSearchMediaTypes.valueR;
+          final isActive = list.contains(e);
+          return _FilterChip(
+            isForcelyEnabled: false,
+            isActive: isActive,
+            type: e,
+          );
+        },
+      );
+      filterChipsChildren.add(child);
+    }
+
+    var initialSearchType = settings.extra.preferredSearchType.value;
+    if (initialSearchType == null || initialSearchType == .auto) {
+      initialSearchType = ScrollSearchController.inst.currentSearchType.value;
+    }
+    return BackgroundWrapper(
+      child: NamidaTabView(
+        key: ScrollSearchController.inst.tabViewKey,
+        initialIndex: initialSearchType.index,
+        onIndexChanged: (index) async {
+          final type = SearchType.values[index];
+          switch (type) {
+            case SearchType.localTracks || SearchType.auto:
+              ScrollSearchController.inst.currentSearchType.value = SearchType.localTracks;
+              final srchTxt = ScrollSearchController.inst.searchTextEditingController.text;
+              ClipboardController.inst.updateTextInControllerEmpty(srchTxt == '');
+              await SearchSortController.inst.prepareResources();
+              SearchSortController.inst.searchAll(srchTxt);
+              break;
+            case SearchType.youtube:
+              ScrollSearchController.inst.currentSearchType.value = SearchType.youtube;
+              final searchValue = ScrollSearchController.inst.ytSearchKey.currentState?.currentSearchText;
+              if (SearchSortController.inst.lastSearchText != searchValue) {
+                ScrollSearchController.inst.latestSubmittedYTSearch.value = SearchSortController.inst.lastSearchText;
+                ScrollSearchController.inst.ytSearchKey.currentState?.fetchSearch(customText: SearchSortController.inst.lastSearchText);
+              }
+              break;
+          }
+        },
+        tabs: [
+          lang.local,
+          lang.youtube,
+        ],
+        children: [
+          Column(
+            children: [
+              SmoothSingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: filterChipsChildren,
+                ),
+              ),
+              Expanded(
+                child: Obx(
+                  (context) => AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 300),
+                    child: !SearchSortController.inst.isSearching
+                        ? Container(
+                            key: const Key('emptysearch'),
+                            padding: const EdgeInsets.all(64.0).add(const EdgeInsets.only(bottom: 64.0)),
+                            width: context.width,
+                            height: context.height,
+                            child: const SizedBox(),
+                          )
+                        : NamidaScrollbarWithController(
+                            key: const Key('fullsearch'),
+                            child: (sc) => AnimationLimiter(
+                              child: TrackTilePropertiesProvider(
+                                configs: const TrackTilePropertiesConfigs(
+                                  queueSource: QueueSource.search,
+                                ),
+                                builder: (properties) => Obx(
+                                  (context) {
+                                    final activeList = settings.activeSearchMediaTypes.valueR;
+
+                                    final tracksSearchTemp = SearchSortController.inst.trackSearchTemp.valueR;
+                                    final albumSearchTemp = !activeList.contains(MediaType.album) ? null : SearchSortController.inst.albumSearchTemp.valueR;
+                                    final artistSearchTemp = !activeList.contains(MediaType.artist) ? null : SearchSortController.inst.artistSearchTemp.valueR;
+                                    final albumArtistSearchTemp = !activeList.contains(MediaType.albumArtist) ? null : SearchSortController.inst.albumArtistSearchTemp.valueR;
+                                    final composerSearchTemp = !activeList.contains(MediaType.composer) ? null : SearchSortController.inst.composerSearchTemp.valueR;
+                                    final genreSearchTemp = !activeList.contains(MediaType.genre) ? null : SearchSortController.inst.genreSearchTemp.valueR;
+                                    final playlistSearchTemp = !activeList.contains(MediaType.playlist) ? null : SearchSortController.inst.playlistSearchTemp.valueR;
+
+                                    final isFolderTracksSearchActive = activeList.contains(MediaType.folderMusic) || activeList.contains(MediaType.folder);
+                                    final isFolderVideosSearchActive = activeList.contains(MediaType.folderVideo) || activeList.contains(MediaType.folder);
+                                    final folderSearchTemp = !isFolderTracksSearchActive
+                                        ? null
+                                        : SearchSortController.inst.folderTracksSearchTemp.valueR.where((f) => Folder.explicit(f).tracksDedicated().isNotEmpty).toList();
+                                    final folderVideosSearchTemp = !isFolderVideosSearchActive
+                                        ? null
+                                        : SearchSortController.inst.folderVideosSearchTemp.valueR.where((f) => VideoFolder.explicit(f).tracksDedicated().isNotEmpty).toList();
+
+                                    final trSearchTypes = settings.activeTrSearch.valueR;
+                                    final trSearchTypesTrActive = trSearchTypes[TrackTypeSearch.tr] ?? true;
+                                    final trSearchTypesVideosActive = trSearchTypes[TrackTypeSearch.v] ?? true;
+                                    String tracksSearchTitle = lang.tracks;
+                                    if (!trSearchTypesTrActive) {
+                                      tracksSearchTitle = lang.videos;
+                                      tracksSearchTemp.removeWhere((element) => element is! Video);
+                                    }
+                                    if (!trSearchTypesVideosActive) {
+                                      tracksSearchTemp.removeWhere((element) => element is Video);
+                                    }
+
+                                    return SmoothCustomScrollView(
+                                      controller: sc,
+                                      slivers: [
+                                        // == Albums ==
+                                        if (albumSearchTemp != null && albumSearchTemp.isNotEmpty) ...[
+                                          SliverToBoxAdapter(
+                                            child: SearchPageTitleRow(
+                                              title: '${lang.albums} • ${albumSearchTemp.length}',
+                                              icon: Broken.music_dashboard,
+                                              trailing: NamidaButton(
+                                                colors: .mid,
+                                                icon: Broken.category,
+                                                text: lang.viewAll,
+                                                onTap: const AlbumSearchResultsPage().navigate,
+                                              ),
+                                            ),
+                                          ),
+                                          _horizontalSliverList(
+                                            height: 138.0,
+                                            itemExtent: 108.0,
+                                            list: albumSearchTemp,
+                                            builder: (item) {
+                                              final albumId = item;
+                                              return Container(
+                                                width: 130.0,
+                                                margin: const EdgeInsets.only(left: 2.0),
+                                                child: AlbumCard(
+                                                  identifier: albumId,
+                                                  album: albumId.getAlbumTracks(),
+                                                  staggered: false,
+                                                ),
+                                              );
+                                            },
+                                          ),
+                                        ],
+
+                                        // == Artists ==
+                                        if (artistSearchTemp != null && artistSearchTemp.isNotEmpty)
+                                          ..._getArtistSection(
+                                            title: '${lang.artists} • ${artistSearchTemp.length}',
+                                            icon: Broken.user,
+                                            list: artistSearchTemp,
+                                            rxList: () => SearchSortController.inst.artistSearchTemp,
+                                            type: MediaType.artist,
+                                            getTracks: (item) => item.getArtistTracks(),
+                                          ),
+
+                                        // == Album Artists ==
+                                        if (albumArtistSearchTemp != null && albumArtistSearchTemp.isNotEmpty)
+                                          ..._getArtistSection(
+                                            title: '${lang.albumArtists} • ${albumArtistSearchTemp.length}',
+                                            icon: Broken.user,
+                                            list: albumArtistSearchTemp,
+                                            rxList: () => SearchSortController.inst.albumArtistSearchTemp,
+                                            type: MediaType.albumArtist,
+                                            getTracks: (item) => item.getAlbumArtistTracks(),
+                                          ),
+
+                                        // == Composers ==
+                                        if (composerSearchTemp != null && composerSearchTemp.isNotEmpty)
+                                          ..._getArtistSection(
+                                            title: '${lang.composer} • ${composerSearchTemp.length}',
+                                            icon: Broken.profile_2user,
+                                            list: composerSearchTemp,
+                                            rxList: () => SearchSortController.inst.composerSearchTemp,
+                                            type: MediaType.composer,
+                                            getTracks: (item) => item.getComposerTracks(),
+                                          ),
+
+                                        // == Genres ==
+                                        if (genreSearchTemp != null && genreSearchTemp.isNotEmpty) ...[
+                                          SliverToBoxAdapter(
+                                            child: SearchPageTitleRow(
+                                              title: '${lang.genres} • ${genreSearchTemp.length}',
+                                              icon: Broken.smileys,
+                                            ),
+                                          ),
+                                          _horizontalSliverList(
+                                            height: 138.0,
+                                            itemExtent: 108.0,
+                                            list: genreSearchTemp,
+                                            builder: (item) {
+                                              final genreName = item;
+                                              return Container(
+                                                width: 130.0,
+                                                margin: const EdgeInsets.only(left: 2.0),
+                                                child: MultiArtworkCard(
+                                                  tracks: genreName.getGenresTracks(),
+                                                  name: genreName,
+                                                  countPerRow: Dimensions.genreSearchGridCount,
+                                                  heroTag: 'genre_$genreName',
+                                                  showMenuFunction: () => NamidaDialogs.inst.showGenreDialog(genreName),
+                                                  onTap: () => NamidaOnTaps.inst.onGenreTap(genreName),
+                                                ),
+                                              );
+                                            },
+                                          ),
+                                        ],
+
+                                        // == Playlists ==
+                                        if (playlistSearchTemp != null && playlistSearchTemp.isNotEmpty) ...[
+                                          SliverToBoxAdapter(
+                                            child: SearchPageTitleRow(
+                                              title: '${lang.playlists} • ${playlistSearchTemp.length}',
+                                              icon: Broken.music_library_2,
+                                            ),
+                                          ),
+                                          _horizontalSliverList(
+                                            height: 138.0,
+                                            itemExtent: 108.0,
+                                            list: playlistSearchTemp,
+                                            builder: (item) {
+                                              final playlistName = item;
+                                              final playlist = PlaylistController.inst.getPlaylist(playlistName);
+
+                                              return Container(
+                                                width: 130.0,
+                                                margin: const EdgeInsets.only(left: 2.0),
+                                                child: MultiArtworkCard(
+                                                  tracks: playlist?.tracks.toTracks() ?? [],
+                                                  name: playlist?.name.translatePlaylistName() ?? playlistName,
+                                                  countPerRow: Dimensions.playlistSearchGridCount,
+                                                  heroTag: 'playlist_$playlistName',
+                                                  showMenuFunction: () => NamidaDialogs.inst.showPlaylistDialog(playlistName),
+                                                  onTap: () => NamidaOnTaps.inst.onNormalPlaylistTap(playlistName),
+                                                ),
+                                              );
+                                            },
+                                          ),
+                                        ],
+
+                                        // == Folders ==
+                                        if (folderSearchTemp != null && folderSearchTemp.isNotEmpty) ...[
+                                          SliverToBoxAdapter(
+                                            child: SearchPageTitleRow(
+                                              title: '${lang.folders} • ${folderSearchTemp.length}',
+                                              icon: Broken.folder,
+                                            ),
+                                          ),
+                                          _horizontalSliverList(
+                                            height: 48.0 + 4 * 2,
+                                            itemExtent: null,
+                                            list: folderSearchTemp,
+                                            builder: (item) {
+                                              final folder = Folder.explicit(item);
+                                              final tracks = folder.tracksDedicated();
+                                              return _FolderSmallCard(
+                                                folder: folder,
+                                                controller: FoldersController.tracks,
+                                                tracks: tracks,
+                                              );
+                                            },
+                                          ),
+                                        ],
+                                        // == Video Folders ==
+                                        if (folderVideosSearchTemp != null && folderVideosSearchTemp.isNotEmpty) ...[
+                                          SliverToBoxAdapter(
+                                            child: SearchPageTitleRow(
+                                              title: '${lang.videos} • ${folderVideosSearchTemp.length}',
+                                              icon: Broken.folder,
+                                            ),
+                                          ),
+                                          _horizontalSliverList(
+                                            height: 48.0 + 4 * 2,
+                                            itemExtent: null,
+                                            list: folderVideosSearchTemp,
+                                            builder: (item) {
+                                              final folder = VideoFolder.explicit(item);
+                                              final tracks = folder.tracksDedicated();
+                                              return _FolderSmallCard(
+                                                folder: folder,
+                                                controller: FoldersController.videos,
+                                                tracks: tracks,
+                                              );
+                                            },
+                                          ),
+                                        ],
+
+                                        // == Tracks ==
+                                        if (tracksSearchTemp.isNotEmpty) ...[
+                                          SliverToBoxAdapter(
+                                            child: Tooltip(
+                                              message: lang.trackPlayMode,
+                                              child: SearchPageTitleRow(
+                                                title: '$tracksSearchTitle • ${tracksSearchTemp.length}',
+                                                icon: Broken.music_circle,
+                                                subtitleWidget: Row(
+                                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                                  children: [
+                                                    NamidaPopupWrapper(
+                                                      children: () => const [SortByMenuTracksSearch()],
+                                                      child: NamidaInkWell(
+                                                        child: Obx(
+                                                          (context) {
+                                                            final isAuto = settings.tracksSortSearchIsAuto.valueR;
+                                                            final activeType = isAuto ? null : settings.tracksSortSearch.valueR;
+                                                            return Text(
+                                                              [
+                                                                ?activeType?.toText(),
+                                                                if (isAuto) '(${lang.auto})',
+                                                              ].join(' '),
+                                                              style: textTheme.displaySmall?.copyWith(
+                                                                color: isAuto ? null : theme.colorScheme.secondary,
+                                                              ),
+                                                            );
+                                                          },
+                                                        ),
+                                                      ),
+                                                    ),
+                                                    const SizedBox(width: 4.0),
+                                                    NamidaInkWell(
+                                                      onTap: () {
+                                                        if (settings.tracksSortSearchIsAuto.value) return;
+                                                        SearchSortController.inst.sortTracksSearch(reverse: !settings.tracksSortSearchReversed.value, canSkipSorting: false);
+                                                      },
+                                                      child: Obx(
+                                                        (context) {
+                                                          final isAuto = settings.tracksSortSearchIsAuto.valueR;
+                                                          final activeReverse = isAuto ? false : settings.tracksSortSearchReversed.valueR;
+                                                          return Icon(
+                                                            activeReverse ? Broken.arrow_up_3 : Broken.arrow_down_2,
+                                                            size: 16.0,
+                                                            color: isAuto ? null : theme.colorScheme.secondary,
+                                                          );
+                                                        },
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                                trailing: NamidaButton(
+                                                  colors: .mid,
+                                                  icon: Broken.play,
+                                                  text: settings.trackPlayMode.valueR.toText(),
+                                                  onTap: () {
+                                                    final element = settings.trackPlayMode.value.nextElement(TrackPlayMode.values);
+                                                    settings.save(trackPlayMode: element);
+                                                  },
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                          const SliverPadding(padding: EdgeInsets.only(bottom: 8.0)),
+                                          SliverFixedExtentList.builder(
+                                            itemCount: tracksSearchTemp.length,
+                                            itemExtent: Dimensions.inst.trackTileItemExtent,
+                                            itemBuilder: (context, i) {
+                                              final track = tracksSearchTemp[i];
+                                              return AnimatingTile(
+                                                position: i,
+                                                child: TrackTile(
+                                                  properties: properties,
+                                                  index: i,
+                                                  trackOrTwd: track,
+                                                  tracks: tracksSearchTemp,
+                                                ),
+                                              );
+                                            },
+                                          ),
+                                        ],
+
+                                        kBottomPaddingWidgetSliver,
+                                      ],
+                                    );
+                                  },
+                                ),
+                              ),
+                            ),
+                          ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          YoutubeSearchResultsPage(
+            key: ScrollSearchController.inst.ytSearchKey,
+            searchTextCallback: null,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FolderSmallCard extends StatelessWidget {
+  final Folder folder;
+  final FoldersController controller;
+  final List<Track> tracks;
+
+  const _FolderSmallCard({
+    required this.folder,
+    required this.controller,
+    required this.tracks,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final folderName = folder.folderNameTryFormatNetwork();
+    final theme = context.theme;
+    final textTheme = theme.textTheme;
+    return ConstrainedBox(
+      constraints: BoxConstraints(maxWidth: context.width * 0.75),
+      child: NamidaInkWell(
+        margin: const EdgeInsets.only(left: 6.0),
+        padding: const EdgeInsets.symmetric(vertical: 4.0),
+        onTap: () => NamidaOnTaps.inst.onFolderTapNavigate(folder, controller),
+        onLongPress: () => NamidaDialogs.inst.showFolderDialog(
+          folder: folder,
+          tracks: tracks,
+          controller: controller,
+          isTracksRecursive: false,
+        ),
+        borderRadius: 8.0,
+        bgColor: theme.colorScheme.secondary.withOpacityExt(0.12),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(width: 4.0),
+            ArtworkWidget(
+              key: Key(tracks.pathToImage),
+              track: tracks.trackOfImage,
+              thumbnailSize: 48.0,
+              path: tracks.pathToImage,
+              forceSquared: true,
+            ),
+            const SizedBox(width: 4.0),
+            Flexible(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    folderName,
+                    softWrap: false,
+                    overflow: TextOverflow.fade,
+                    style: textTheme.displayMedium?.copyWith(
+                      fontSize: 13.0,
+                    ),
+                  ),
+                  const SizedBox(height: 1.0),
+                  Text(
+                    tracks.length.displayTrackKeyword,
+                    softWrap: false,
+                    overflow: TextOverflow.fade,
+                    style: textTheme.displaySmall?.copyWith(
+                      fontSize: 12.0,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12.0),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _FilterChip extends StatelessWidget {
+  final String? title;
+  final bool isForcelyEnabled;
+  final bool isActive;
+  final MediaType type;
+  final VoidCallback? customOnTap;
+  const _FilterChip({
+    this.title,
+    required this.isForcelyEnabled,
+    required this.isActive,
+    required this.type,
+    this.customOnTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = context.theme;
+    final textTheme = theme.textTheme;
+    return NamidaOpacity(
+      opacity: isForcelyEnabled ? 0.6 : 1.0,
+      child: NamidaInkWell(
+        bgColor: isActive ? theme.colorScheme.secondary.withOpacityExt(0.12) : null,
+        borderRadius: 8.0,
+        onTap: () async {
+          if (isForcelyEnabled) return;
+          if (customOnTap != null) {
+            customOnTap!();
+            return;
+          }
+          if (isActive) {
+            settings.removeFromList(activeSearchMediaTypes1: type);
+            await SearchSortController.inst.disposeMediaResources(type);
+          } else {
+            settings.save(activeSearchMediaTypes: [type]);
+            await SearchSortController.inst.prepareResources();
+            SearchSortController.inst.searchAll(ScrollSearchController.inst.searchTextEditingController.text);
+          }
+        },
+        margin: const EdgeInsets.symmetric(horizontal: 3.0, vertical: 12.0),
+        padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 6.0),
+        decoration: BoxDecoration(
+          border: Border.all(
+            color: theme.colorScheme.secondary.withOpacityExt(0.7),
+            width: 1.5,
+          ),
+        ),
+        child: Row(
+          children: [
+            Text(
+              title ?? type.toText(),
+              style: textTheme.displayMedium?.copyWith(
+                color: theme.colorScheme.secondary.withOpacityExt(0.7),
+              ),
+            ),
+            const SizedBox(width: 8.0),
+            NamidaCheckMark(
+              size: 12.0,
+              active: isActive,
+              activeColor: theme.colorScheme.secondary.withOpacityExt(0.7),
+              inactiveColor: theme.colorScheme.secondary.withOpacityExt(0.7),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

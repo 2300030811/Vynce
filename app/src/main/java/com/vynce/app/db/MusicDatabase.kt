@@ -60,8 +60,12 @@ class MusicDatabase(
 
     fun transaction(block: MusicDatabase.() -> Unit) = with(delegate) {
         transactionExecutor.execute {
-            runInTransaction {
-                block(this@MusicDatabase)
+            try {
+                runInTransaction {
+                    block(this@MusicDatabase)
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("MusicDatabase", "Transaction failed", e)
             }
         }
     }
@@ -125,6 +129,7 @@ class MusicDatabase(
         AutoMigration(from = 17, to = 18, spec = Migration17To18::class), // Fix Room nonsense
         AutoMigration(from = 18, to = 19), // Recent activity
         AutoMigration(from = 19, to = 20, spec = Migration19To20::class), // Db optimization, remove totalplaytime, local media fields
+        AutoMigration(from = 20, to = 21)
     ]
 )
 @TypeConverters(Converters::class)
@@ -142,7 +147,6 @@ abstract class InternalDatabase : RoomDatabase() {
                     .addMigrations(MIGRATION_14_15)
                     .addMigrations(MIGRATION_15_16)
                     .addMigrations(MIGRATION_16_17)
-                    .fallbackToDestructiveMigration()
                     .build()
             )
 
@@ -154,7 +158,6 @@ abstract class InternalDatabase : RoomDatabase() {
                     .addMigrations(MIGRATION_14_15)
                     .addMigrations(MIGRATION_15_16)
                     .addMigrations(MIGRATION_16_17)
-                    .fallbackToDestructiveMigration()
                     .build()
             )
     }

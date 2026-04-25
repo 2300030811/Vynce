@@ -8,9 +8,11 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.security.MessageDigest
 
+import com.vynce.app.BuildConfig
+
 class LastFmScrobbler(
-    private val apiKey: String = "YOUR_LASTFM_API_KEY",
-    private val apiSecret: String = "YOUR_LASTFM_API_SECRET"
+    private val apiKey: String = BuildConfig.LASTFM_API_KEY,
+    private val apiSecret: String = BuildConfig.LASTFM_API_SECRET
 ) {
     private val client = OkHttpClient()
     private val BASE = "https://ws.audioscrobbler.com/2.0/"

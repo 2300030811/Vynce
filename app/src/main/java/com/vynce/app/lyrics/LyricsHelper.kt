@@ -51,6 +51,9 @@ class LyricsHelper @Inject constructor(
             return parseLrc(cached.lyrics, trim, multiline)
         }
         val dbLyrics = database.lyrics(mediaMetadata.id).let { it.first()?.lyrics }
+        if (dbLyrics == LYRICS_NOT_FOUND) {
+            return null  // previously searched, not available
+        }
         if (dbLyrics != null && !prefLocal) {
             return parseLrc(dbLyrics, trim, multiline)
         }
@@ -155,8 +158,7 @@ class LyricsHelper @Inject constructor(
         duration: Int,
         callback: (LyricsResult) -> Unit,
     ) {
-        val cacheKey = "$songArtists-$songTitle".replace(" ", "")
-        cache.get(cacheKey)?.let { results ->
+        cache.get(mediaId)?.let { results ->
             results.forEach {
                 callback(it)
             }
@@ -172,11 +174,11 @@ class LyricsHelper @Inject constructor(
                 }
             }
         }
-        cache.put(cacheKey, allResult)
+        cache.put(mediaId, allResult)
     }
 
     companion object {
-        private const val MAX_CACHE_SIZE = 3
+        private const val MAX_CACHE_SIZE = 20
     }
 }
 

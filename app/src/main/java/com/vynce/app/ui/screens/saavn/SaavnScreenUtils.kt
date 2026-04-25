@@ -1,11 +1,8 @@
 package com.vynce.app.ui.screens.saavn
 
-import androidx.compose.ui.graphics.Color
-import androidx.core.net.toUri
-import androidx.media3.common.MediaItem
-import androidx.media3.common.MediaMetadata
 import com.vynce.app.playback.PlayerConnection
-import com.zionhuang.jiosaavn.JioSaavn
+import com.vynce.app.playback.queues.ListQueue
+import com.vynce.app.utils.toSaavnMediaMetadata
 import com.zionhuang.jiosaavn.SaavnSong
 
 fun formatDuration(seconds: Int): String {
@@ -23,28 +20,19 @@ fun formatFollowerCount(count: String): String {
     }
 }
 
+/**
+ * Play a list of JioSaavn songs through the proper QueueBoard pipeline.
+ * Using playerConnection.playQueue() ensures MusicService/QueueBoard get correctly
+ * notified, which prevents crashes from getCurrentQueue() returning null.
+ */
 fun playAllSongs(songs: List<SaavnSong>, playerConnection: PlayerConnection?) {
     if (songs.isEmpty()) return
-    with(JioSaavn) {
-        val mediaItems = songs.mapNotNull { song ->
-            song.streamUrl()?.let { url ->
-                MediaItem.Builder()
-                    .setMediaId("saavn:${song.id}")
-                    .setUri(url)
-                    .setMediaMetadata(MediaMetadata.Builder()
-                        .setTitle(song.name)
-                        .setArtist(song.artistNames())
-                        .setArtworkUri(song.thumbnailUrl()?.replace("http://","https://")?.toUri())
-                        .build())
-                    .build()
-            }
-        }
-        playerConnection?.player?.apply {
-            clearMediaItems()
-            addMediaItems(mediaItems)
-            prepare()
-            playWhenReady = true
-            play()
-        }
-    }
+    playerConnection ?: return
+    val metadataList = songs.map { it.toSaavnMediaMetadata() }
+    playerConnection.playQueue(
+        ListQueue(
+            title = songs.firstOrNull()?.name ?: "Playlist",
+            items = metadataList
+        )
+    )
 }

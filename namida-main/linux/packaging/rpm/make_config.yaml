@@ -1,0 +1,36 @@
+display_name: Namida
+summary: A Beautiful and Feature-rich Music Player, With YouTube & Video Support Built in Flutter
+group: Applications/Media Player
+vendor: MSOB7YY
+packager: MSOB7YY
+packagerEmail: namida.coo@gmail.com
+license: EULA
+url: https://github.com/namidaco/namida
+icon: linux/icons/namida_512.png
+bin_name: namida
+package_name: namida
+build_arch: x86_64
+
+requires:
+  - mpv # (has mpv-devel as sub)
+  - libepoxy
+  - bzip2-libs
+
+keywords:
+  - API
+  - API Client
+
+generic_name: Media Player
+
+changelog: https://github.com/namidaco/namida/blob/main/CHANGELOG.md
+
+categories:
+  - AudioVideo
+  - Audio
+  - Video
+  - Player
+
+startup_notify: true
+
+post_install_symlinks:
+  /usr/lib64/libbz2.so.1.0: /usr/lib64/libbz2.so.1

@@ -75,7 +75,7 @@ object LrcLib {
         var plain = 0
         tracks.forEach {
             if (count <= 4) {
-                if (it.syncedLyrics != null && duration == -1) {
+                if (it.syncedLyrics != null && duration <= 0) {
                     count++
                     it.syncedLyrics.let(callback)
                 } else {
