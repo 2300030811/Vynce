@@ -43,8 +43,8 @@ android {
         applicationId = "com.vynce.app"
         minSdk = 24
         targetSdk = 36
-        versionCode = 73
-        versionName = "1.1.1"
+        versionCode = 74
+        versionName = "1.1.3"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         manifestPlaceholders["appAuthRedirectScheme"] = "com.vynce.app"
         
