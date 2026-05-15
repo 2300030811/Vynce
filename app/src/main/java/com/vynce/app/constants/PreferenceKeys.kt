@@ -82,6 +82,7 @@ val LyricFontSizeKey = intPreferencesKey("lyricFontSize")
 val LyricClickable = booleanPreferencesKey("lyricClickable")
 val LyricKaraokeEnable = booleanPreferencesKey("lyricKaraokeEnable")
 val LyricUpdateSpeed = stringPreferencesKey("lyricUpdateSpeed")
+val LyricOffsetKey = longPreferencesKey("lyricOffset")
 
 
 /**
@@ -177,6 +178,14 @@ val LastFmUsernameKey = stringPreferencesKey("lastfmUsername")
 val LastUpdateCheckKey = longPreferencesKey("lastUpdateCheck")
 val LastVersionKey = stringPreferencesKey("lastVersion")
 val UpdateAvailableKey = booleanPreferencesKey("updateAvailable")
+
+/**
+ * Backup
+ */
+val AutoBackupKey = booleanPreferencesKey("autoBackup")
+val AutoBackupFrequencyKey = stringPreferencesKey("autoBackupFrequency")
+val MaxAutoBackupsKey = intPreferencesKey("maxAutoBackups")
+val LastAutoBackupKey = longPreferencesKey("lastAutoBackup")
 
 val LanguageCodeToName = mapOf(
     "af" to "Afrikaans",

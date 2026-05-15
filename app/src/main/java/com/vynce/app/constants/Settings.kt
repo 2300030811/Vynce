@@ -165,6 +165,12 @@ enum class LikedAutodownloadMode {
     OFF, ON, WIFI_ONLY
 }
 
+enum class AutoBackupFrequency(val intervalMillis: Long) {
+    DAILY(24L * 60L * 60L * 1000L),
+    WEEKLY(7L * 24L * 60L * 60L * 1000L),
+    MONTHLY(30L * 24L * 60L * 60L * 1000L),
+}
+
 
 /*
 ---------------------------

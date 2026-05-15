@@ -42,6 +42,8 @@ import com.vynce.app.utils.saavnHighResHttps
 import java.util.Calendar
 import kotlinx.coroutines.launch
 import android.widget.Toast
+import com.vynce.app.ui.component.shimmer.*
+import com.vynce.app.ui.utils.shimmer
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -168,12 +170,23 @@ fun HomeScreen(
                     }
                 } else if (state.isLoading) {
                     item(key = "artists_shimmer_h") { SectionHeader("Top Artists") }
-                    item(key = "artists_shimmer") { ArtistShimmerRow() }
+                    item(key = "artists_shimmer") {
+                        LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                            items(6) {
+                                val placeholderColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
+                                Column(Modifier.width(96.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Box(Modifier.size(96.dp).clip(CircleShape).background(placeholderColor).shimmer())
+                                    Spacer(Modifier.height(8.dp))
+                                    Box(Modifier.width(56.dp).height(12.dp).clip(RoundedCornerShape(4.dp)).background(placeholderColor).shimmer())
+                                }
+                            }
+                        }
+                    }
                 }
 
                 // ── DYNAMIC SECTIONS ───────────────────────────
                 if (state.isLoading && state.sections.isEmpty()) {
-                    items(3) { PlaylistShimmer() }
+                    item { HomeShimmer() }
                 } else {
                     state.sections.forEachIndexed { index, section ->
                         item(key = "sec_header_$index") {
@@ -388,46 +401,7 @@ fun ArtistLetterAvatar(name: String, bgColor: Color) {
 
 // ── Shimmer / Error states ──────────────────────────────────────────
 
-@Composable
-fun PlaylistShimmer() {
-    val alpha by rememberInfiniteTransition(label = "s").animateFloat(
-        0.15f, 0.4f, infiniteRepeatable(tween(900, easing = LinearEasing), RepeatMode.Reverse), label = "s"
-    )
-    Column(Modifier.padding(start = 16.dp, top = 8.dp)) {
-        // Header shimmer
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(40.dp).clip(RoundedCornerShape(10.dp)).background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = alpha)))
-            Spacer(Modifier.width(12.dp))
-            Box(Modifier.width(120.dp).height(16.dp).clip(RoundedCornerShape(4.dp)).background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = alpha)))
-        }
-        Spacer(Modifier.height(12.dp))
-        LazyRow(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-            items(4) {
-                Column(Modifier.width(150.dp)) {
-                    Box(Modifier.size(150.dp).clip(RoundedCornerShape(14.dp)).background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = alpha)))
-                    Spacer(Modifier.height(8.dp))
-                    Box(Modifier.fillMaxWidth(0.7f).height(12.dp).clip(RoundedCornerShape(4.dp)).background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = alpha)))
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun ArtistShimmerRow() {
-    val alpha by rememberInfiniteTransition(label = "as").animateFloat(
-        0.15f, 0.4f, infiniteRepeatable(tween(900, easing = LinearEasing), RepeatMode.Reverse), label = "as"
-    )
-    LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-        items(6) {
-            Column(Modifier.width(96.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                Box(Modifier.size(96.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = alpha)))
-                Spacer(Modifier.height(8.dp))
-                Box(Modifier.width(56.dp).height(12.dp).clip(RoundedCornerShape(4.dp)).background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = alpha)))
-            }
-        }
-    }
-}
+// Shimmer / Error states moved to ShimmerComponents.kt
 
 @Composable
 fun SectionErrorCard(title: String, onRetry: () -> Unit) {

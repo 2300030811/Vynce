@@ -4,17 +4,16 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vynce.app.constants.StatPeriod
 import com.vynce.app.db.MusicDatabase
-import com.vynce.app.utils.reportException
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.launch
-import java.time.Duration
 import java.time.LocalDateTime
+import java.util.Locale
 import javax.inject.Inject
 
 // redoing this whole feature later, plz ignore the slop code
@@ -41,7 +40,11 @@ class StatsViewModel @Inject constructor(
         database.mostPlayedAlbums(period.toTimeMillis())
     }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
-    init {
-    }
+    val lostMemories = flowOf(LocalDateTime.now()).map { now ->
+        val dateMonth = String.format(Locale.ROOT, "%02d-%02d", now.monthValue, now.dayOfMonth)
+        val currentYear = now.year.toString()
+        database.lostMemories(dateMonth, currentYear)
+    }.flatMapLatest { it }
+        .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 }
 

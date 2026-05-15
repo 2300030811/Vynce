@@ -30,7 +30,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.vynce.app.LocalPlayerAwareWindowInsets
-import com.vynce.app.ui.utils.isScrollingUp
+import com.vynce.app.ui.utils.isScrollingUp as utilIsScrollingUp
 
 @Composable
 fun BoxScope.HideOnScrollFAB(
@@ -40,7 +40,7 @@ fun BoxScope.HideOnScrollFAB(
     onClick: () -> Unit,
 ) {
     AnimatedVisibility(
-        visible = visible && lazyListState.isScrollingUp(),
+        visible = visible && lazyListState.utilIsScrollingUp(),
         enter = slideInVertically { it },
         exit = slideOutVertically { it },
         modifier = Modifier
@@ -70,7 +70,7 @@ fun BoxScope.HideOnScrollFAB(
     onClick: () -> Unit,
 ) {
     AnimatedVisibility(
-        visible = visible && lazyListState.isScrollingUp(),
+        visible = visible && lazyListState.utilIsScrollingUp(),
         enter = slideInVertically { it },
         exit = slideOutVertically { it },
         modifier = Modifier
@@ -101,7 +101,7 @@ fun BoxScope.HideOnScrollFAB(
     onClick: () -> Unit,
 ) {
     AnimatedVisibility(
-        visible = visible && lazyListState.isScrollingUp(),
+        visible = visible && lazyListState.utilIsScrollingUp(),
         enter = slideInVertically { it },
         exit = slideOutVertically { it },
         modifier = Modifier
@@ -131,7 +131,7 @@ fun BoxScope.HideOnScrollFAB(
     onClick: () -> Unit,
 ) {
     AnimatedVisibility(
-        visible = visible && scrollState.isScrollingUp(),
+        visible = visible && scrollState.utilIsScrollingUp(),
         enter = slideInVertically { it },
         exit = slideOutVertically { it },
         modifier = Modifier
@@ -161,7 +161,7 @@ fun BoxScope.HideOnScrollFAB(
     onClick: () -> Unit,
 ) {
     AnimatedVisibility(
-        visible = visible && lazyListState.isScrollingUp(),
+        visible = visible && lazyListState.utilIsScrollingUp(),
         enter = slideInVertically { it },
         exit = slideOutVertically { it },
         modifier = Modifier
@@ -191,7 +191,7 @@ fun BoxScope.HideOnScrollFAB(
     onClick: () -> Unit,
 ) {
     AnimatedVisibility(
-        visible = visible && scrollState.isScrollingUp(),
+        visible = visible && scrollState.utilIsScrollingUp(),
         enter = slideInVertically { it },
         exit = slideOutVertically { it },
         modifier = Modifier

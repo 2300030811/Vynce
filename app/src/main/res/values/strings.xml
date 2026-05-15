@@ -206,6 +206,8 @@ We recycle translations from upstream, they are pulled periodically. -->
 
     <!-- Player -->
     <string name="lyrics_not_found">Lyrics not found</string>
+    <string name="lyrics_offset">Lyrics offset</string>
+    <string name="lyrics_offset_desc">Adjust lyrics timing (±ms)</string>
     <string name="sleep_timer">Sleep timer</string>
     <string name="end_of_song">End of song</string>
     <plurals name="minute">

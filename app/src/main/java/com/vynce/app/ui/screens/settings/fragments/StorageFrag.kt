@@ -58,16 +58,23 @@ import coil3.imageLoader
 import com.vynce.app.LocalDownloadUtil
 import com.vynce.app.LocalPlayerConnection
 import com.vynce.app.R
+import com.vynce.app.constants.AutoBackupFrequency
+import com.vynce.app.constants.AutoBackupFrequencyKey
+import com.vynce.app.constants.AutoBackupKey
 import com.vynce.app.constants.DownloadExtraPathKey
 import com.vynce.app.constants.DownloadPathKey
+import com.vynce.app.constants.LastAutoBackupKey
+import com.vynce.app.constants.MaxAutoBackupsKey
 import com.vynce.app.constants.MaxImageCacheSizeKey
 import com.vynce.app.constants.MaxSongCacheSizeKey
 import com.vynce.app.constants.ScanPathsKey
 import com.vynce.app.constants.ThumbnailCornerRadius
 import com.vynce.app.db.MusicDatabase
 import com.vynce.app.extensions.tryOrNull
+import com.vynce.app.ui.component.EnumListPreference
 import com.vynce.app.ui.component.ListPreference
 import com.vynce.app.ui.component.PreferenceEntry
+import com.vynce.app.ui.component.SwitchPreference
 import com.vynce.app.ui.component.SettingsClickToReveal
 import com.vynce.app.ui.component.button.IconButton
 import com.vynce.app.ui.component.button.ResizableIconButton
@@ -76,6 +83,7 @@ import com.vynce.app.ui.dialog.DefaultDialog
 import com.vynce.app.ui.dialog.InfoLabel
 import com.vynce.app.utils.dlCoroutine
 import com.vynce.app.utils.formatFileSize
+import com.vynce.app.utils.rememberEnumPreference
 import com.vynce.app.utils.rememberPreference
 import com.vynce.app.utils.scanners.absoluteFilePathFromUri
 import com.vynce.app.utils.scanners.stringFromUriList
@@ -85,7 +93,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import java.time.Instant
 import java.time.LocalDateTime
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
 @Composable
@@ -121,8 +131,6 @@ fun ColumnScope.BackupAndRestoreFrag(viewModel: BackupRestoreViewModel) {
             }
         )
     }
-    Spacer(modifier = Modifier.height(16.dp))
-
     ElevatedCard(
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -133,6 +141,65 @@ fun ColumnScope.BackupAndRestoreFrag(viewModel: BackupRestoreViewModel) {
                 restoreLauncher.launch(arrayOf("application/octet-stream"))
             }
         )
+    }
+    Spacer(modifier = Modifier.height(16.dp))
+
+    val (autoBackup, onAutoBackupChange) = rememberPreference(AutoBackupKey, false)
+    val (autoBackupFrequency, onAutoBackupFrequencyChange) = rememberEnumPreference(
+        AutoBackupFrequencyKey,
+        AutoBackupFrequency.DAILY
+    )
+    val (maxAutoBackups, onMaxAutoBackupsChange) = rememberPreference(MaxAutoBackupsKey, 10)
+    val lastAutoBackup by rememberPreference(LastAutoBackupKey, 0L)
+    val lastAutoBackupText = if (lastAutoBackup == 0L) {
+        stringResource(R.string.never)
+    } else {
+        DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
+            .withZone(ZoneId.systemDefault())
+            .format(Instant.ofEpochMilli(lastAutoBackup))
+    }
+
+    ElevatedCard(
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        SwitchPreference(
+            title = { Text(stringResource(R.string.auto_backup)) },
+            description = stringResource(R.string.auto_backup_description),
+            checked = autoBackup,
+            onCheckedChange = onAutoBackupChange
+        )
+        if (autoBackup) {
+            EnumListPreference(
+                title = { Text(stringResource(R.string.auto_backup_frequency)) },
+                icon = null,
+                selectedValue = autoBackupFrequency,
+                valueText = {
+                    when (it) {
+                        AutoBackupFrequency.DAILY -> stringResource(R.string.backup_frequency_daily)
+                        AutoBackupFrequency.WEEKLY -> stringResource(R.string.backup_frequency_weekly)
+                        AutoBackupFrequency.MONTHLY -> stringResource(R.string.backup_frequency_monthly)
+                    }
+                },
+                onValueSelected = onAutoBackupFrequencyChange,
+                values = listOf(
+                    AutoBackupFrequency.DAILY,
+                    AutoBackupFrequency.WEEKLY,
+                    AutoBackupFrequency.MONTHLY
+                )
+            )
+            ListPreference(
+                title = { Text(stringResource(R.string.max_auto_backups)) },
+                selectedValue = maxAutoBackups,
+                values = listOf(5, 10, 20, 50),
+                valueText = { it.toString() },
+                onValueSelected = onMaxAutoBackupsChange
+            )
+            PreferenceEntry(
+                title = { Text(stringResource(R.string.last_auto_backup)) },
+                description = lastAutoBackupText,
+                onClick = {}
+            )
+        }
     }
 }
 

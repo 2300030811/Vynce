@@ -17,16 +17,12 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.core.net.toUri
 import androidx.navigation.NavController
 import coil3.compose.AsyncImage
 import com.vynce.app.playback.PlayerConnection
 import com.zionhuang.jiosaavn.JioSaavn
 import com.zionhuang.jiosaavn.SaavnAlbumInfo
 import com.zionhuang.jiosaavn.SaavnSong
-import com.vynce.app.utils.playJioSaavnSong
-import androidx.media3.common.MediaItem
-import androidx.media3.common.MediaMetadata
 
 @Composable
 fun AlbumScreen(
@@ -70,7 +66,7 @@ fun AlbumScreen(
                 // Play All + Shuffle buttons
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Button(
-                        onClick = { playAllSongs(songs, playerConnection) },
+                        onClick = { playAllSongs(albumInfo.name, songs, playerConnection) },
                         modifier = Modifier.weight(1f)
                     ) {
                         Icon(Icons.Rounded.PlayArrow, null)
@@ -78,7 +74,14 @@ fun AlbumScreen(
                         Text("Play all")
                     }
                     OutlinedButton(
-                        onClick = { playAllSongs(songs.shuffled(), playerConnection) },
+                        onClick = {
+                            playAllSongs(
+                                title = albumInfo.name,
+                                songs = songs,
+                                playerConnection = playerConnection,
+                                shuffle = true
+                            )
+                        },
                         modifier = Modifier.weight(1f)
                     ) {
                         Icon(Icons.Rounded.Shuffle, null)
@@ -100,7 +103,14 @@ fun AlbumScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { playJioSaavnSong(song, playerConnection) }
+                        .clickable {
+                            playAllSongs(
+                                title = albumInfo.name,
+                                songs = songs,
+                                playerConnection = playerConnection,
+                                startIndex = index
+                            )
+                        }
                         .padding(horizontal = 16.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -128,4 +138,3 @@ fun AlbumScreen(
         }
     }
 }
-

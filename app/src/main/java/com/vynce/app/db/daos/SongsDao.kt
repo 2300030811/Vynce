@@ -376,6 +376,18 @@ interface SongsDao {
         LIMIT 200
     """)
     fun historySongs(): Flow<List<Song>>
+
+    // region Lost Memories
+    @Transaction
+    @Query("""
+        SELECT song.* FROM song
+        JOIN event ON song.id = event.songId
+        WHERE strftime('%m-%d', event.timestamp / 1000, 'unixepoch') = :dateMonth
+        AND strftime('%Y', event.timestamp / 1000, 'unixepoch') < :currentYear
+        GROUP BY song.id
+        ORDER BY event.timestamp DESC
+    """)
+    fun lostMemories(dateMonth: String, currentYear: String): Flow<List<Song>>
     // endregion
     // endregion
 

@@ -178,12 +178,15 @@ import com.vynce.app.ui.dialog.ActionPromptDialog
 import com.vynce.app.ui.screens.saavn.AlbumScreen
 import com.vynce.app.ui.screens.saavn.ArtistScreen
 import com.vynce.app.ui.screens.saavn.PlaylistScreen
+import com.vynce.app.viewmodels.BackupRestoreViewModel
 import android.net.Uri
 import androidx.lifecycle.lifecycleScope
 
 import com.vynce.app.utils.lmScannerCoroutine
 import com.vynce.app.utils.rememberEnumPreference
 import com.vynce.app.utils.rememberPreference
+import com.vynce.app.utils.dataStore
+import com.vynce.app.utils.getAsync
 import com.valentinilk.shimmer.LocalShimmerTheme
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.SupervisorJob
@@ -263,6 +266,9 @@ class MainActivity : ComponentActivity() {
         WindowCompat.setDecorFitsSystemWindows(window, false)
 
         activityLauncher = ActivityLauncherHelper(this)
+
+        val backupViewModel = ViewModelProvider(this)[BackupRestoreViewModel::class.java]
+        backupViewModel.autoBackup()
 
         setContent {
             Log.v(MAIN_TAG, "RC-1")
@@ -739,8 +745,14 @@ class MainActivity : ComponentActivity() {
                             }
 
                             // Setup wizard
+                            // Read OOBE status directly from DataStore to avoid race condition
+                            // where rememberPreference initially returns defaultValue=0 before
+                            // the real persisted value loads, causing a false navigation to
+                            // setup_wizard on every app launch.
                             LaunchedEffect(Unit) {
-                                if (oobeStatus < OOBE_VERSION) {
+                                val actualOobeStatus = this@MainActivity.dataStore
+                                    .getAsync(OobeStatusKey, 0)
+                                if (actualOobeStatus < OOBE_VERSION) {
                                     navController.navigate("setup_wizard")
                                 }
                             }

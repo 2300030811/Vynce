@@ -21,6 +21,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.ExpandLess
 import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.Search
@@ -49,7 +50,7 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.vynce.app.LocalDatabase
 import com.vynce.app.R
 import com.vynce.app.constants.LyricTrimKey
@@ -63,6 +64,7 @@ import com.vynce.app.ui.component.button.IconButton
 import com.vynce.app.ui.dialog.DefaultDialog
 import com.vynce.app.ui.dialog.ListDialog
 import com.vynce.app.ui.dialog.TextFieldDialog
+import com.vynce.app.ui.screens.settings.fragments.LyricAdvancedFrag
 import com.vynce.app.ui.screens.settings.fragments.LyricFormatFrag
 import com.vynce.app.ui.screens.settings.fragments.LyricParserFrag
 import com.vynce.app.ui.screens.settings.fragments.LyricSourceFrag
@@ -82,6 +84,7 @@ fun LyricsMenu(
 ) {
     val context = LocalContext.current
     val database = LocalDatabase.current
+
 
     val multilineLrc by rememberPreference(MultilineLrcKey, defaultValue = true)
     val lyricTrim by rememberPreference(LyricTrimKey, defaultValue = false)
@@ -349,14 +352,34 @@ fun LyricsMenu(
         )
     }
 
+    var showLyricOffset by remember {
+        mutableStateOf(false)
+    }
+
     var showSettings by remember {
         mutableStateOf(false)
     }
+    if (showLyricOffset) {
+        DefaultDialog(
+            onDismiss = { showLyricOffset = false },
+            content = {
+                Column {
+                    LyricAdvancedFrag()
+                }
+            },
+            buttons = {
+                TextButton(onClick = { showLyricOffset = false }) {
+                    Text(text = stringResource(android.R.string.ok))
+                }
+            }
+        )
+    }
+
     if (showSettings) {
         DefaultDialog(
             onDismiss = { showSettings = false },
             content = {
-                Column() {
+                Column {
                     Text(
                         text = stringResource(R.string.settings),
                         style = MaterialTheme.typography.bodyLarge,
@@ -427,6 +450,13 @@ fun LyricsMenu(
             ) {
                 showDeleteLyric = true
             }
+        }
+
+        GridMenuItem(
+            icon = Icons.Rounded.History,
+            title = R.string.lyrics_offset,
+        ) {
+            showLyricOffset = true
         }
 
         GridMenuItem(

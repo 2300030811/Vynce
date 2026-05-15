@@ -2,6 +2,7 @@ package com.vynce.app.ui.screens
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -15,6 +16,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -25,6 +27,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.vynce.app.LocalMenuState
@@ -70,11 +74,16 @@ fun StatsScreen(
     val mostPlayedSongs by viewModel.mostPlayedSongs.collectAsState()
     val mostPlayedArtists by viewModel.mostPlayedArtists.collectAsState()
     val mostPlayedAlbums by viewModel.mostPlayedAlbums.collectAsState()
+    val lostMemories by viewModel.lostMemories.collectAsState()
 
     val coroutineScope = rememberCoroutineScope()
     val lazyListState = rememberLazyListState()
 
     val mostPlayedSongTitle = stringResource(R.string.most_played_songs)
+    val lostMemoriesTitle = stringResource(R.string.lost_memories)
+
+    // Compute thumbnail size in composable scope (not in LazyListScope)
+    val thumbnailSize = (ListThumbnailSize.value * density.density).roundToInt()
 
     LazyColumn(
         state = lazyListState,
@@ -97,14 +106,60 @@ fun StatsScreen(
             )
         }
 
-        item(key = "mostPlayedSongs") {
-            NavigationTitle(
-                title = stringResource(R.string.most_played_songs),
-                modifier = Modifier.animateItem()
-            )
+        if (lostMemories.isNotEmpty()) {
+            item(key = "lostMemoriesTitle") {
+                NavigationTitle(
+                    title = stringResource(R.string.lost_memories),
+                    modifier = Modifier.animateItem()
+                )
+                Text(
+                    text = stringResource(R.string.on_this_day),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.secondary,
+                    modifier = Modifier
+                        .padding(horizontal = 18.dp)
+                        .padding(bottom = 8.dp)
+                        .animateItem()
+                )
+            }
+
+            items(
+                items = lostMemories,
+                key = { "lost_${it.id}" }
+            ) { song ->
+                SongListItem(
+                    song = song,
+                    navController = navController,
+                    isActive = song.song.id == mediaMetadata?.id,
+                    isPlaying = isPlaying,
+                    inSelectMode = false,
+                    isSelected = false,
+                    onSelectedChange = {},
+                    swipeEnabled = swipeEnabled,
+                    thumbnailSize = thumbnailSize,
+                    onPlay = {
+                        playerConnection.playQueue(
+                            ListQueue(
+                                title = lostMemoriesTitle,
+                                items = lostMemories.map { it.toMediaMetadata() }
+                            )
+                        )
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .animateItem()
+                )
+            }
         }
 
-        val thumbnailSize = (ListThumbnailSize.value * density.density).roundToInt()
+        if (mostPlayedSongs.isNotEmpty()) {
+            item(key = "mostPlayedSongs") {
+                NavigationTitle(
+                    title = stringResource(R.string.most_played_songs),
+                    modifier = Modifier.animateItem()
+                )
+            }
+
         items(
             items = mostPlayedSongs,
             key = { it.id }
@@ -134,16 +189,18 @@ fun StatsScreen(
                     .animateItem()
             )
         }
+        } // End of mostPlayedSongs.isNotEmpty() condition
 
-        item(key = "mostPlayedArtists") {
-            NavigationTitle(
-                title = stringResource(R.string.most_played_artists),
-                modifier = Modifier.animateItem()
-            )
+        if (mostPlayedArtists.isNotEmpty()) {
+            item(key = "mostPlayedArtists") {
+                NavigationTitle(
+                    title = stringResource(R.string.most_played_artists),
+                    modifier = Modifier.animateItem()
+                )
 
-            LazyRow(
-                modifier = Modifier.animateItem()
-            ) {
+                LazyRow(
+                    modifier = Modifier.animateItem()
+                ) {
                 items(
                     items = mostPlayedArtists,
                     key = { it.artist.id }
@@ -170,6 +227,7 @@ fun StatsScreen(
                     )
                 }
             }
+            } // End of mostPlayedArtists.isNotEmpty() condition
         }
 
         if (mostPlayedAlbums.isNotEmpty()) {

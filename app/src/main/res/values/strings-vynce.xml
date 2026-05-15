@@ -361,4 +361,17 @@ while also allowing users to translate our app as well. New, specific strings to
     <string name="speed_medium">Medium</string>
     <string name="speed_fast">Fast</string>
     <string name="speed_very_fast">Very fast</string>
+    <string name="lost_memories">Lost Memories</string>
+    <string name="on_this_day">On this day in previous years</string>
+    <string name="auto_backup">Auto backup</string>
+    <string name="auto_backup_description">Automatically create a backup of your library and settings when starting the app</string>
+    <string name="auto_backup_frequency">Backup frequency</string>
+    <string name="max_auto_backups">Max auto backups</string>
+    <string name="max_auto_backups_description">Number of automatic backups to keep</string>
+    <string name="last_auto_backup">Last auto backup</string>
+    <string name="backup_frequency_daily">Daily</string>
+    <string name="backup_frequency_weekly">Weekly</string>
+    <string name="backup_frequency_monthly">Monthly</string>
+    <string name="never">Never</string>
+    <string name="lyric_offset_adjustment">Offset adjustment</string>
 </resources>

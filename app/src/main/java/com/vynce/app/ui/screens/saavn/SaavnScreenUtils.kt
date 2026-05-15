@@ -25,14 +25,23 @@ fun formatFollowerCount(count: String): String {
  * Using playerConnection.playQueue() ensures MusicService/QueueBoard get correctly
  * notified, which prevents crashes from getCurrentQueue() returning null.
  */
-fun playAllSongs(songs: List<SaavnSong>, playerConnection: PlayerConnection?) {
-    if (songs.isEmpty()) return
+fun playAllSongs(
+    title: String,
+    songs: List<SaavnSong>,
+    playerConnection: PlayerConnection?,
+    startIndex: Int = 0,
+    shuffle: Boolean = false,
+) {
     playerConnection ?: return
-    val metadataList = songs.map { it.toSaavnMediaMetadata() }
+    val queueSongs = if (shuffle) songs.shuffled() else songs
+    if (queueSongs.isEmpty()) return
+    val metadataList = queueSongs.map { it.toSaavnMediaMetadata() }
+    val queueStartIndex = if (shuffle) 0 else startIndex.coerceIn(metadataList.indices)
     playerConnection.playQueue(
         ListQueue(
-            title = songs.firstOrNull()?.name ?: "Playlist",
-            items = metadataList
+            title = title.ifBlank { "JioSaavn" },
+            items = metadataList,
+            startIndex = queueStartIndex
         )
     )
 }

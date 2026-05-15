@@ -30,7 +30,6 @@ import com.zionhuang.jiosaavn.SaavnAlbumInfo
 import com.zionhuang.jiosaavn.SaavnSong
 import com.vynce.app.ui.screens.home.SectionHeader
 import com.vynce.app.ui.component.items.SaavnSongListItem
-import com.vynce.app.utils.playJioSaavnSong
 
 @Composable
 fun ArtistScreen(
@@ -81,10 +80,20 @@ fun ArtistScreen(
         // Play button
         item {
             Row(modifier = Modifier.padding(16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Button(onClick = { playAllSongs(songs, playerConnection) }, modifier = Modifier.weight(1f)) {
+                Button(onClick = { playAllSongs(artistInfo.name, songs, playerConnection) }, modifier = Modifier.weight(1f)) {
                     Icon(Icons.Rounded.PlayArrow, null); Spacer(Modifier.width(4.dp)); Text("Play")
                 }
-                OutlinedButton(onClick = { playAllSongs(songs.shuffled(), playerConnection) }, modifier = Modifier.weight(1f)) {
+                OutlinedButton(
+                    onClick = {
+                        playAllSongs(
+                            title = artistInfo.name,
+                            songs = songs,
+                            playerConnection = playerConnection,
+                            shuffle = true
+                        )
+                    },
+                    modifier = Modifier.weight(1f)
+                ) {
                     Icon(Icons.Rounded.Shuffle, null); Spacer(Modifier.width(4.dp)); Text("Shuffle")
                 }
             }
@@ -98,7 +107,14 @@ fun ArtistScreen(
                     SaavnSongListItem(
                         song = song,
                         navController = navController,
-                        onPlay = { playJioSaavnSong(song, playerConnection) }
+                        onPlay = {
+                            playAllSongs(
+                                title = artistInfo.name,
+                                songs = songs,
+                                playerConnection = playerConnection,
+                                startIndex = songs.indexOf(song).coerceAtLeast(0)
+                            )
+                        }
                     )
                 }
             }
@@ -135,4 +151,3 @@ fun ArtistScreen(
         }
     }
 }
-

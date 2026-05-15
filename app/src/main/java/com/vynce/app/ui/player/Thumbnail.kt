@@ -24,6 +24,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
@@ -44,6 +47,7 @@ import com.vynce.app.ui.component.RotatingAlbumArt
 import com.vynce.app.constants.ShowLyricsKey
 import com.vynce.app.constants.ThumbnailCornerRadius
 import com.vynce.app.models.MediaMetadata
+import com.vynce.app.ui.component.InfiniteBorderAnimationView
 import com.vynce.app.ui.component.Lyrics
 import com.vynce.app.utils.rememberPreference
 
@@ -95,21 +99,39 @@ fun Thumbnail(
                     modifier = Modifier
                         .weight(1f, false)
                 ) {
-                    RotatingAlbumArt(
-                        artworkUrl = mediaMetadata?.thumbnailUrl,
-                        isPlaying = isPlaying,
-                        modifier = Modifier
-                            .aspectRatio(1f)
-                            .clip(RoundedCornerShape(16.dp))
-                            .clickable(
-                                interactionSource = remember { MutableInteractionSource() },
-                                indication = null,
-                                enabled = showLyricsOnClick,
-                            ) {
-                                showLyrics = !showLyrics
-                                haptic.performHapticFeedback(HapticFeedbackType.Confirm)
-                            }
+                    val premiumBrush = Brush.sweepGradient(
+                        colors = listOf(
+                            MaterialTheme.colorScheme.primary,
+                            MaterialTheme.colorScheme.secondary,
+                            MaterialTheme.colorScheme.tertiary,
+                            MaterialTheme.colorScheme.primary
+                        )
                     )
+
+                    InfiniteBorderAnimationView(
+                        isAnimated = isPlaying,
+                        brush = premiumBrush,
+                        backgroundColor = Color.Transparent,
+                        borderWidth = 2.dp,
+                        shape = RoundedCornerShape(16.dp),
+                        oneCircleDurationMillis = 4000
+                    ) {
+                        RotatingAlbumArt(
+                            artworkUrl = mediaMetadata?.thumbnailUrl,
+                            isPlaying = isPlaying,
+                            modifier = Modifier
+                                .aspectRatio(1f)
+                                .clip(RoundedCornerShape(16.dp))
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = null,
+                                    enabled = showLyricsOnClick,
+                                ) {
+                                    showLyrics = !showLyrics
+                                    haptic.performHapticFeedback(HapticFeedbackType.Confirm)
+                                }
+                        )
+                    }
                 }
             }
         }

@@ -15,7 +15,11 @@ import android.util.Log
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -85,18 +89,17 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-
+import androidx.compose.ui.draw.blur
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.blur
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
@@ -140,7 +143,6 @@ import com.vynce.app.playback.PlayerConnection
 import com.vynce.app.playback.QueueBoard
 import com.vynce.app.ui.component.BottomSheet
 import com.vynce.app.ui.component.BottomSheetState
-
 import com.vynce.app.ui.component.PlayerSliderTrack
 import com.vynce.app.ui.component.button.IconButton
 import com.vynce.app.ui.component.button.ResizableIconButton
@@ -154,13 +156,10 @@ import com.vynce.app.utils.coilCoroutine
 import com.vynce.app.utils.makeTimeString
 import com.vynce.app.utils.rememberEnumPreference
 import com.vynce.app.utils.rememberPreference
-
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
 import kotlin.math.max
-
-
 
 @SuppressLint("UnusedBoxWithConstraintsScope")
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
@@ -642,6 +641,22 @@ fun ControlsContent(
         label = "playPauseRoundness"
     )
 
+    val breathingScale = if (isPlaying) {
+        val infiniteTransition = rememberInfiniteTransition(label = "PlayButtonBreathing")
+        val scale by infiniteTransition.animateFloat(
+            initialValue = 1f,
+            targetValue = 1.05f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(1000, easing = LinearEasing),
+                repeatMode = RepeatMode.Reverse
+            ),
+            label = "breathingScale"
+        )
+        scale
+    } else {
+        1f
+    }
+
 
     val seekIncrement by rememberEnumPreference(
         key = SeekIncrementKey,
@@ -904,6 +919,10 @@ fun ControlsContent(
                 Box(
                     modifier = Modifier
                         .size(if (maxW >= 320.dp) if (showLyrics) 56.dp else 72.dp else 42.dp)
+                        .graphicsLayer {
+                            scaleX = breathingScale
+                            scaleY = breathingScale
+                        }
                         .animateContentSize()
                         .clip(RoundedCornerShape(playPauseRoundness))
                         .background(MaterialTheme.colorScheme.primary)

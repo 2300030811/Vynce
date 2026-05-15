@@ -19,6 +19,7 @@ import androidx.compose.material.icons.rounded.Speed
 import androidx.compose.material.icons.rounded.TextFields
 import androidx.compose.material.icons.rounded.TextRotationAngledown
 import androidx.compose.material.icons.rounded.TouchApp
+import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -36,6 +37,7 @@ import com.vynce.app.constants.EnableLrcLibKey
 import com.vynce.app.constants.LyricClickable
 import com.vynce.app.constants.LyricFontSizeKey
 import com.vynce.app.constants.LyricKaraokeEnable
+import com.vynce.app.constants.LyricOffsetKey
 import com.vynce.app.constants.LyricSourcePrefKey
 import com.vynce.app.constants.LyricTrimKey
 import com.vynce.app.constants.LyricUpdateSpeed
@@ -166,6 +168,11 @@ fun ColumnScope.LyricAdvancedFrag() {
     val (lyricUpdateSpeed, onLyricsUpdateSpeedChange) = rememberEnumPreference(LyricUpdateSpeed, Speed.MEDIUM)
     val (lyricsFancy, onLyricsFancyChange) = rememberPreference(LyricKaraokeEnable, false)
     val (syncedLyricsClickable, onSyncedLyricsClickable) = rememberPreference(LyricClickable, defaultValue = true)
+    val (lyricOffset, onLyricOffsetChange) = rememberPreference(LyricOffsetKey, defaultValue = 0L)
+
+    var showOffsetDialog by remember {
+        mutableStateOf(false)
+    }
 
     ElevatedCard(
         modifier = Modifier.fillMaxWidth()
@@ -176,6 +183,13 @@ fun ColumnScope.LyricAdvancedFrag() {
             icon = { Icon(Icons.Rounded.TouchApp, null) },
             checked = syncedLyricsClickable,
             onCheckedChange = onSyncedLyricsClickable
+        )
+
+        PreferenceEntry(
+            title = { Text(stringResource(R.string.lyrics_offset)) },
+            description = "${if (lyricOffset >= 0) "+" else ""}${lyricOffset}ms",
+            icon = { Icon(Icons.Rounded.Tune, null) },
+            onClick = { showOffsetDialog = true }
         )
     }
     Spacer(modifier = Modifier.height(16.dp))
@@ -205,6 +219,24 @@ fun ColumnScope.LyricAdvancedFrag() {
                 }
             },
             isEnabled = lyricsFancy
+        )
+    }
+
+    if (showOffsetDialog) {
+        CounterDialog(
+            title = stringResource(R.string.lyrics_offset),
+            description = stringResource(R.string.lyrics_offset_desc),
+            initialValue = lyricOffset.toInt(),
+            upperBound = 10000,
+            lowerBound = -10000,
+            unitDisplay = "ms",
+            onDismiss = { showOffsetDialog = false },
+            onConfirm = {
+                onLyricOffsetChange(it.toLong())
+                showOffsetDialog = false
+            },
+            onReset = { onLyricOffsetChange(0L) },
+            onCancel = { showOffsetDialog = false }
         )
     }
 }

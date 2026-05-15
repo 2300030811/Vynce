@@ -6,7 +6,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.CloudOff
 import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Shuffle
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -19,9 +21,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import coil3.compose.AsyncImage
-import com.vynce.app.models.MediaMetadata
 import com.vynce.app.playback.PlayerConnection
-import com.vynce.app.playback.queues.ListQueue
 import com.zionhuang.jiosaavn.JioSaavn
 import com.zionhuang.jiosaavn.SaavnPlaylistInfo
 import com.zionhuang.jiosaavn.SaavnSong
@@ -35,77 +35,161 @@ fun PlaylistScreen(
     var playlistInfo by remember { mutableStateOf(SaavnPlaylistInfo()) }
     var songs by remember { mutableStateOf<List<SaavnSong>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
+    var error by remember { mutableStateOf<String?>(null) }
+    var reloadKey by remember { mutableIntStateOf(0) }
 
-    LaunchedEffect(playlistId) {
-        val (info, songList) = JioSaavn.getPlaylist(playlistId)
-        playlistInfo = info; songs = songList; isLoading = false
+    fun loadPlaylist() {
+        reloadKey += 1
     }
 
-    LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 100.dp)) {
-        item {
-            Column(modifier = Modifier.padding(16.dp)) {
-                AsyncImage(model = playlistInfo.image, contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxWidth().aspectRatio(1f).clip(RoundedCornerShape(12.dp)))
+    LaunchedEffect(playlistId, reloadKey) {
+        isLoading = true
+        error = null
+        try {
+            val (info, songList) = JioSaavn.getPlaylist(playlistId)
+            playlistInfo = info
+            songs = songList
+        } catch (e: Exception) {
+            error = e.message ?: "Failed to load playlist"
+        } finally {
+            isLoading = false
+        }
+    }
+
+    when {
+        isLoading -> {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
+        }
+        error != null -> {
+            Column(
+                Modifier.fillMaxSize().padding(32.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Icon(
+                    Icons.Rounded.CloudOff, null,
+                    Modifier.size(64.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                )
                 Spacer(Modifier.height(16.dp))
-                Text(playlistInfo.name, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-                Text("${playlistInfo.songCount} songs • ${formatFollowerCount(playlistInfo.followerCount)} followers",
-                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Spacer(Modifier.height(12.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Button(onClick = { playAllSongs(songs, playerConnection) }, modifier = Modifier.weight(1f)) {
-                        Icon(Icons.Rounded.PlayArrow, null); Spacer(Modifier.width(4.dp)); Text("Play all")
-                    }
-                    OutlinedButton(onClick = { playAllSongs(songs.shuffled(), playerConnection) }, modifier = Modifier.weight(1f)) {
-                        Icon(Icons.Rounded.Shuffle, null); Spacer(Modifier.width(4.dp)); Text("Shuffle")
-                    }
+                Text(
+                    text = "Couldn't load playlist",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = error ?: "Check your connection and try again",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                )
+                Spacer(Modifier.height(24.dp))
+                FilledTonalButton(onClick = { loadPlaylist() }) {
+                    Icon(Icons.Rounded.Refresh, null, Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("Retry")
                 }
             }
         }
-        if (isLoading) {
-            item { Box(Modifier.fillMaxWidth().padding(32.dp), Alignment.Center) { CircularProgressIndicator() } }
-        }
-        itemsIndexed(songs) { index, song ->
-            with(JioSaavn) {
-                Row(
-                    modifier = Modifier.fillMaxWidth()
-                        .clickable {
-                            // Play the whole playlist starting from the tapped song,
-                            // not just the single song — consistent with LocalPlaylistScreen.
-                            playerConnection ?: return@clickable
-                            val metadataList = songs.map { s ->
-                                MediaMetadata(
-                                    id = "saavn:${s.id}",
-                                    title = s.name,
-                                    artists = s.artistNames().split(", ").map { name ->
-                                        MediaMetadata.Artist(id = null, name = name.trim())
-                                    },
-                                    duration = s.duration.toIntOrNull() ?: -1,
-                                    thumbnailUrl = s.thumbnailUrl()?.replace("http://", "https://"),
-                                    album = null,
-                                    genre = null
+        else -> {
+            LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 100.dp)) {
+                item {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        AsyncImage(
+                            model = playlistInfo.image,
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .aspectRatio(1f)
+                                .clip(RoundedCornerShape(12.dp))
+                        )
+                        Spacer(Modifier.height(16.dp))
+                        Text(
+                            playlistInfo.name,
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            "${playlistInfo.songCount} songs • ${formatFollowerCount(playlistInfo.followerCount)} followers",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(Modifier.height(12.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Button(
+                                onClick = { playAllSongs(playlistInfo.name, songs, playerConnection) },
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Icon(Icons.Rounded.PlayArrow, null)
+                                Spacer(Modifier.width(4.dp))
+                                Text("Play all")
+                            }
+                            OutlinedButton(
+                                onClick = {
+                                    playAllSongs(
+                                        title = playlistInfo.name,
+                                        songs = songs,
+                                        playerConnection = playerConnection,
+                                        shuffle = true
+                                    )
+                                },
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Icon(Icons.Rounded.Shuffle, null)
+                                Spacer(Modifier.width(4.dp))
+                                Text("Shuffle")
+                            }
+                        }
+                    }
+                }
+
+                itemsIndexed(songs) { index, song ->
+                    with(JioSaavn) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    playAllSongs(
+                                        title = playlistInfo.name,
+                                        songs = songs,
+                                        playerConnection = playerConnection,
+                                        startIndex = index
+                                    )
+                                }
+                                .padding(horizontal = 16.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                "${index + 1}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.width(28.dp)
+                            )
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    song.name,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                Text(
+                                    song.artistNames(),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
                                 )
                             }
-                            playerConnection.playQueue(
-                                ListQueue(
-                                    title = playlistInfo.name,
-                                    items = metadataList,
-                                    startIndex = index
-                                )
+                            Text(
+                                formatDuration(song.duration.toIntOrNull() ?: 0),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("${index + 1}", style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.width(28.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(song.name, style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        Text(song.artistNames(), style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
-                    Text(formatDuration(song.duration.toIntOrNull() ?: 0),
-                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }

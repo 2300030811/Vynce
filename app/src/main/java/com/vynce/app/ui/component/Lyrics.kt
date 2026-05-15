@@ -14,11 +14,18 @@ import android.content.res.Configuration
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.add
@@ -27,15 +34,18 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.MoreHoriz
+import androidx.compose.material.icons.rounded.Remove
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -55,6 +65,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.graphicsLayer
@@ -82,6 +93,7 @@ import com.vynce.app.R
 import com.vynce.app.constants.LyricClickable
 import com.vynce.app.constants.LyricFontSizeKey
 import com.vynce.app.constants.LyricKaraokeEnable
+import com.vynce.app.constants.LyricOffsetKey
 import com.vynce.app.constants.LyricUpdateSpeed
 import com.vynce.app.constants.LyricsPosition
 import com.vynce.app.constants.LyricsTextPositionKey
@@ -93,22 +105,22 @@ import com.vynce.app.extensions.isPowerSaver
 import com.vynce.app.ui.component.button.IconButton
 import com.vynce.app.ui.component.shimmer.ShimmerHost
 import com.vynce.app.ui.component.shimmer.TextPlaceholder
+import com.vynce.app.ui.dialog.CounterDialog
 import com.vynce.app.ui.menu.LyricsMenu
 import com.vynce.app.ui.utils.fadingEdge
 import com.vynce.app.utils.rememberEnumPreference
 import com.vynce.app.utils.rememberPreference
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.isActive
-import kotlinx.coroutines.runBlocking
 import org.akanework.gramophone.logic.utils.LrcUtils
 import org.akanework.gramophone.logic.utils.SemanticLyrics
 import org.akanework.gramophone.logic.utils.SemanticLyrics.LyricLine
 import java.io.File
 import kotlin.time.Duration.Companion.seconds
 
+@OptIn(ExperimentalLayoutApi::class)
 @SuppressLint("UnusedBoxWithConstraintsScope")
 @Composable
 fun Lyrics(
@@ -129,7 +141,7 @@ fun Lyrics(
     val lyricsClickable by rememberPreference(LyricClickable, true)
     val lyricsFancy by rememberPreference(LyricKaraokeEnable, false)
     val lyricsUpdateSpeed by rememberEnumPreference(LyricUpdateSpeed, Speed.MEDIUM)
-    var lyricRefreshRate = lyricsUpdateSpeed.toLrcRefreshMillis()
+    val (lyricOffset, onLyricOffsetChange) = rememberPreference(LyricOffsetKey, 0L)
 
     val mediaMetadata by playerConnection.mediaMetadata.collectAsState()
 
@@ -152,8 +164,9 @@ fun Lyrics(
     val currentDbLyrics = remember(dbLyrics, mediaMetadata) {
         var lyrics = dbLyrics
         val metadata = mediaMetadata
-        if (lyrics == null && metadata?.localPath != null) {
-            LrcUtils.loadLyricsFile(File(metadata.localPath!!))?.let {
+        val localPath = metadata?.localPath
+        if (lyrics == null && localPath != null) {
+            LrcUtils.loadLyricsFile(File(localPath))?.let {
                 lyrics = LyricsEntity(metadata.id, it)
             }
         }
@@ -167,23 +180,15 @@ fun Lyrics(
     LaunchedEffect(lyricsModel) {
         lines.clear()
         lyricsModel?.let { model ->
-            if (isSynced) {
-                val lyrics = lyricsModel as SemanticLyrics.SyncedLyrics
-                lines.addAll(lyrics.text)
-
-                if (lyricsFancy && lyrics.text.fastAny { it.words != null }) {
-                    lyricRefreshRate = lyricsUpdateSpeed.toLrcRefreshMillis()
-                } else {
-                    lyricRefreshRate = Speed.SLOW.toLrcRefreshMillis()
-                }
+            if (model is SemanticLyrics.SyncedLyrics) {
+                lines.addAll(model.text)
             } else {
                 lines.add(
                     LyricLine(
-                        model.unsyncedText.joinToString { "${it.first}\n" }, 0L.toULong(), 0L.toULong(),
+                        model.unsyncedText.joinToString(separator = "\n") { it.first }, 0L.toULong(), 0L.toULong(),
                         null, null, false
                     )
                 )
-                lyricRefreshRate = Speed.SLOW.toLrcRefreshMillis()
             }
         }
     }
@@ -207,20 +212,50 @@ fun Lyrics(
         mutableStateOf(false)
     }
     var currentPos by remember { mutableLongStateOf(0L) }
+    var showLyricOffsetDialog by remember {
+        mutableStateOf(false)
+    }
 
-    LaunchedEffect(lyricsModel) {
-        if (lyricsModel == null || !isSynced || (lyricsModel as SemanticLyrics.SyncedLyrics).text.isEmpty()) {
+    if (showLyricOffsetDialog) {
+        CounterDialog(
+            title = stringResource(R.string.lyrics_offset),
+            description = stringResource(R.string.lyrics_offset_desc),
+            initialValue = lyricOffset.toInt(),
+            upperBound = 10000,
+            lowerBound = -10000,
+            unitDisplay = "ms",
+            onDismiss = { showLyricOffsetDialog = false },
+            onConfirm = {
+                onLyricOffsetChange(it.toLong())
+                showLyricOffsetDialog = false
+            },
+            onReset = { onLyricOffsetChange(0L) },
+            onCancel = { showLyricOffsetDialog = false },
+        )
+    }
+
+
+    LaunchedEffect(lyricsModel, lyricsFancy, lyricsUpdateSpeed, lyricOffset) {
+        val syncedLines = (lyricsModel as? SemanticLyrics.SyncedLyrics)?.text.orEmpty()
+        if (syncedLines.isEmpty()) {
             currentLineIndex = -1
             return@LaunchedEffect
+        }
+        val lyricRefreshRate = if (lyricsFancy && syncedLines.fastAny { it.words != null }) {
+            lyricsUpdateSpeed.toLrcRefreshMillis()
+        } else {
+            Speed.SLOW.toLrcRefreshMillis()
         }
         while (isActive) {
             // TODO: likely can improve power usage by disabling lyric refresh
             delay(lyricRefreshRate)
-            if (!playerConnection.isPlaying.value) continue
             val sliderPosition = sliderPositionProvider()
             isSeeking = sliderPosition != null
-            currentLineIndex = findCurrentLineIndex(lines, sliderPosition ?: playerConnection.player.currentPosition)
-            currentPos = sliderPosition ?: playerConnection.player.currentPosition
+            if (!playerConnection.isPlaying.value && !isSeeking) continue
+            val playerPosition = sliderPosition ?: playerConnection.player.currentPosition
+            val lyricPosition = (playerPosition - lyricOffset).coerceAtLeast(0L)
+            currentLineIndex = findCurrentLineIndex(syncedLines, lyricPosition)
+            currentPos = lyricPosition
         }
     }
 
@@ -253,7 +288,7 @@ fun Lyrics(
         }
 
         if (!isSynced) return@LaunchedEffect
-        if (currentLineIndex != -1) {
+        if (currentLineIndex in lines.indices) {
             deferredCurrentLineIndex = currentLineIndex
             if (lastPreviewTime == 0L) {
                 if (isSeeking) {
@@ -351,59 +386,40 @@ fun Lyrics(
                             )
                             // we allow clicking on blank lyrics, ignore item.isClickable
                             .clickable(enabled = isSynced && lyricsClickable) {
-                                playerConnection.player.seekTo(item.start.toLong())
+                                playerConnection.player.seekTo((item.start.toLong() + lyricOffset).coerceAtLeast(0))
                                 currentLineIndex = index
-                                currentPos = item.start.toLong()
+                                currentPos = item.start.toLong().coerceAtLeast(0)
                                 lastPreviewTime = 0L
                                 haptic.performHapticFeedback(HapticFeedbackType.SegmentFrequentTick)
                             }
                     ) {
+                        val words = item.words
                         if (currentPos.toULong() in item.start..item.end + 100.toULong() && lyricsFancy
-                            && item.words != null && !context.isPowerSaver()
+                            && words != null && !context.isPowerSaver()
                         ) { // word by word
-                            // now do eye bleach to make lyric line babies
-                            val style = LocalTextStyle.current.copy(
-                                fontSize = lyricsFontSize.sp,
-                                color = textColor,
-                                fontWeight = FontWeight.Bold
-                            )
-                            val rawSplitLines = splitTextToLines(item.text, style, maxW)
-                            val lyricLines = ArrayList<LyricLine>()
-                            if (rawSplitLines.size > 1) {
-                                var from = 0
-                                for (i in rawSplitLines) {
-                                    val to = from + i.split(' ').size
-                                    val words = item.words.subList(from, to.coerceIn(from, item.words.size))
-                                    lyricLines.add(
-                                        item.copy(
-                                            text = i,
-                                            start = words.first().timeRange.start,
-                                            end = words.last().timeRange.endInclusive,
-                                            words = words
-                                        )
-                                    )
-                                    from = to
-                                }
-                            } else {
-                                lyricLines.add(item)
-                            }
-
-
-                            lyricLines.forEach {
-                                HorizontalReveal(
-                                    progress = calculateLineProgress(it, currentPos),
-                                    modifier = Modifier
-                                ) {
-                                    Text(
-                                        text = it.text,
+                            FlowRow(
+                                horizontalArrangement = when (lyricsTextPosition) {
+                                    LyricsPosition.LEFT -> Arrangement.Start
+                                    LyricsPosition.CENTER -> Arrangement.Center
+                                    LyricsPosition.RIGHT -> Arrangement.End
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                words.forEach { word ->
+                                    val wordText = item.text.substring(word.charRange)
+                                    AnimatedWord(
+                                        word = wordText,
+                                        wordStartTimeMs = word.timeRange.start.toLong(),
+                                        wordEndTimeMs = word.timeRange.endInclusive.toLong(),
+                                        currentTimeMs = currentPos,
                                         fontSize = lyricFontSizeAdjusted.sp,
-                                        color = textColor,
-                                        fontWeight = FontWeight.Bold
+                                        textColor = textColor,
+                                        isCurrent = true
                                     )
+                                    // Add a small spacer for word separation
+                                    Spacer(modifier = Modifier.size(4.dp))
                                 }
                             }
-
-
                         } else { // regular
                             val isConsumed = currentPos.toULong() > (item.end + 100.toULong())
                             val isHighlighted =
@@ -471,7 +487,7 @@ fun Lyrics(
                         menuState.show {
                             LyricsMenu(
                                 lyricsEntity = currentDbLyrics,
-                                mediaMetadataProvider = { mediaMetadata!! },
+                                mediaMetadataProvider = { mediaMetadata },
                                 onRefreshRequest = { lyricsModel = it },
                                 onDismiss = menuState::dismiss,
                             )
@@ -485,6 +501,140 @@ fun Lyrics(
                     )
                 }
             }
+        }
+
+        if (isSynced && lyricsModel != null && lyricsModel != uninitializedLyric && lines.isNotEmpty()) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 16.dp)
+                    .background(
+                        color = MaterialTheme.colorScheme.surfaceColorAtElevation(4.dp).copy(alpha = 0.8f),
+                        shape = MaterialTheme.shapes.medium
+                    )
+                    .padding(horizontal = 8.dp, vertical = 4.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(4.dp)
+                ) {
+                    val adjustOffset: (Long) -> Unit = { delta ->
+                        onLyricOffsetChange((lyricOffset + delta).coerceIn(-10000L, 10000L))
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    }
+
+                    IconButton(
+                        onClick = { adjustOffset(-50) },
+                        onLongClick = { adjustOffset(-500) }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.Remove,
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+
+                    Text(
+                        text = "${if (lyricOffset > 0) "+" else ""}${lyricOffset}ms",
+                        style = MaterialTheme.typography.labelLarge,
+                        modifier = Modifier
+                            .padding(horizontal = 8.dp)
+                            .clickable { showLyricOffsetDialog = true },
+                        color = MaterialTheme.colorScheme.primary
+                    )
+
+                    IconButton(
+                        onClick = { adjustOffset(50) },
+                        onLongClick = { adjustOffset(500) }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.Add,
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AnimatedWord(
+    word: String,
+    wordStartTimeMs: Long,
+    wordEndTimeMs: Long,
+    currentTimeMs: Long,
+    fontSize: androidx.compose.ui.unit.TextUnit,
+    textColor: Color,
+    isCurrent: Boolean,
+) {
+    if (word.isEmpty()) return
+
+    // Non-current lines render simply with dimmed color
+    if (!isCurrent) {
+        Text(
+            text = word,
+            fontSize = fontSize,
+            color = textColor.copy(alpha = 0.5f),
+            fontWeight = FontWeight.Bold
+        )
+        return
+    }
+
+    // Calculate word duration
+    val wordDuration = (wordEndTimeMs - wordStartTimeMs).coerceAtLeast(100L)
+
+    // Apple Music style: Character-level wipe effect
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(0.dp),
+    ) {
+        word.forEachIndexed { charIndex, char ->
+            // Calculate timing for each character
+            val charStartTimeMs = wordStartTimeMs + (wordDuration * charIndex / word.length)
+            val charEndTimeMs = if (charIndex < word.length - 1) {
+                wordStartTimeMs + (wordDuration * (charIndex + 1) / word.length)
+            } else {
+                wordEndTimeMs
+            }
+
+            // Calculate character progress
+            val isPastChar = currentTimeMs >= charEndTimeMs
+            val isFutureChar = currentTimeMs <= charStartTimeMs
+
+            val rawProgress = when {
+                isPastChar -> 1f
+                isFutureChar -> 0f
+                else -> ((currentTimeMs - charStartTimeMs).toFloat() / (charEndTimeMs - charStartTimeMs).toFloat()).coerceIn(0f, 1f)
+            }
+
+            // Animate character progress
+            val animatedCharProgress by animateFloatAsState(
+                targetValue = rawProgress,
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioNoBouncy,
+                    stiffness = Spring.StiffnessMedium,
+                ),
+                label = "charProgress"
+            )
+
+            // Interpolate color
+            val charColor = if (animatedCharProgress >= 1f) {
+                textColor
+            } else if (animatedCharProgress <= 0f) {
+                textColor.copy(alpha = 0.5f)
+            } else {
+                val t = animatedCharProgress
+                val alpha = 0.5f + (1f - 0.5f) * t
+                textColor.copy(alpha = alpha)
+            }
+
+            Text(
+                text = char.toString(),
+                fontSize = fontSize,
+                color = charColor,
+                fontWeight = FontWeight.Bold
+            )
         }
     }
 }
@@ -567,8 +717,10 @@ fun splitTextToLines(
  * Get current position in lyric line list
  */
 fun findCurrentLineIndex(lines: List<LyricLine>, position: Long): Int {
+    if (lines.isEmpty()) return -1
+    val safePosition = position.coerceAtLeast(0L).toULong()
     for (index in lines.indices) {
-        if (lines[index].start > (position).toUInt()) {
+        if (lines[index].start > safePosition) {
             return if (index > 0 && lines[index - 1].isTranslated) index - 2 else index - 1
         }
     }

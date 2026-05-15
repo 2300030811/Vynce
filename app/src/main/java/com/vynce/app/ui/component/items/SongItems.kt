@@ -8,6 +8,7 @@
 package com.vynce.app.ui.component.items
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.media3.common.Player
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
@@ -49,7 +50,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import coil3.compose.AsyncImage
-import com.vynce.app.BuildConfig
 import com.vynce.app.LocalDatabase
 import com.vynce.app.LocalDownloadUtil
 import com.vynce.app.LocalMenuState
@@ -116,7 +116,6 @@ fun SongListItem(
         ListItem(
             title = song.song.title,
             subtitle = joinByBullet(
-                (if (BuildConfig.DEBUG) song.song.id else ""),
                 song.artists.joinToString { it.name },
                 makeTimeString(song.song.duration * 1000L)
             ),
@@ -194,7 +193,7 @@ fun SongListItem(
                 onClick = {
                     if (inSelectMode == true) {
                         onSelectedChange(!isSelected)
-                    } else if (isActive) {
+                    } else if (isActive && playerConnection.player.playbackState != Player.STATE_IDLE && playerConnection.player.mediaItemCount > 0) {
                         playerConnection.player.togglePlayPause()
                     } else {
                         onPlay()

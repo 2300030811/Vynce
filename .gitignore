@@ -106,3 +106,7 @@ lint/tmp/
 .DS_Store
 
 /ffMetadataEx
+
+# Local reference checkouts
+/SimpMusic-main/
+/namida-main/
