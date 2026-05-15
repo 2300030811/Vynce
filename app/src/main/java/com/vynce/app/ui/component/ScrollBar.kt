@@ -23,7 +23,7 @@ val DefaultScrollbar: ScrollbarSettings
         ScrollbarSettings.Default.copy(
             thumbThickness = 8.dp,
             thumbUnselectedColor = MaterialTheme.colorScheme.primary,
-            thumbSelectedColor = MaterialTheme.colorScheme.secondary, // TODO: re-eval colour
+            thumbSelectedColor = MaterialTheme.colorScheme.secondary,
             hideDelayMillis = 2000,
         )
 

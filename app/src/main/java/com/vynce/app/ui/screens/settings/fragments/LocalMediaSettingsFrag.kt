@@ -68,6 +68,7 @@ import com.vynce.app.LocalDatabase
 import com.vynce.app.LocalPlayerConnection
 import com.vynce.app.LocalSnackbarHostState
 import com.vynce.app.R
+import com.vynce.app.constants.AutoAlbumArtistKey
 import com.vynce.app.constants.DownloadExtraPathKey
 import com.vynce.app.constants.DownloadPathKey
 import com.vynce.app.constants.ENABLE_FFMETADATAEX
@@ -492,6 +493,7 @@ fun ColumnScope.LocalScannerExtraFrag() {
     )
     val (strictExtensions, onStrictExtensionsChange) = rememberPreference(ScannerStrictExtKey, defaultValue = false)
     val (strictFilePaths, onStrictFilePathsChange) = rememberPreference(ScannerStrictFilePathsKey, defaultValue = false)
+    val (autoAlbumArtist, onAutoAlbumArtistChange) = rememberPreference(AutoAlbumArtistKey, defaultValue = true)
 
 
     // scanner sensitivity
@@ -525,6 +527,14 @@ fun ColumnScope.LocalScannerExtraFrag() {
         icon = { Icon(Icons.Rounded.MoreHoriz, null) },
         checked = strictFilePaths,
         onCheckedChange = onStrictFilePathsChange,
+    )
+    // auto album artist detection
+    SwitchPreference(
+        title = { Text(stringResource(R.string.auto_album_artist)) },
+        description = stringResource(R.string.auto_album_artist_desc),
+        icon = { Icon(Icons.Rounded.GraphicEq, null) },
+        checked = autoAlbumArtist,
+        onCheckedChange = onAutoAlbumArtistChange,
     )
     // scanner type
     EnumListPreference(

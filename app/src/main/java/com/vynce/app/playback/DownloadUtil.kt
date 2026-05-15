@@ -310,25 +310,27 @@ class DownloadUtil @Inject constructor(
 
         // add custom downloads
         val availableFiles = localMgr.getAvailableFiles(false)
+        val validExtensions = setOf("mp3", "flac", "ogg", "m4a", "aac", "wav", "opus", "wma", "alac")
+        var validCount = 0
+        var invalidCount = 0
         database.transaction {
             availableFiles.forEach { f ->
                 try {
                     val file = fileFromUri(context, f.value)
-                    if (file == null) throw (InvalidAudioFileException("Hello darkness my old friend"))
-                    // TODO: validate files in download folder
-//                        val format: FormatEntity? = scanner.advancedScan(f.value).format
-//                        if (format != null) {
-//                            database.upsert(format)
-//                        }
+                    if (file == null) throw InvalidAudioFileException("Null file from URI ${f.value}")
+                    if (!file.exists()) throw InvalidAudioFileException("File does not exist: ${file.absolutePath}")
+                    if (file.length() == 0L) throw InvalidAudioFileException("File is empty: ${file.absolutePath}")
+                    val ext = file.extension.lowercase()
+                    if (ext !in validExtensions) throw InvalidAudioFileException("Unsupported format .$ext: ${file.absolutePath}")
                     database.registerDownloadSong(f.key, timeNow, file.absolutePath)
-
+                    validCount++
                 } catch (e: InvalidAudioFileException) {
-                    reportException(e)
+                    Log.w(TAG, "Skipping invalid download file: ${e.message}")
+                    invalidCount++
                 }
             }
         }
-//            LocalMediaScanner.destroyScanner(SCANNER_OWNER_DL)
-        Log.d(TAG, "Registered ${availableFiles.size} files from custom downloads")
+        Log.d(TAG, "Registered $validCount files from custom downloads ($invalidCount invalid skipped)")
 
         // add internal downloads
         downloadManager.downloadIndex.getDownloads().use { cursor ->
@@ -355,7 +357,6 @@ class DownloadUtil @Inject constructor(
 
     init {
         Log.i(TAG, "DownloadUtil init")
-        // TODO: make sure db is update when download is queued
         CoroutineScope(dlCoroutine).launch {
             rescanDownloads()
         }
@@ -380,12 +381,21 @@ class DownloadUtil @Inject constructor(
                     }
 
                     CoroutineScope(Dispatchers.IO).launch {
-                        if (download.state == Download.STATE_COMPLETED) {
-                            val updateTime =
-                                Instant.ofEpochMilli(download.updateTimeMs).atZone(ZoneOffset.UTC).toLocalDateTime()
-                            database.updateDownloadStatus(download.request.id, updateTime)
-                        } else {
-                            database.updateDownloadStatus(download.request.id, null)
+                        when (download.state) {
+                            Download.STATE_COMPLETED -> {
+                                val updateTime =
+                                    Instant.ofEpochMilli(download.updateTimeMs).atZone(ZoneOffset.UTC).toLocalDateTime()
+                                database.updateDownloadStatus(download.request.id, updateTime)
+                            }
+                            Download.STATE_QUEUED, Download.STATE_DOWNLOADING -> {
+                                database.updateDownloadStatus(download.request.id, STATE_DOWNLOADING)
+                            }
+                            Download.STATE_FAILED -> {
+                                database.updateDownloadStatus(download.request.id, STATE_INVALID)
+                            }
+                            else -> {
+                                database.updateDownloadStatus(download.request.id, null)
+                            }
                         }
                     }
                 }

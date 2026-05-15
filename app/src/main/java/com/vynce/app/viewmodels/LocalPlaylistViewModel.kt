@@ -2,24 +2,21 @@ package com.vynce.app.viewmodels
 
 import android.content.Context
 import androidx.lifecycle.SavedStateHandle
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import com.vynce.app.constants.PlaylistSongSortDescendingKey
 import com.vynce.app.constants.PlaylistSongSortType
 import com.vynce.app.constants.PlaylistSongSortTypeKey
 import com.vynce.app.db.MusicDatabase
+import com.vynce.app.db.entities.PlaylistSong
+import com.vynce.app.db.entities.Song
 import com.vynce.app.extensions.reversed
 import com.vynce.app.extensions.toEnum
-import com.vynce.app.utils.dataStore
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -28,12 +25,12 @@ class LocalPlaylistViewModel @Inject constructor(
     @ApplicationContext context: Context,
     database: MusicDatabase,
     savedStateHandle: SavedStateHandle,
-) : ViewModel() {
+) : NavViewModel(context, database, savedStateHandle) {
     val playlistId = savedStateHandle.get<String>("playlistId")!!
     val playlistWithSongs = combine(
         database.playlist(playlistId),
         database.playlistSongs(playlistId),
-        context.dataStore.data
+        dataStore.data
             .map {
                 it[PlaylistSongSortTypeKey].toEnum(PlaylistSongSortType.CUSTOM) to
                         (it[PlaylistSongSortDescendingKey] ?: true)
@@ -52,12 +49,12 @@ class LocalPlaylistViewModel @Inject constructor(
         }.reversed(sortDescending && sortType != PlaylistSongSortType.CUSTOM)
 
         Pair(playlist, sortedSongs)
-    }.stateIn(viewModelScope, SharingStarted.Lazily, Pair(null, emptyList()))
+    }.asStateFlow(Pair(null, emptyList<PlaylistSong>()))
 
     init {
         // Fix playlist song order
-        viewModelScope.launch(Dispatchers.IO) {
-            val sortedSongs = playlistWithSongs.first().second.sortedWith(compareBy({ it.map.position }, { it.map.id }))
+        ioScope.launch(Dispatchers.IO) {
+            val sortedSongs = playlistWithSongs.value.second.sortedWith(compareBy({ it.map.position }, { it.map.id }))
             database.transaction {
                 sortedSongs.forEachIndexed { index, song ->
                     if (song.map.position != index) {

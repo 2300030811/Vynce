@@ -1,7 +1,5 @@
 package com.vynce.app.viewmodels
 
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import com.vynce.app.db.MusicDatabase
 import com.vynce.app.db.entities.SearchHistory
 import com.zionhuang.jiosaavn.JioSaavn
@@ -11,6 +9,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -19,13 +18,13 @@ import javax.inject.Inject
 @HiltViewModel
 class OnlineSearchSuggestionViewModel @Inject constructor(
     database: MusicDatabase,
-) : ViewModel() {
+) : DatabaseViewModel(database) {
     val query = MutableStateFlow("")
     private val _viewState = MutableStateFlow(SearchSuggestionViewState())
     val viewState = _viewState.asStateFlow()
 
     init {
-        viewModelScope.launch {
+        ioScope.launch {
             query.flatMapLatest { query ->
                 if (query.isEmpty()) {
                     database.searchHistory().map { history ->

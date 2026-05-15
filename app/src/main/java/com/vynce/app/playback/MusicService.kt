@@ -72,6 +72,7 @@ import com.vynce.app.constants.AudioOffloadKey
 import com.vynce.app.constants.AudioQuality
 import com.vynce.app.constants.AudioQualityKey
 import com.vynce.app.constants.AutoLoadMoreKey
+import com.vynce.app.constants.CrossfadeDurationKey
 import com.vynce.app.constants.ENABLE_FFMETADATAEX
 import com.vynce.app.constants.KeepAliveKey
 import com.vynce.app.constants.MAX_PLAYER_CONSECUTIVE_ERR
@@ -103,7 +104,7 @@ import com.vynce.app.extensions.collect
 import com.vynce.app.extensions.collectLatest
 import com.vynce.app.extensions.currentMetadata
 import com.vynce.app.extensions.findNextMediaItemById
-import com.vynce.app.extensions.metadata
+import com.vynce.app.extensions.vynceMetadata
 import com.vynce.app.extensions.setOffloadEnabled
 import com.vynce.app.lyrics.LyricsHelper
 import com.vynce.app.models.HybridCacheDataSinkFactory
@@ -257,6 +258,7 @@ class MusicService : MediaLibraryService(),
 
     private val audioDecoder by lazy { dataStore.get(AudioDecoderPreferenceKey, DefaultRenderersFactory.EXTENSION_RENDERER_MODE_OFF) }
     private val isGaplessOffloadAllowed by lazy { dataStore.get(AudioGaplessOffloadPreferenceKey, false) }
+    private val crossfadeDuration by lazy { dataStore.get(CrossfadeDurationKey, 0) }
     val playerVolume = MutableStateFlow(1f)
 
     private var isAudioEffectSessionOpened = false
@@ -340,12 +342,14 @@ class MusicService : MediaLibraryService(),
         )
 
         // lateinit tasks
-        offloadScope.launch {
-            Log.i(TAG, "Launching MusicService offloadScope tasks")
-            if (!qbInit.value) {
+        Log.i(TAG, "Launching MusicService offloadScope tasks")
+        if (!qbInit.value) {
+            offloadScope.launch {
                 initQueue()
             }
+        }
 
+        offloadScope.launch {
             combine(playerVolume, normalizeFactor) { playerVolume, normalizeFactor ->
                 playerVolume * normalizeFactor
             }.collectLatest(scope) {
@@ -353,13 +357,17 @@ class MusicService : MediaLibraryService(),
                     player.volume = it
                 }
             }
+        }
 
+        offloadScope.launch {
             playerVolume.debounce(1000).collect(scope) { volume ->
                 dataStore.edit { settings ->
                     settings[PlayerVolumeKey] = volume
                 }
             }
+        }
 
+        offloadScope.launch {
             dataStore.data
                 .map { it[SkipSilenceKey] ?: false }
                 .distinctUntilChanged()
@@ -368,7 +376,9 @@ class MusicService : MediaLibraryService(),
                         player.skipSilenceEnabled = it
                     }
                 }
+        }
 
+        offloadScope.launch {
             combine(
                 currentFormat,
                 dataStore.data
@@ -383,24 +393,23 @@ class MusicService : MediaLibraryService(),
                     1f
                 }
             }
+        }
 
+        // network connectivity
+        if (::connectivityObserver.isInitialized) {
+            // Not unregistering because it's a singleton provided by Dagger
+            // connectivityObserver.unregister()
+        }
 
-            // network connectivity
-            if (::connectivityObserver.isInitialized) {
-                // Not unregistering because it's a singleton provided by Dagger
-                // connectivityObserver.unregister()
-            }
+        offloadScope.launch {
+            connectivityObserver.networkStatus.collect { isConnected: Boolean ->
+                isNetworkConnected.value = isConnected
 
-            offloadScope.launch {
-                connectivityObserver.networkStatus.collect { isConnected: Boolean ->
-                    isNetworkConnected.value = isConnected
-
-                    if (isConnected && waitingForNetworkConnection.value) {
-                        waitingForNetworkConnection.value = false
-                        withContext(Dispatchers.Main) {
-                            player.prepare()
-                            player.play()
-                        }
+                if (isConnected && waitingForNetworkConnection.value) {
+                    waitingForNetworkConnection.value = false
+                    withContext(Dispatchers.Main) {
+                        player.prepare()
+                        player.play()
                     }
                 }
             }
@@ -526,14 +535,14 @@ class MusicService : MediaLibraryService(),
                     playQueue(
                         ListQueue(
                             title = items.first().mediaMetadata.title.toString(),
-                            items = items.mapNotNull { it.metadata }
+                            items = items.mapNotNull { it.vynceMetadata }
                         )
                     )
                 }
             } else {
                 // enqueue next
                 queueBoard.value.getCurrentQueue()?.let {
-                    queueBoard.value.addSongsToQueue(it, player.currentMediaItemIndex + 1, items.mapNotNull { it.metadata })
+                    queueBoard.value.addSongsToQueue(it, player.currentMediaItemIndex + 1, items.mapNotNull { it.vynceMetadata })
                 }
             }
         }
@@ -543,7 +552,7 @@ class MusicService : MediaLibraryService(),
      * Add items to end of current queue
      */
     fun enqueueEnd(items: List<MediaItem>) {
-        queueBoard.value.enqueueEnd(items.mapNotNull { it.metadata })
+        queueBoard.value.enqueueEnd(items.mapNotNull { it.vynceMetadata })
     }
 
     fun triggerShuffle() {
@@ -868,8 +877,8 @@ class MusicService : MediaLibraryService(),
 
         val lastFmEnabled = dataStore.get(LastFmScrobblingEnabledKey, false)
         if (lastFmEnabled) {
-            val artist = mediaItem?.metadata?.artists?.firstOrNull()?.name ?: "Unknown"
-            val track = mediaItem?.metadata?.title ?: currentSong.value?.song?.title ?: "Unknown"
+            val artist = mediaItem?.vynceMetadata?.artists?.firstOrNull()?.name ?: "Unknown"
+            val track = mediaItem?.vynceMetadata?.title ?: currentSong.value?.song?.title ?: "Unknown"
             val album: String? = null
 
             if (track.isNotBlank()) {
@@ -948,7 +957,7 @@ class MusicService : MediaLibraryService(),
             }
 
             val playRatio =
-                playbackStats.totalPlayTimeMs.toFloat() / ((mediaItem.metadata?.duration?.times(1000)) ?: -1)
+                playbackStats.totalPlayTimeMs.toFloat() / ((mediaItem.vynceMetadata?.duration?.times(1000)) ?: -1)
             Log.d(TAG, "Playback ratio: $playRatio Min threshold: $minPlaybackDur")
             if (playRatio >= minPlaybackDur && !dataStore.get(PauseListenHistoryKey, false)) {
                 database.incrementPlayCount(mediaItem.mediaId)
@@ -1001,7 +1010,6 @@ class MusicService : MediaLibraryService(),
 
         mediaSession.player.stop()
         mediaSession.release()
-        mediaSession.player.release()
         super.onDestroy()
         Log.i(TAG, "Terminated MusicService.")
     }

@@ -11,6 +11,9 @@ import androidx.media3.common.TrackSelectionParameters
 import com.vynce.app.models.MediaMetadata
 import java.util.ArrayDeque
 
+// Import custom MediaItem.metadata extension that returns our custom MediaMetadata
+// vynceMetadata is in same package
+
 fun Player.togglePlayPause() {
     if (!playWhenReady && playbackState == Player.STATE_IDLE) {
         prepare()
@@ -77,7 +80,7 @@ fun Player.getCurrentQueueIndex(): Int {
 }
 
 val Player.currentMetadata: MediaMetadata?
-    get() = currentMediaItem?.metadata
+    get() = currentMediaItem?.vynceMetadata
 
 val Player.mediaItems: List<MediaItem>
     get() = object : AbstractList<MediaItem>() {

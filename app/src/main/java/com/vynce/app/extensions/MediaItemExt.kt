@@ -10,7 +10,7 @@ import com.vynce.app.utils.toSaavnMediaMetadata
 
 import com.zionhuang.jiosaavn.SaavnSong
 
-val MediaItem.metadata: MediaMetadata?
+val MediaItem.vynceMetadata: MediaMetadata?
     get() = localConfiguration?.tag as? MediaMetadata
 
 fun SaavnSong.toMediaItem() = MediaItem.Builder()

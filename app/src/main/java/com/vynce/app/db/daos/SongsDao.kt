@@ -96,6 +96,30 @@ interface SongsDao {
     fun getPlayCountByMonth(songId: String?, year: Int, month: Int): Flow<Int>
 
     @Transaction
+    @Query("""
+        SELECT song.*, COUNT(event.songId) as sessionCount, SUM(event.playTime) as totalSessionTime
+        FROM song
+        JOIN event ON song.id = event.songId
+        WHERE event.timestamp > :fromTimeStamp
+        GROUP BY song.id
+        ORDER BY sessionCount DESC
+        LIMIT :limit
+    """)
+    fun mostFrequentSongs(fromTimeStamp: Long, limit: Int = 10): Flow<List<Song>>
+
+    @Transaction
+    @Query("""
+        SELECT song.*, SUM(event.playTime) as totalPlayTime
+        FROM song
+        JOIN event ON song.id = event.songId
+        WHERE strftime('%m', event.timestamp) = :monthStr
+        GROUP BY song.id
+        ORDER BY totalPlayTime DESC
+        LIMIT :limit
+    """)
+    fun monthlyTopSongs(monthStr: String, limit: Int = 20): Flow<List<Song>>
+
+    @Transaction
     @Query("SELECT * FROM song WHERE liked AND dateDownload IS NULL")
     fun likedSongsNotDownloaded(): Flow<List<Song>>
 

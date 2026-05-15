@@ -172,6 +172,15 @@ interface AlbumsDao : ArtistsDao {
     @Query("SELECT * FROM album WHERE title = :name")
     fun albumsByName(name: String): AlbumEntity?
 
+    @Query("SELECT * FROM album")
+    fun allAlbums(): List<AlbumEntity>
+
+    @Query("SELECT * FROM artist WHERE name = :name LIMIT 1")
+    override fun artistByName(name: String): ArtistEntity?
+
+    @Query("SELECT * FROM album_artist_map WHERE albumId = :albumId AND artistId = :artistId LIMIT 1")
+    fun albumArtistMap(albumId: String, artistId: String): AlbumArtistMap?
+
     @Transaction
     @Query(
         """

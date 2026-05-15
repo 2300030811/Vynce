@@ -240,8 +240,8 @@ class MainActivity : ComponentActivity() {
         Log.i(MAIN_TAG, "onDestroy() called. isFinishing = $isFinishing")
         try {
             connectivityObserver.unregister()
-        } catch (e: UninitializedPropertyAccessException) {
-            // lol
+        } catch (_: Exception) {
+            // Observer may not be initialized if activity is destroyed early
         }
         // https://github.com/androidx/media/issues/805
         if (Build.VERSION.SDK_INT == Build.VERSION_CODES.UPSIDE_DOWN_CAKE && (playerConnection?.player?.playWhenReady != true || playerConnection?.player?.mediaItemCount == 0)) {
@@ -271,7 +271,6 @@ class MainActivity : ComponentActivity() {
         backupViewModel.autoBackup()
 
         setContent {
-            Log.v(MAIN_TAG, "RC-1")
             val coroutineScope = rememberCoroutineScope()
             val haptic = LocalHapticFeedback.current
             val snackbarHostState = remember { SnackbarHostState() }
@@ -342,7 +341,6 @@ class MainActivity : ComponentActivity() {
                 pureBlack = pureBlack,
                 highContrastCompat = highContrastCompat,
             ) {
-                Log.v(MAIN_TAG, "RC-2.1")
                 val density = LocalDensity.current
                 val windowsInsets = WindowInsets.systemBars
                 val bottomInset = with(density) { windowsInsets.getBottom(density).toDp() }
@@ -380,7 +378,6 @@ class MainActivity : ComponentActivity() {
                         .background(MaterialTheme.colorScheme.surface)
                 ) {
                     val maxW = maxWidth
-                    Log.v(MAIN_TAG, "RC-2.2")
 
                     fun getNavPadding(): Dp {
                         return if (!useNavRail) (if (slimNav) 52.dp else 68.dp) else MinMiniPlayerHeight
@@ -472,7 +469,6 @@ class MainActivity : ComponentActivity() {
                             modifier = Modifier
                                 .fillMaxSize()
                         ) {
-                            Log.v(MAIN_TAG, "RC-3")
 
 
                             val navHost: @Composable() (() -> Unit) = @Composable {

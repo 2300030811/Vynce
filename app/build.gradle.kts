@@ -108,18 +108,18 @@ android {
         }
     }
 
-    flavorDimensions.add("abi")
+    flavorDimensions.add("version")
 
     productFlavors {
         // main version
         create("core") {
             isDefault = true
-            dimension = "abi"
+            dimension = "version"
         }
 
         // fully featured version, large file size
         create("full") {
-            dimension = "abi"
+            dimension = "version"
         }
     }
 
@@ -147,11 +147,11 @@ android {
         }
     }
 
-    tasks.withType<KotlinCompile> {
-        if (!name.substringAfter("compile").lowercase().startsWith("full")) {
+    tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
+        if (name.contains("Core", ignoreCase = true)) {
             exclude("**/*FFmpegScanner.kt")
             exclude("**/*NextRendersFactory.kt")
-        } else {
+        } else if (name.contains("Full", ignoreCase = true)) {
             exclude("**/*FFmpegScannerDud.kt")
             exclude("**/*ffdecoderDud.kt")
         }
@@ -238,6 +238,7 @@ dependencies {
     implementation(libs.coil.network.okhttp)
     implementation(libs.lazycolumnscrollbar)
     implementation(libs.shimmer)
+    implementation(libs.haze)
 
     // material
     implementation(libs.adaptive)

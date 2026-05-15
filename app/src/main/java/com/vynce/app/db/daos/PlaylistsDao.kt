@@ -96,12 +96,11 @@ interface PlaylistsDao {
     @RawQuery(observedEntities = [PlaylistEntity::class])
     fun _getPlaylists(query: SupportSQLiteQuery): Flow<List<Playlist>>
 
-    // TODO: do i even want an enum for this
     /**
-     * Variant
+     * Playlist filter variants used by raw SQL queries:
      *
-     * 0 -> Use this one (WHERE p.bookmarkedAt IS NOT NULL OR p.isLocal = 1)
-     * 1 -> local playlists (WHERE p.isLocal AND p.bookmarkedAt IS NOT NULL)
+     * 0 -> All playlists (WHERE p.bookmarkedAt IS NOT NULL OR p.isLocal = 1)
+     * 1 -> Local playlists (WHERE p.isLocal AND p.bookmarkedAt IS NOT NULL)
      * 2 -> editable playlists (WHERE p.isEditable AND p.bookmarkedAt IS NOT NULL)
      */
     fun playlists(filter: PlaylistFilter, sortType: PlaylistSortType, descending: Boolean, variant: Int = 0): Flow<List<Playlist>> {

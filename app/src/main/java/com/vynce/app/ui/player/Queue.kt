@@ -130,7 +130,7 @@ import com.vynce.app.constants.MiniPlayerHeight
 import com.vynce.app.constants.PlayerHorizontalPadding
 import com.vynce.app.constants.SeekIncrement
 import com.vynce.app.constants.SeekIncrementKey
-import com.vynce.app.extensions.metadata
+import com.vynce.app.extensions.vynceMetadata
 import com.vynce.app.extensions.move
 import com.vynce.app.extensions.supportsWideScreen
 import com.vynce.app.extensions.tabMode
@@ -457,7 +457,7 @@ fun BoxScope.QueueContent(
 
         mutableSongs.apply {
             clear()
-            addAll(queueWindows.mapIndexedNotNull { index, w -> w.mediaItem.metadata?.copy(composeUidWorkaround = index.toDouble()) })
+            addAll(queueWindows.mapIndexedNotNull { index, w -> w.mediaItem.vynceMetadata?.copy(composeUidWorkaround = index.toDouble()) })
         }
 
         if (currentWindowIndex != -1 && !isSearching) {
@@ -1008,7 +1008,7 @@ fun BoxScope.QueueContent(
                     ) {
                         fun getQueueLength(): Int {
                             return if (!detachedHead) {
-                                queueWindows.sumOf { it.mediaItem.metadata!!.duration }
+                                queueWindows.sumOf { it.mediaItem.vynceMetadata!!.duration }
                             } else detachedQueue?.queue?.sumOf { it.duration } ?: 0
                         }
 

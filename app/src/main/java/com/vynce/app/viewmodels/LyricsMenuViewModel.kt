@@ -1,14 +1,11 @@
 package com.vynce.app.viewmodels
 
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import com.vynce.app.constants.LYRIC_FETCH_TIMEOUT
 import com.vynce.app.db.MusicDatabase
 import com.vynce.app.lyrics.LyricsHelper
 import com.vynce.app.lyrics.LyricsResult
 import com.vynce.app.models.MediaMetadata
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -21,8 +18,8 @@ import javax.inject.Inject
 @HiltViewModel
 class LyricsMenuViewModel @Inject constructor(
     private val lyricsHelper: LyricsHelper,
-    val database: MusicDatabase,
-) : ViewModel() {
+    database: MusicDatabase,
+) : DatabaseViewModel(database) {
     private var job: Job? = null
     val results = MutableStateFlow(emptyList<LyricsResult>())
     val isLoading = MutableStateFlow(false)
@@ -31,7 +28,7 @@ class LyricsMenuViewModel @Inject constructor(
         isLoading.value = true
         results.value = emptyList()
         job?.cancel()
-        job = viewModelScope.launch(Dispatchers.IO) {
+        job = ioScope.launch(Dispatchers.IO) {
             try {
                 withTimeoutOrNull(LYRIC_FETCH_TIMEOUT) {
                     lyricsHelper.getAllLyrics(mediaId, title, artist, duration) { result ->
@@ -53,7 +50,7 @@ class LyricsMenuViewModel @Inject constructor(
     }
 
     fun refetchLyrics(mediaMetadata: MediaMetadata, onDone: (SemanticLyrics?) -> Unit) {
-        CoroutineScope(Dispatchers.IO).launch {
+        ioScope.launch(Dispatchers.IO) {
             database.deleteLyricById(mediaMetadata.id)
             withTimeoutOrNull(LYRIC_FETCH_TIMEOUT) {
                 val lyrics = lyricsHelper.getLyrics(mediaMetadata)

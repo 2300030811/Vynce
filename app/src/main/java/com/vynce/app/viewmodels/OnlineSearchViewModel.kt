@@ -1,22 +1,18 @@
 package com.vynce.app.viewmodels
 
 import androidx.lifecycle.SavedStateHandle
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import com.zionhuang.jiosaavn.JioSaavn
 import com.zionhuang.jiosaavn.SaavnSong
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 @HiltViewModel
 class OnlineSearchViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
-) : ViewModel() {
+) : BaseViewModel() {
     val query = savedStateHandle.get<String>("query")!!
     private val _searchResults = MutableStateFlow<List<SaavnSong>>(emptyList())
     val searchResults = _searchResults.asStateFlow()
@@ -29,12 +25,10 @@ class OnlineSearchViewModel @Inject constructor(
     }
 
     fun search() {
-        viewModelScope.launch {
+        launchIO {
             _isLoading.value = true
             try {
-                val results = withContext(Dispatchers.IO) {
-                    JioSaavn.searchSongs(query)
-                }
+                val results = JioSaavn.searchSongs(query)
                 _searchResults.value = results
             } catch (e: Exception) {
                 android.util.Log.e("OnlineSearchVM", "Search failed: ${e.message}")

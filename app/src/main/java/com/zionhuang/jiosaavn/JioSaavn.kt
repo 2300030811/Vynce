@@ -152,7 +152,7 @@ object JioSaavn {
             }
             return result
         } catch (e: Exception) {
-            println("JioSaavn getHome error: ${e.message}")
+            android.util.Log.e("JioSaavn", "getHome error: ${e.message}")
             return emptyList()
         }
     }
@@ -250,10 +250,9 @@ object JioSaavn {
                     params.forEach { (k, v) -> parameter(k, v) }
                 }
                 val text = response.bodyAsText()
-                println("JioSaavn: Response from $base$path (${text.length} chars): ${text.take(300)}")
                 return json.parseToJsonElement(text).jsonObject
             } catch (e: Exception) {
-                println("JioSaavn: Failed $base$path: ${e.message}")
+                android.util.Log.e("JioSaavn", "Failed $base$path: ${e.message}")
             }
         }
         return null
@@ -263,7 +262,6 @@ object JioSaavn {
         val finalDownloadUrl = song["downloadUrl"]?.jsonArray?.lastOrNull()?.jsonObject?.get("url")?.jsonPrimitive?.content
             ?: song["downloadUrl"]?.jsonArray?.lastOrNull()?.jsonObject?.get("link")?.jsonPrimitive?.content
             ?: ""
-        println("JioSaavn: Download URL for ${song["name"]?.jsonPrimitive?.content}: $finalDownloadUrl")
         return SaavnSong(
             id = song["id"]?.jsonPrimitive?.content ?: "",
             name = (song["name"]?.jsonPrimitive?.content ?: "").decodeHtml(),
@@ -287,19 +285,19 @@ object JioSaavn {
         val obj = getJson("/api/search/songs", mapOf("query" to query, "limit" to "20")) ?: return emptyList()
         return try {
             val results = obj["data"]?.jsonObject?.get("results")?.jsonArray ?: run {
-                println("JioSaavn: No results array. Keys: ${obj.keys}")
+                android.util.Log.w("JioSaavn", "No results array. Keys: ${obj.keys}")
                 return emptyList()
             }
             results.mapNotNull { el ->
                 try {
                     parseSong(el.jsonObject)
                 } catch (e: Exception) {
-                    println("JioSaavn: Failed parsing song: ${e.message}")
+                    android.util.Log.e("JioSaavn", "Failed parsing song: ${e.message}")
                     null
                 }
             }
         } catch (e: Exception) {
-            println("JioSaavn: Parse error: ${e.message}")
+            android.util.Log.e("JioSaavn", "Parse error: ${e.message}")
             emptyList()
         }
     }
@@ -311,7 +309,7 @@ object JioSaavn {
             try {
                 parseSong(it)
             } catch (e: Exception) {
-                println("JioSaavn: Failed parsing getSong: ${e.message}")
+                android.util.Log.e("JioSaavn", "Failed parsing getSong: ${e.message}")
                 null
             }
         }

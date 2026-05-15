@@ -197,7 +197,7 @@ fun SwipeActionBox(
                         tint = MaterialTheme.colorScheme.onPrimary,
                         icon = firstAction.first,
                         modifier = Modifier
-                            .alpha(if (progress.intValue == 1) 1f else 0.6f) // TODO: wai alpha change cause hidden edge to become un-hidden
+                            .alpha(if (progress.intValue == 1) 1f else 0.6f)
                             .width(defaultActionSize)
                             .fillMaxHeight()
                             .align(Alignment.CenterStart)

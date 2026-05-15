@@ -31,6 +31,7 @@ import com.vynce.app.constants.ScannerM3uMatchCriteria
 import com.vynce.app.constants.ScannerMatchCriteria
 import com.vynce.app.constants.scannerWhitelistExts
 import com.vynce.app.db.MusicDatabase
+import com.vynce.app.db.entities.AlbumArtistMap
 import com.vynce.app.db.entities.AlbumEntity
 import com.vynce.app.db.entities.Artist
 import com.vynce.app.db.entities.ArtistEntity
@@ -277,7 +278,8 @@ class LocalMediaScanner(scannerImpl: ScannerImpl) {
         strictFileNames: Boolean,
         strictFilePaths: Boolean,
         refreshExisting: Boolean = false,
-        noDisable: Boolean = false
+        noDisable: Boolean = false,
+        albumArtistMap: MutableMap<String, String> = mutableMapOf()
     ) {
         if (scannerState.value > 0) {
             Log.i(TAG, "------------ SYNC: Scanner in use. Aborting Local Library Sync ------------")
@@ -316,6 +318,9 @@ class LocalMediaScanner(scannerImpl: ScannerImpl) {
         val artistCache = mutableMapOf<String, ArtistEntity?>()
         val albumCache = mutableMapOf<String, AlbumEntity?>()
         val genreCache = mutableMapOf<String, GenreEntity?>()
+
+        // Album artist mapping: album title -> album artist string (from TPE2 tag)
+        val albumArtistMap = mutableMapOf<String, String>()
 
         // Sync in batches of 100 to balance performance and UI responsiveness
         var runs = 0
@@ -484,11 +489,18 @@ class LocalMediaScanner(scannerImpl: ScannerImpl) {
         scannerProgressProbe.value = 0
 
         Log.d(TAG, "Scanning for files...")
-        // get list of all songs in db, then get songs unknown to the database
-        // TODO: duplicate songs with different paths will cycle through paths, causing it to be synced instead of ignored...
-        val allSongs = database.allLocalSongs().fastMapNotNull { it.song.localPath }.toSet()
+        val dbSongs = database.allLocalSongs()
+        val allPaths = dbSongs.fastMapNotNull { it.song.localPath }.toSet()
+        val allFingerprints = dbSongs
+            .filter { it.song.localPath != null }
+            .map { "${it.song.title.lowercase()}|${it.song.duration}" }
+            .toSet()
         val converted = newSongs.fastMapNotNull { fileFromUri(context, it)?.absolutePath }
-        val delta = converted.minus(allSongs)
+        val knownByPath = converted.minus(allPaths)
+        val delta = knownByPath.filter { candidate ->
+            val name = File(candidate).nameWithoutExtension.lowercase()
+            !allFingerprints.any { fp -> fp.startsWith("$name|") }
+        }
         Log.d(TAG, "Songs found: ${delta.size}")
         val mod = if (newSongs.size < 20) {
             2
@@ -739,6 +751,7 @@ class LocalMediaScanner(scannerImpl: ScannerImpl) {
             MediaStore.Audio.Media.DURATION,
             MediaStore.Audio.Media.ARTIST,
             MediaStore.Audio.Media.ALBUM,
+            MediaStore.Audio.Media.ALBUM_ARTIST,
             MediaStore.Audio.Media.DATE_MODIFIED,
             MediaStore.Audio.Media.YEAR,
             MediaStore.Audio.Media.DATA,
@@ -758,6 +771,9 @@ class LocalMediaScanner(scannerImpl: ScannerImpl) {
         }
 
         val mediaStoreSongs = ArrayList<SongTempData>()
+
+        // Album artist mapping: album title -> album artist string (from TPE2 tag)
+        val albumArtistMap = mutableMapOf<String, String>()
 
 
         val contentResolver: ContentResolver = context.contentResolver
@@ -798,6 +814,7 @@ class LocalMediaScanner(scannerImpl: ScannerImpl) {
             val durationColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DURATION)
             val artistColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ARTIST)
             val albumColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM)
+            val albumArtistColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM_ARTIST)
             val yearColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.YEAR)
             val dateModifiedColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DATE_MODIFIED)
             val pathColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DATA)
@@ -826,6 +843,7 @@ class LocalMediaScanner(scannerImpl: ScannerImpl) {
                 val duration = cursor.getInt(durationColumn) / 1000
                 val artist = cursor.getString(artistColumn)
                 val album = cursor.getString(albumColumn)
+                val albumArtist = cursor.getString(albumArtistColumn)
                 val rawYear = cursor.getString(yearColumn)
                 val rawDateModified = cursor.getString(dateModifiedColumn)
                 val path = cursor.getString(pathColumn)
@@ -850,6 +868,11 @@ class LocalMediaScanner(scannerImpl: ScannerImpl) {
 
                 if (SCANNER_DEBUG)
                     Log.d(TAG, "ID: $id, Name: $name, ARTIST: $artist, PATH: $path")
+
+                // Collect album artist info for later mapping
+                if (album != null && !albumArtist.isNullOrBlank()) {
+                    albumArtistMap[album] = albumArtist
+                }
 
                 if (title.isBlank()) { // songs with no title tag
                     title = name.substringBeforeLast('.')
@@ -925,10 +948,17 @@ class LocalMediaScanner(scannerImpl: ScannerImpl) {
             }
         }
 
-        // TODO: duplicate songs with different paths will cycle through paths, causing it to be synced instead of ignored...
         val finalSongs = if (!refreshExisting) {
-            val allSongs = database.allLocalSongs().fastMapNotNull { it.song.localPath }.toSet()
-            ArrayList(mediaStoreSongs.filterNot { it.song.song.localPath in allSongs })
+            val dbSongs = database.allLocalSongs()
+            val allPaths = dbSongs.fastMapNotNull { it.song.localPath }.toSet()
+            val allFingerprints = dbSongs
+                .filter { it.song.localPath != null }
+                .map { "${it.song.title.lowercase()}|${it.song.duration}" }
+                .toSet()
+            ArrayList(mediaStoreSongs.filterNot { s ->
+                s.song.song.localPath in allPaths ||
+                    allFingerprints.contains("${s.song.song.title.lowercase()}|${s.song.song.duration}")
+            })
         } else {
             mediaStoreSongs
         }
@@ -941,8 +971,13 @@ class LocalMediaScanner(scannerImpl: ScannerImpl) {
             scannerState.value = 0
             syncDB(
                 database, finalSongs, matchCriteria, strictFileNames, strictFilePaths,
-                refreshExisting = refreshExisting, noDisable = true
+                refreshExisting = refreshExisting, noDisable = true, albumArtistMap = albumArtistMap
             )
+
+            // Populate album_artist_map from TPE2 tags
+            if (albumArtistMap.isNotEmpty()) {
+                populateAlbumArtistMap(database, albumArtistMap)
+            }
 
         } else {
             Log.i(TAG, "Not syncing, no valid songs found!")
@@ -1470,6 +1505,40 @@ class LocalMediaScanner(scannerImpl: ScannerImpl) {
 
                 // nuke old genre
                 safeDeleteGenre(old.id)
+            }
+        }
+    }
+
+    /**
+     * Populate album_artist_map table from TPE2 (album artist) tags collected during scanning.
+     * For each album with an explicit album artist tag, creates the mapping between the album
+     * and its artist(s).
+     */
+    private fun populateAlbumArtistMap(database: MusicDatabase, albumArtistMap: Map<String, String>) {
+        database.transaction {
+            val albums = allAlbums()
+            for (album in albums) {
+                val albumArtist = albumArtistMap[album.title] ?: continue
+
+                // Split album artist by common separators (same as track artists)
+                val artistNames = albumArtist.split(ARTIST_SEPARATORS).map { it.trim() }.filter { it.isNotBlank() }
+                if (artistNames.isEmpty()) continue
+
+                for ((index, artistName) in artistNames.withIndex()) {
+                    // Find existing artist or create new one
+                    val existingArtist = artistByName(artistName)
+                    val artistId = existingArtist?.id ?: run {
+                        val newId = ArtistEntity.generateArtistId()
+                        insert(ArtistEntity(id = newId, name = artistName, isLocal = true))
+                        newId
+                    }
+
+                    // Check if mapping already exists
+                    val existingMap = albumArtistMap(album.id, artistId)
+                    if (existingMap == null) {
+                        insert(AlbumArtistMap(albumId = album.id, artistId = artistId, order = index))
+                    }
+                }
             }
         }
     }

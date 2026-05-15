@@ -99,6 +99,7 @@ fun ColumnScope.ThemePlayerFrag() {
                 PlayerBackgroundStyle.FOLLOW_THEME -> stringResource(R.string.player_background_default)
                 PlayerBackgroundStyle.GRADIENT -> stringResource(R.string.player_background_gradient)
                 PlayerBackgroundStyle.BLUR -> stringResource(R.string.player_background_blur)
+                PlayerBackgroundStyle.PARTY -> stringResource(R.string.player_background_party)
             }
         },
         values = availableBackgroundStyles

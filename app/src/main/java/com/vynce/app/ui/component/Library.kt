@@ -190,7 +190,6 @@ fun LibraryPlaylistListItem(
         IconButton(
             onClick = {
                 menuState.show {
-                    // TODO: investigate why song count is needed. Remove if not needed
                     PlaylistMenu(
                         navController = navController,
                         playlist = playlist,

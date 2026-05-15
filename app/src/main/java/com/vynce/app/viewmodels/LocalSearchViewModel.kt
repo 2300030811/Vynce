@@ -1,7 +1,5 @@
 package com.vynce.app.viewmodels
 
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import com.vynce.app.db.MusicDatabase
 import com.vynce.app.db.entities.Album
 import com.vynce.app.db.entities.Artist
@@ -11,19 +9,17 @@ import com.vynce.app.db.entities.Song
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class LocalSearchViewModel @Inject constructor(
     database: MusicDatabase,
-) : ViewModel() {
+) : DatabaseViewModel(database) {
     val query = MutableStateFlow("")
     val filter = MutableStateFlow(LocalFilter.ALL)
 
@@ -68,7 +64,7 @@ class LocalSearchViewModel @Inject constructor(
                     })
             }
         }
-    }.stateIn(viewModelScope, SharingStarted.Lazily, LocalSearchResult("", filter.value, emptyMap()))
+    }.asStateFlow(LocalSearchResult("", filter.value, emptyMap()))
 
     companion object {
         const val PREVIEW_SIZE = 3

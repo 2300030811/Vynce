@@ -8,6 +8,8 @@ import androidx.compose.material.icons.rounded.FastForward
 import androidx.compose.material.icons.rounded.GraphicEq
 import androidx.compose.material.icons.rounded.SkipNext
 import androidx.compose.material.icons.rounded.Sync
+import androidx.compose.material.icons.rounded.Tune
+import androidx.compose.material.icons.rounded.Waves
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -23,6 +25,8 @@ import com.vynce.app.constants.AudioNormalizationKey
 import com.vynce.app.constants.AudioQuality
 import com.vynce.app.constants.AudioQualityKey
 import com.vynce.app.constants.AutoLoadMoreKey
+import com.vynce.app.constants.CrossfadeDurationKey
+import com.vynce.app.constants.WaveformSeekBarKey
 import com.vynce.app.constants.KeepAliveKey
 import com.vynce.app.constants.SeekIncrement
 import com.vynce.app.constants.SeekIncrementKey
@@ -31,6 +35,7 @@ import com.vynce.app.constants.SkipSilenceKey
 import com.vynce.app.constants.StopMusicOnTaskClearKey
 import com.vynce.app.constants.minPlaybackDurKey
 import com.vynce.app.ui.component.EnumListPreference
+import com.vynce.app.ui.component.ListPreference
 import com.vynce.app.ui.component.PreferenceEntry
 import com.vynce.app.ui.component.SwitchPreference
 import com.vynce.app.ui.dialog.CounterDialog
@@ -102,8 +107,19 @@ fun AudioEffectsFrag() {
         defaultValue = true
     )
 
+    val (crossfadeDuration, onCrossfadeDurationChange) = rememberPreference(
+        key = CrossfadeDurationKey,
+        defaultValue = 0
+    )
+
+    var showCrossfadeDialog by remember { mutableStateOf(false) }
+
+    val crossfadeOptions = listOf(0, 1000, 2000, 3000, 4000, 5000, 8000, 10000, 12000)
+    val crossfadeLabels = listOf("Off", "1s", "2s", "3s", "4s", "5s", "8s", "10s", "12s")
+
     SwitchPreference(
         title = { Text(stringResource(R.string.audio_normalization)) },
+        description = stringResource(R.string.audio_normalization_desc),
         icon = { Icon(Icons.AutoMirrored.Rounded.VolumeUp, null) },
         checked = audioNormalization,
         onCheckedChange = onAudioNormalizationChange
@@ -114,7 +130,28 @@ fun AudioEffectsFrag() {
         checked = skipSilence,
         onCheckedChange = onSkipSilenceChange
     )
+    ListPreference(
+        title = { Text(stringResource(R.string.crossfade)) },
+        icon = { Icon(Icons.Rounded.Tune, null) },
+        selectedValue = crossfadeDuration,
+        onValueSelected = onCrossfadeDurationChange,
+        values = crossfadeOptions,
+        valueText = { duration ->
+            crossfadeLabels[crossfadeOptions.indexOf(duration)]
+        }
+    )
 
+    val (waveformSeekBar, onWaveformSeekBarChange) = rememberPreference(
+        key = WaveformSeekBarKey,
+        defaultValue = false
+    )
+    SwitchPreference(
+        title = { Text(stringResource(R.string.waveform_seekbar)) },
+        description = stringResource(R.string.waveform_seekbar_desc),
+        icon = { Icon(Icons.Rounded.Waves, null) },
+        checked = waveformSeekBar,
+        onCheckedChange = onWaveformSeekBarChange
+    )
 }
 
 @Composable

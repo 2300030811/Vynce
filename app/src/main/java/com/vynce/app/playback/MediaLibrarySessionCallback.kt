@@ -25,7 +25,7 @@ import com.vynce.app.constants.SongSortType
 import com.vynce.app.db.MusicDatabase
 import com.vynce.app.db.entities.PlaylistEntity
 import com.vynce.app.db.entities.Song
-import com.vynce.app.extensions.metadata
+import com.vynce.app.extensions.vynceMetadata
 import com.vynce.app.extensions.toMediaItem
 import com.vynce.app.extensions.toggleRepeatMode
 import com.vynce.app.extensions.toggleShuffleMode
@@ -99,8 +99,7 @@ class MediaLibrarySessionCallback @Inject constructor(
         mediaSession: MediaSession,
         controller: MediaSession.ControllerInfo
     ): ListenableFuture<MediaItemsWithStartPosition> = scope.future(Dispatchers.IO) {
-        // TODO: when this is stable, change to debug
-        Log.i(TAG, "onPlaybackResumption() called")
+        Log.d(TAG, "onPlaybackResumption() called")
         val q = database.getResumptionQueue()
         if (q == null) {
             Log.w(TAG, "No resumption queue data. Loading empty list")
@@ -360,7 +359,7 @@ class MediaLibrarySessionCallback @Inject constructor(
         val queueTitle = context.getString(R.string.android_auto)
         service.queueBoard.value.addQueue(
             queueTitle,
-            queue.first.map { it.metadata },
+            queue.first.map { it.vynceMetadata },
             shuffled = false,
             replace = true,
             delta = false,

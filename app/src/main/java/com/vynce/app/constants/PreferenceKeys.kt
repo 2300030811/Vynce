@@ -68,6 +68,8 @@ val PlayerVolumeKey = floatPreferencesKey("playerVolume")
 val RepeatModeKey = intPreferencesKey("repeatMode")
 val LockQueueKey = booleanPreferencesKey("lockQueue")
 val minPlaybackDurKey = intPreferencesKey("minPlaybackDur")
+val CrossfadeDurationKey = intPreferencesKey("crossfadeDuration")
+val WaveformSeekBarKey = booleanPreferencesKey("waveformSeekBar")
 
 
 /**
@@ -117,6 +119,7 @@ val ScannerSensitivityKey = stringPreferencesKey("scannerSensitivity")
 val ScannerImplKey = stringPreferencesKey("scannerImpl")
 val ScannerStrictFilePathsKey = booleanPreferencesKey("scannerStrictFilePaths")
 val ScannerStrictExtKey = booleanPreferencesKey("scannerStrictExt")
+val AutoAlbumArtistKey = booleanPreferencesKey("autoAlbumArtist")
 //val LookupYtmArtistsKey = booleanPreferencesKey("lookupYtmArtists") // removed key
 
 val ScanPathsKey = stringPreferencesKey("inclScanPaths") // previously "scanPaths"

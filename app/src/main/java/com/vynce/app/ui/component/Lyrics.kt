@@ -107,6 +107,8 @@ import com.vynce.app.ui.component.shimmer.ShimmerHost
 import com.vynce.app.ui.component.shimmer.TextPlaceholder
 import com.vynce.app.ui.dialog.CounterDialog
 import com.vynce.app.ui.menu.LyricsMenu
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.Lifecycle
 import com.vynce.app.ui.utils.fadingEdge
 import com.vynce.app.utils.rememberEnumPreference
 import com.vynce.app.utils.rememberPreference
@@ -235,6 +237,8 @@ fun Lyrics(
     }
 
 
+    val lifecycleOwner = LocalLifecycleOwner.current
+
     LaunchedEffect(lyricsModel, lyricsFancy, lyricsUpdateSpeed, lyricOffset) {
         val syncedLines = (lyricsModel as? SemanticLyrics.SyncedLyrics)?.text.orEmpty()
         if (syncedLines.isEmpty()) {
@@ -247,8 +251,8 @@ fun Lyrics(
             Speed.SLOW.toLrcRefreshMillis()
         }
         while (isActive) {
-            // TODO: likely can improve power usage by disabling lyric refresh
             delay(lyricRefreshRate)
+            if (lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED).not()) continue
             val sliderPosition = sliderPositionProvider()
             isSeeking = sliderPosition != null
             if (!playerConnection.isPlaying.value && !isSeeking) continue

@@ -72,6 +72,27 @@ interface DatabaseDao : SongsDao, AlbumsDao, ArtistsDao, PlaylistsDao, QueueDao 
     """)
     fun quickPicks(now: Long = System.currentTimeMillis()): Flow<List<Song>>
 
+    @Transaction
+    @Query("""
+        SELECT DISTINCT song.*, count(song.dateDownload) downloadCount
+        FROM song
+            LEFT JOIN song_artist_map ON song.id = song_artist_map.songId
+            LEFT JOIN song_album_map ON song.id = song_album_map.songId
+        WHERE song.id != :songId
+            AND (
+                song_artist_map.artistId IN (
+                    SELECT artistId FROM song_artist_map WHERE songId = :songId
+                )
+                OR song_album_map.albumId IN (
+                    SELECT albumId FROM song_album_map WHERE songId = :songId
+                )
+            )
+        GROUP BY song.id
+        ORDER BY downloadCount DESC
+        LIMIT :limit
+    """)
+    fun similarSongs(songId: String, limit: Int = 20): Flow<List<Song>>
+
     @Query("SELECT * FROM format WHERE id = :id")
     fun format(id: String?): Flow<FormatEntity?>
 
@@ -162,7 +183,7 @@ interface DatabaseDao : SongsDao, AlbumsDao, ArtistsDao, PlaylistsDao, QueueDao 
         if (insert(mediaMetadata.toSongEntity().let(block)) == -1L) return
         mediaMetadata.artists.forEachIndexed { index, artist ->
             val artistId = artist.id ?: artistByName(artist.name)?.id ?: ArtistEntity.generateArtistId()
-            insert( // TODO: use upsert???
+            upsert(
                 ArtistEntity(
                     id = artistId,
                     name = artist.name,
@@ -179,7 +200,7 @@ interface DatabaseDao : SongsDao, AlbumsDao, ArtistsDao, PlaylistsDao, QueueDao 
         }
         mediaMetadata.genre?.forEachIndexed { index, genre ->
             val genreId = genreByName(genre.title)?.id ?: GenreEntity.generateGenreId()
-            insert( // TODO: use upsert???
+            upsert(
                 GenreEntity(
                     id = genreId,
                     title = genre.title,
@@ -224,6 +245,12 @@ interface DatabaseDao : SongsDao, AlbumsDao, ArtistsDao, PlaylistsDao, QueueDao 
 
     @Upsert
     fun upsert(format: FormatEntity)
+
+    @Upsert
+    fun upsert(artist: ArtistEntity)
+
+    @Upsert
+    fun upsert(genre: GenreEntity)
 
     @Delete
     fun delete(lyrics: LyricsEntity)

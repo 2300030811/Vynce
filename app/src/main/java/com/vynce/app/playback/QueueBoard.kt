@@ -54,6 +54,7 @@ class QueueBoard(
 
     private var masterIndex: Int // current queue index
     var detachedHead = false
+    private val queueCoroutineScope = CoroutineScope(Dispatchers.IO)
 
     init {
         masterQueues.clear()
@@ -451,7 +452,7 @@ class QueueBoard(
                 masterIndex = -1
             }
 
-            coroutineScope.launch {
+            queueCoroutineScope.launch {
                 player.database.deleteQueue(match.id)
             }
         } else {
@@ -839,7 +840,7 @@ class QueueBoard(
     var queueEntity = PriorityQueue<PriorityJob>()
     var queueSongMap = PriorityQueue<PriorityJob>()
     var jobActive = Mutex()
-    val coroutineScope = CoroutineScope(Dispatchers.IO)
+    private var dispatcherLaunched = false
 
     /**
      * Execute the most recent save request, with a 5 second delay from function call
@@ -873,6 +874,19 @@ class QueueBoard(
         Log.d(TAG, "Exiting database save task")
     }
 
+    /**
+     * Trigger the database dispatcher, ensuring only one instance runs at a time
+     */
+    fun triggerDatabaseSave() {
+        if (!dispatcherLaunched) {
+            dispatcherLaunched = true
+            queueCoroutineScope.launch {
+                databaseDispatcher()
+                dispatcherLaunched = false
+            }
+        }
+    }
+
     fun shutdown() {
         queueSongMap.clear()
         queueEntity.clear()
@@ -883,14 +897,12 @@ class QueueBoard(
             queueSongMap.add(
                 PriorityJob(
                     0,
-                    coroutineScope.launch(start = CoroutineStart.DEFAULT) {
+                    queueCoroutineScope.launch(start = CoroutineStart.DEFAULT) {
                         player.database.saveQueue(mq)
                     }
                 )
             )
-            coroutineScope.launch {
-                databaseDispatcher()
-            }
+            triggerDatabaseSave()
         }
     }
 
@@ -899,14 +911,12 @@ class QueueBoard(
             queueEntity.add(
                 PriorityJob(
                     0,
-                    coroutineScope.launch(start = CoroutineStart.DEFAULT) {
+                    queueCoroutineScope.launch(start = CoroutineStart.DEFAULT) {
                         player.database.updateQueue(mq)
                     }
                 )
             )
-            CoroutineScope(Dispatchers.IO).launch {
-                databaseDispatcher()
-            }
+            triggerDatabaseSave()
         }
     }
 
@@ -916,14 +926,12 @@ class QueueBoard(
                 // we select most recent task, therefore "lowest" numeric priority at the end of the list == "highest" priority
                 PriorityJob(
                     -1,
-                    coroutineScope.launch(start = CoroutineStart.DEFAULT) {
+                    queueCoroutineScope.launch(start = CoroutineStart.DEFAULT) {
                         player.database.updateAllQueues(mq)
                     }
                 )
             )
-            CoroutineScope(Dispatchers.IO).launch {
-                databaseDispatcher()
-            }
+            triggerDatabaseSave()
         }
     }
 

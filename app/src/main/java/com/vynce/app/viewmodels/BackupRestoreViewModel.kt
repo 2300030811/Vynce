@@ -6,8 +6,6 @@ import android.net.Uri
 import android.util.Log
 import android.widget.Toast
 import androidx.datastore.preferences.core.edit
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import com.vynce.app.MainActivity
 import com.vynce.app.R
 import com.vynce.app.constants.AutoBackupFrequency
@@ -22,7 +20,6 @@ import com.vynce.app.extensions.toEnum
 import com.vynce.app.extensions.zipInputStream
 import com.vynce.app.extensions.zipOutputStream
 import com.vynce.app.playback.MusicService
-import com.vynce.app.utils.dataStore
 import com.vynce.app.utils.reportException
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -30,7 +27,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
@@ -44,25 +40,24 @@ import kotlin.system.exitProcess
 
 @HiltViewModel
 class BackupRestoreViewModel @Inject constructor(
-    // TODO: make these calls non-blocking
-    @ApplicationContext val context: Context,
-    val database: MusicDatabase,
-) : ViewModel() {
+    @ApplicationContext context: Context,
+    database: MusicDatabase,
+) : ContextDatabaseViewModel(context, database) {
     val TAG = BackupRestoreViewModel::class.simpleName.toString()
 
     fun backup(uri: Uri) {
-        viewModelScope.launch(Dispatchers.IO) {
+        ioScope.launch(Dispatchers.IO) {
             runCatching {
                 context.applicationContext.contentResolver.openOutputStream(uri)?.use { outputStream ->
                     writeBackup(outputStream)
                 } ?: error("Could not open backup destination")
             }.onSuccess {
-                withContext(Dispatchers.Main) {
+                android.os.Handler(android.os.Looper.getMainLooper()).post {
                     Toast.makeText(context, R.string.backup_create_success, Toast.LENGTH_SHORT).show()
                 }
             }.onFailure {
                 reportException(it)
-                withContext(Dispatchers.Main) {
+                android.os.Handler(android.os.Looper.getMainLooper()).post {
                     Toast.makeText(context, R.string.backup_create_failed, Toast.LENGTH_SHORT).show()
                 }
             }
@@ -70,7 +65,7 @@ class BackupRestoreViewModel @Inject constructor(
     }
 
     fun restore(uri: Uri) {
-        viewModelScope.launch(Dispatchers.IO) {
+        ioScope.launch(Dispatchers.IO) {
             runCatching {
                 context.applicationContext.contentResolver.openInputStream(uri)?.use {
                     it.zipInputStream().use { inputStream ->
@@ -117,7 +112,7 @@ class BackupRestoreViewModel @Inject constructor(
                                         }
                                     } else {
                                         Log.e(TAG, "Incompatible database, aborting restore")
-                                        withContext(Dispatchers.Main) {
+                                        android.os.Handler(android.os.Looper.getMainLooper()).post {
                                             Toast.makeText(
                                                 context,
                                                 context.getString(R.string.err_restore_incompatible_database),
@@ -132,7 +127,7 @@ class BackupRestoreViewModel @Inject constructor(
                     }
                 }
 
-                withContext(Dispatchers.Main) {
+                android.os.Handler(android.os.Looper.getMainLooper()).post {
                     val stopIntent = Intent(context, MusicService::class.java)
                     context.stopService(stopIntent)
                     val startIntent = Intent(context, MainActivity::class.java)
@@ -142,7 +137,7 @@ class BackupRestoreViewModel @Inject constructor(
                 }
             }.onFailure {
                 reportException(it)
-                withContext(Dispatchers.Main) {
+                android.os.Handler(android.os.Looper.getMainLooper()).post {
                     Toast.makeText(context, it.message, Toast.LENGTH_SHORT).show()
                 }
             }
@@ -150,14 +145,14 @@ class BackupRestoreViewModel @Inject constructor(
     }
 
     fun autoBackup() {
-        viewModelScope.launch(Dispatchers.IO) {
-            val enabled = context.dataStore.data.map { it[AutoBackupKey] ?: false }.first()
+        ioScope.launch(Dispatchers.IO) {
+            val enabled = dataStore.data.map { it[AutoBackupKey] ?: false }.first()
             if (!enabled) return@launch
 
-            val frequency = context.dataStore.data
+            val frequency = dataStore.data
                 .map { it[AutoBackupFrequencyKey].toEnum(AutoBackupFrequency.DAILY) }
                 .first()
-            val lastBackup = context.dataStore.data.map { it[LastAutoBackupKey] ?: 0L }.first()
+            val lastBackup = dataStore.data.map { it[LastAutoBackupKey] ?: 0L }.first()
             val now = System.currentTimeMillis()
             if (now - lastBackup < frequency.intervalMillis) return@launch
 
@@ -175,7 +170,7 @@ class BackupRestoreViewModel @Inject constructor(
                 }
                 if (backupFile.exists()) backupFile.delete()
                 check(tempFile.renameTo(backupFile)) { "Could not finalize auto backup" }
-                context.dataStore.edit { it[LastAutoBackupKey] = now }
+                dataStore.edit { it[LastAutoBackupKey] = now }
                 trimBackups()
                 Log.i(TAG, "Auto backup created: $fileName")
             }.onFailure {
@@ -208,7 +203,7 @@ class BackupRestoreViewModel @Inject constructor(
     }
 
     private suspend fun trimBackups() {
-        val maxBackups = context.dataStore.data.map { it[MaxAutoBackupsKey] ?: 10 }.first()
+        val maxBackups = dataStore.data.map { it[MaxAutoBackupsKey] ?: 10 }.first()
         val backupDir = File(context.filesDir, "backups/auto")
         if (!backupDir.exists()) return
 

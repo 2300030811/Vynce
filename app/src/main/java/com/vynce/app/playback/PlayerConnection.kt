@@ -25,7 +25,7 @@ import com.vynce.app.db.entities.LyricsEntity.Companion.uninitializedLyric
 import com.vynce.app.extensions.currentMetadata
 import com.vynce.app.extensions.getCurrentQueueIndex
 import com.vynce.app.extensions.getQueueWindows
-import com.vynce.app.extensions.metadata
+import com.vynce.app.extensions.vynceMetadata
 import com.vynce.app.playback.queues.Queue
 import com.vynce.app.utils.reportException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -161,7 +161,7 @@ class PlayerConnection(
     }
 
     override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
-        mediaMetadata.value = mediaItem?.metadata
+        mediaMetadata.value = mediaItem?.vynceMetadata
         currentMediaItemIndex.value = player.currentMediaItemIndex
         currentWindowIndex.value = player.getCurrentQueueIndex()
         updateCanSkipPreviousAndNext()

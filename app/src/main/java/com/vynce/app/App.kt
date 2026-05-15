@@ -10,11 +10,6 @@
 package com.vynce.app
 
 import android.app.Application
-import android.content.Context
-import android.util.Log
-import android.widget.Toast
-import android.widget.Toast.LENGTH_SHORT
-import androidx.datastore.preferences.core.edit
 import coil3.ImageLoader
 import coil3.PlatformContext
 import coil3.SingletonImageLoader
@@ -25,31 +20,16 @@ import coil3.request.CachePolicy
 import coil3.request.allowHardware
 import coil3.request.crossfade
 import com.vynce.app.constants.MaxImageCacheSizeKey
-import com.vynce.app.extensions.toEnum
-import com.vynce.app.extensions.toInetSocketAddress
 import com.vynce.app.utils.CoilBitmapLoader
 import com.vynce.app.utils.LocalArtworkPathKeyer
 import com.vynce.app.utils.dataStore
 import com.vynce.app.utils.get
-import com.vynce.app.utils.reportException
-import com.zionhuang.kugou.KuGou
 import dagger.hilt.android.HiltAndroidApp
-import kotlinx.coroutines.DelicateCoroutinesApi
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withContext
-import java.net.Proxy
-import java.util.Locale
 
 @HiltAndroidApp
 class App : Application(), SingletonImageLoader.Factory {
     private val TAG = App::class.simpleName.toString()
 
-    @OptIn(DelicateCoroutinesApi::class)
     override fun onCreate() {
         super.onCreate()
 
@@ -57,7 +37,7 @@ class App : Application(), SingletonImageLoader.Factory {
             System.setProperty("kotlinx.coroutines.debug", "on")
         }
 
-        instance = this;
+        instance = this
 
         // JioSaavn initialization (if any needed)
         // No special locale/visitor data needed for basic JioSaavn usage
@@ -66,7 +46,8 @@ class App : Application(), SingletonImageLoader.Factory {
     override fun newImageLoader(context: PlatformContext): ImageLoader {
         val cacheSize = dataStore[MaxImageCacheSizeKey]
 
-        // will crash app if you set to 0 after cache starts being used
+        // When cacheSize is 0, disk cache is disabled to prevent corruption
+        // of existing cache entries. Memory cache remains active.
         if (cacheSize == 0) {
             return ImageLoader.Builder(this)
                 .components {

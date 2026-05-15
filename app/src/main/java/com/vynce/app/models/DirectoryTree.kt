@@ -337,6 +337,5 @@ class DirectoryTree(path: String, var culmSongs: CulmSongs) {
     }
 }
 
-// TODO: delete dis if unused
 data class CulmSongs(var value: Int)
 

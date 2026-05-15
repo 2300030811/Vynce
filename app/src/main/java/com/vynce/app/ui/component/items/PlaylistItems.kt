@@ -240,7 +240,6 @@ fun PlaylistThumbnail(
 
             Icon(
                 imageVector = when {
-                    // TODO: Icons that actually goddamn match with each other wth is this google???
                     features >= 8 -> Icons.AutoMirrored.Rounded.QueueMusic
                     features >= 4 -> Icons.AutoMirrored.Rounded.PlaylistAdd
                     features >= 2 -> Icons.AutoMirrored.Rounded.PlaylistPlay

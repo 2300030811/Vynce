@@ -127,6 +127,8 @@ while also allowing users to translate our app as well. New, specific strings to
     <string name="player_background_blur">Blur</string>
     <string name="player_background_default">Follow theme</string>
     <string name="player_background_gradient">Gradient</string>
+    <string name="player_background_party">Party mode</string>
+    <string name="player_background_party_desc">Cycle through album art colors during playback</string>
     <string name="player_background_style">Player background style</string>
     <string name="show_liked_and_downloaded_playlist">Show playlists for liked and downloaded songs in library</string>
     <string name="slim_navbar_title">Slim navbar</string>
@@ -374,4 +376,21 @@ while also allowing users to translate our app as well. New, specific strings to
     <string name="backup_frequency_monthly">Monthly</string>
     <string name="never">Never</string>
     <string name="lyric_offset_adjustment">Offset adjustment</string>
+    <string name="audio_normalization_desc">Automatically adjust volume based on track loudness</string>
+    <string name="crossfade">Crossfade</string>
+    <string name="crossfade_desc">Smoothly transition between songs</string>
+    <string name="crossfade_duration">Crossfade duration</string>
+    <string name="crossfade_duration_desc">Duration of the crossfade between songs (%d ms)</string>
+    <string name="auto_album_artist">Auto-detect album artists</string>
+    <string name="auto_album_artist_desc">Extract album artist (TPE2) tags from local files and map albums to their primary artists</string>
+    <string name="similar_songs">Similar songs</string>
+    <string name="listening_streak">Listening streak</string>
+    <string name="listening_streak_desc">%d consecutive days</string>
+    <string name="unique_songs">Unique songs played</string>
+    <string name="total_listening_time">Total listening time</string>
+    <string name="hours_format">%.1f hours</string>
+    <string name="monthly_top">Monthly top</string>
+    <string name="most_frequent">Most frequent</string>
+    <string name="waveform_seekbar">Waveform seekbar</string>
+    <string name="waveform_seekbar_desc">Display audio waveform visualization in the seekbar</string>
 </resources>
