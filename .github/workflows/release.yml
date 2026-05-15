@@ -1,6 +1,7 @@
 name: Build & Release Vynce
 
 on:
+  workflow_dispatch:
   push:
     tags:
       - 'v*'
