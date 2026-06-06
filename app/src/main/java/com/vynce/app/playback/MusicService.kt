@@ -877,10 +877,14 @@ class MusicService : MediaLibraryService(),
             player.play()
         }
 
+        val currentMediaItemIndex = player.currentMediaItemIndex
+        val mediaItemCount = player.mediaItemCount
+        val existingIds = (0 until mediaItemCount).map { player.getMediaItemAt(it).mediaId }.toSet()
+
         // Auto load more songs (Endless Radio via JioSaavn suggestions)
         offloadScope.launch {
             if (dataStore.get(AutoplayKey, false)) {
-                val isNearEnd = player.currentMediaItemIndex >= player.mediaItemCount - 3
+                val isNearEnd = currentMediaItemIndex >= mediaItemCount - 3
                 if (isNearEnd && mediaItem != null) {
                     val mediaId = mediaItem.mediaId
                     if (mediaId.startsWith("saavn:")) {
@@ -888,7 +892,6 @@ class MusicService : MediaLibraryService(),
                             val id = mediaId.removePrefix("saavn:")
                             val suggestions = JioSaavn.getSongSuggestions(id, limit = 15)
                             
-                            val existingIds = (0 until player.mediaItemCount).map { player.getMediaItemAt(it).mediaId }.toSet()
                             val newItems = suggestions.filter { "saavn:${it.id}" !in existingIds }.map { s ->
                                 MediaMetadata(
                                     id = "saavn:${s.id}",
