@@ -87,16 +87,18 @@ fun ImportM3uDialog(
         mutableStateOf(ScannerM3uMatchCriteria.LEVEL_1)
     }
 
-    var isLoading by remember { mutableStateOf(false) }
+    var isLoading by rememberSaveable { mutableStateOf(false) }
     var showChoosePlaylistDialog by rememberSaveable {
         mutableStateOf(false)
     }
-    var importedTitle by remember { mutableStateOf("") }
+    var importedTitle by rememberSaveable { mutableStateOf("") }
     val importedSongs = remember { mutableStateListOf<Song>() }
     val rejectedSongs = remember { mutableStateListOf<String>() }
 
+    val appScope = com.vynce.app.LocalAppScope.current
+    val importFailedMessage = stringResource(R.string.m3u_import_failed)
     val importM3uLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        CoroutineScope(lmScannerCoroutine).launch {
+        appScope.launch(lmScannerCoroutine) {
             try {
                 isLoading = true
                 if (uri != null) {
@@ -112,6 +114,15 @@ fun ImportM3uDialog(
                     rejectedSongs.clear()
                     rejectedSongs.addAll(result.second)
                     importedTitle = result.third
+                    if (importedSongs.isEmpty()) {
+                        appScope.launch(Dispatchers.Main) {
+                            snackbarHostState.showSnackbar(
+                                message = importFailedMessage,
+                                withDismissAction = true,
+                                duration = SnackbarDuration.Long
+                            )
+                        }
+                    }
                 }
             } catch (e: Exception) {
                 reportException(e)
@@ -377,15 +388,7 @@ suspend fun loadM3u(
         Toast.makeText(context, R.string.m3u_import_playlist_failed, Toast.LENGTH_SHORT).show()
     }
 
-    if (songs.isEmpty()) {
-        CoroutineScope(Dispatchers.Main).launch {
-            snackbarHostState.showSnackbar(
-                message = context.getString(R.string.m3u_import_failed),
-                withDismissAction = true,
-                duration = SnackbarDuration.Long
-            )
-        }
-    }
+    // moved snackbar to caller
     return Triple(songs, rejectedSongs, uri.path?.substringAfterLast('/')?.substringBeforeLast('.') ?: "")
 }
 

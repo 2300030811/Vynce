@@ -1,5 +1,6 @@
 package com.vynce.app.ui.screens.library
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import android.content.pm.PackageManager
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -33,7 +34,6 @@ import androidx.compose.material3.pulltorefresh.pullToRefresh
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -91,8 +91,8 @@ fun LibraryAlbumsScreen(
     val context = LocalContext.current
     val menuState = LocalMenuState.current
     val playerConnection = LocalPlayerConnection.current ?: return
-    val isPlaying by playerConnection.isPlaying.collectAsState()
-    val mediaMetadata by playerConnection.mediaMetadata.collectAsState()
+    val isPlaying by playerConnection.isPlaying.collectAsStateWithLifecycle()
+    val mediaMetadata by playerConnection.mediaMetadata.collectAsStateWithLifecycle()
 
     val coroutineScope = rememberCoroutineScope()
 
@@ -105,8 +105,8 @@ fun LibraryAlbumsScreen(
     val (sortDescending, onSortDescendingChange) = rememberPreference(AlbumSortDescendingKey, true)
     val localLibEnable by rememberPreference(LocalLibraryEnableKey, defaultValue = true)
 
-    val albums by viewModel.allAlbums.collectAsState()
-    val isSyncingLibraryAlbums by viewModel.isSyncingRemoteAlbums.collectAsState()
+    val albums by viewModel.allAlbums.collectAsStateWithLifecycle()
+    val isSyncingLibraryAlbums by viewModel.isSyncingRemoteAlbums.collectAsStateWithLifecycle()
     val pullRefreshState = rememberPullToRefreshState()
 
     val lazyListState = rememberLazyListState()

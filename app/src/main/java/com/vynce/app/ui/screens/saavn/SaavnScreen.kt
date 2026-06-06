@@ -1,5 +1,7 @@
 package com.vynce.app.ui.screens.saavn
 
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -19,7 +21,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import coil3.request.ImageRequest
 import coil3.compose.AsyncImage
 import com.vynce.app.R
@@ -34,10 +36,10 @@ fun SaavnScreen(
     viewModel: SaavnViewModel = hiltViewModel(),
     onPlaySong: (SaavnSong) -> Unit
 ) {
-    var query by remember { mutableStateOf("") }
-    val searchResults by viewModel.searchResults.collectAsState()
-    val charts by viewModel.charts.collectAsState()
-    val isLoading by viewModel.isLoading.collectAsState()
+    var query by rememberSaveable { mutableStateOf("") }
+    val searchResults by viewModel.searchResults.collectAsStateWithLifecycle()
+    val charts by viewModel.charts.collectAsStateWithLifecycle()
+    val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
 
     Column(
         modifier = Modifier

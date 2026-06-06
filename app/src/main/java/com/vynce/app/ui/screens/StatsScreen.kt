@@ -1,5 +1,6 @@
 package com.vynce.app.ui.screens
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.padding
@@ -20,7 +21,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
@@ -67,14 +67,14 @@ fun StatsScreen(
 
     val swipeEnabled by rememberPreference(SwipeToQueueKey, true)
 
-    val isPlaying by playerConnection.isPlaying.collectAsState()
-    val mediaMetadata by playerConnection.mediaMetadata.collectAsState()
+    val isPlaying by playerConnection.isPlaying.collectAsStateWithLifecycle()
+    val mediaMetadata by playerConnection.mediaMetadata.collectAsStateWithLifecycle()
 
-    val statPeriod by viewModel.statPeriod.collectAsState()
-    val mostPlayedSongs by viewModel.mostPlayedSongs.collectAsState()
-    val mostPlayedArtists by viewModel.mostPlayedArtists.collectAsState()
-    val mostPlayedAlbums by viewModel.mostPlayedAlbums.collectAsState()
-    val lostMemories by viewModel.lostMemories.collectAsState()
+    val statPeriod by viewModel.statPeriod.collectAsStateWithLifecycle()
+    val mostPlayedSongs by viewModel.mostPlayedSongs.collectAsStateWithLifecycle()
+    val mostPlayedArtists by viewModel.mostPlayedArtists.collectAsStateWithLifecycle()
+    val mostPlayedAlbums by viewModel.mostPlayedAlbums.collectAsStateWithLifecycle()
+    val lostMemories by viewModel.lostMemories.collectAsStateWithLifecycle()
 
     val coroutineScope = rememberCoroutineScope()
     val lazyListState = rememberLazyListState()

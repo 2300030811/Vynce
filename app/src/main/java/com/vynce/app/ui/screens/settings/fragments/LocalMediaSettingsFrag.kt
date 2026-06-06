@@ -8,6 +8,8 @@
 
 package com.vynce.app.ui.screens.settings.fragments
 
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import android.app.Activity
 import com.vynce.app.MainActivity
 import android.content.Intent
@@ -48,7 +50,6 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -122,9 +123,9 @@ fun ColumnScope.LocalScannerFrag() {
     val scannerScanFailText = stringResource(R.string.scanner_scan_fail)
 
     // scanner vars
-    val scannerState by scannerState.collectAsState()
-    val scannerProgressTotal by scannerProgressTotal.collectAsState()
-    val scannerProgressCurrent by scannerProgressCurrent.collectAsState()
+    val scannerState by scannerState.collectAsStateWithLifecycle()
+    val scannerProgressTotal by scannerProgressTotal.collectAsStateWithLifecycle()
+    val scannerProgressCurrent by scannerProgressCurrent.collectAsStateWithLifecycle()
 
     val scannerSensitivity by rememberEnumPreference(
         key = ScannerSensitivityKey,
@@ -134,7 +135,7 @@ fun ColumnScope.LocalScannerFrag() {
         key = ScannerImplKey,
         defaultValue = ScannerImpl.MEDIASTORE
     )
-    var scannerFailure by remember { mutableStateOf(false) }
+    var scannerFailure by rememberSaveable { mutableStateOf(false) }
 
     /**
      * True = include folders
@@ -151,7 +152,7 @@ fun ColumnScope.LocalScannerFrag() {
     val (excludedScanPaths, onExcludedScanPathsChange) = rememberPreference(ExcludedScanPathsKey, defaultValue = "")
     val dlPathExtra by rememberPreference(DownloadExtraPathKey, "")
 
-    var fullRescan by remember { mutableStateOf(false) }
+    var fullRescan by rememberSaveable { mutableStateOf(false) }
 
     val (lastLocalScan, onLastLocalScanChange) = rememberPreference(LastLocalScanKey, 0L)
 

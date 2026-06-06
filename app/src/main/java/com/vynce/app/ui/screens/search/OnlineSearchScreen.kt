@@ -1,5 +1,6 @@
 package com.vynce.app.ui.screens.search
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vynce.app.extensions.decodeHtml
 
 import androidx.compose.foundation.clickable
@@ -28,7 +29,6 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.snapshotFlow
@@ -91,10 +91,10 @@ fun OnlineSearchScreen(
 
     val swipeEnabled by rememberPreference(SwipeToQueueKey, true)
 
-    val isPlaying by playerConnection.isPlaying.collectAsState()
-    val mediaMetadata by playerConnection.mediaMetadata.collectAsState()
+    val isPlaying by playerConnection.isPlaying.collectAsStateWithLifecycle()
+    val mediaMetadata by playerConnection.mediaMetadata.collectAsStateWithLifecycle()
 
-    val viewState by viewModel.viewState.collectAsState()
+    val viewState by viewModel.viewState.collectAsStateWithLifecycle()
 
     val lazyListState = rememberLazyListState()
     val snackbarHostState = LocalSnackbarHostState.current

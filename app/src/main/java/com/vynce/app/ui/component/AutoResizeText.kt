@@ -1,5 +1,6 @@
 package com.vynce.app.ui.component
 
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -42,7 +43,7 @@ fun AutoResizeText(
     style: TextStyle = LocalTextStyle.current,
 ) {
     var fontSizeValue by remember { mutableStateOf(fontSizeRange.max.value) }
-    var readyToDraw by remember { mutableStateOf(false) }
+    var readyToDraw by rememberSaveable { mutableStateOf(false) }
 
     Text(
         text = text,

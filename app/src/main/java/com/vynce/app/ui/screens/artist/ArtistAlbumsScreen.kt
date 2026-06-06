@@ -1,5 +1,6 @@
 package com.vynce.app.ui.screens.artist
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Box
@@ -24,7 +25,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -62,11 +62,11 @@ fun ArtistAlbumsScreen(
 ) {
     val menuState = LocalMenuState.current
     val playerConnection = LocalPlayerConnection.current ?: return
-    val isPlaying by playerConnection.isPlaying.collectAsState()
-    val mediaMetadata by playerConnection.mediaMetadata.collectAsState()
+    val isPlaying by playerConnection.isPlaying.collectAsStateWithLifecycle()
+    val mediaMetadata by playerConnection.mediaMetadata.collectAsStateWithLifecycle()
 
-    val artist by viewModel.artist.collectAsState()
-    val albums by viewModel.albums.collectAsState()
+    val artist by viewModel.artist.collectAsStateWithLifecycle()
+    val albums by viewModel.albums.collectAsStateWithLifecycle()
 
     val coroutineScope = rememberCoroutineScope()
     val lazyGridState = rememberLazyGridState()

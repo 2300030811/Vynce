@@ -7,6 +7,7 @@
  */
 package com.vynce.app.ui.menu
 
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -46,7 +47,7 @@ fun ActionDropdown(
     onDismiss: () -> Unit = {},
     extraContent: @Composable (() -> Unit)? = null,
 ) {
-    var menuExpanded by remember { mutableStateOf(false) }
+    var menuExpanded by rememberSaveable { mutableStateOf(false) }
 
     Row(
         verticalAlignment = Alignment.CenterVertically,

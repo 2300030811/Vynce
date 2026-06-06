@@ -71,6 +71,7 @@ import com.vynce.app.constants.AudioNormalizationKey
 import com.vynce.app.constants.AudioOffloadKey
 import com.vynce.app.constants.AudioQuality
 import com.vynce.app.constants.AudioQualityKey
+import com.vynce.app.constants.AutoplayKey
 import com.vynce.app.constants.AutoLoadMoreKey
 import com.vynce.app.constants.CrossfadeDurationKey
 import com.vynce.app.constants.ENABLE_FFMETADATAEX
@@ -510,6 +511,11 @@ class MusicService : MediaLibraryService(),
                     )
                     queueBoard.value.setCurrQueue(q, shouldResume)
                 }
+                if (isRadio) {
+                    dataStore.edit { settings ->
+                        settings[AutoplayKey] = true
+                    }
+                }
 
                 player.prepare()
                 player.playWhenReady = playWhenReady
@@ -871,7 +877,46 @@ class MusicService : MediaLibraryService(),
             player.play()
         }
 
-        // Auto load more songs disabled (was YouTube-based)
+        val currentMediaItemIndex = player.currentMediaItemIndex
+        val mediaItemCount = player.mediaItemCount
+        val existingIds = (0 until mediaItemCount).map { player.getMediaItemAt(it).mediaId }.toSet()
+
+        // Auto load more songs (Endless Radio via JioSaavn suggestions)
+        offloadScope.launch {
+            if (dataStore.get(AutoplayKey, false)) {
+                val isNearEnd = currentMediaItemIndex >= mediaItemCount - 3
+                if (isNearEnd && mediaItem != null) {
+                    val mediaId = mediaItem.mediaId
+                    if (mediaId.startsWith("saavn:")) {
+                        try {
+                            val id = mediaId.removePrefix("saavn:")
+                            val suggestions = JioSaavn.getSongSuggestions(id, limit = 15)
+                            
+                            val newItems = suggestions.filter { "saavn:${it.id}" !in existingIds }.map { s ->
+                                MediaMetadata(
+                                    id = "saavn:${s.id}",
+                                    title = s.name,
+                                    artists = listOf(MediaMetadata.Artist(id = null, name = s.primaryArtists)),
+                                    duration = s.duration.toIntOrNull() ?: 0,
+                                    thumbnailUrl = s.image,
+                                    album = MediaMetadata.Album(id = "", title = s.album),
+                                    genre = null,
+                                    isLocal = false
+                                )
+                            }
+                            
+                            if (newItems.isNotEmpty()) {
+                                withContext(Dispatchers.Main) {
+                                    queueBoard.value.enqueueEnd(newItems)
+                                }
+                            }
+                        } catch (e: Exception) {
+                            android.util.Log.e(TAG, "Failed to fetch suggestions", e)
+                        }
+                    }
+                }
+            }
+        }
 
         queueBoard.value.setCurrQueuePosIndex(player.currentMediaItemIndex)
 

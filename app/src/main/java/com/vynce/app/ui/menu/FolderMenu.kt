@@ -1,5 +1,6 @@
 package com.vynce.app.ui.menu
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -17,7 +18,6 @@ import androidx.compose.material.icons.rounded.Shuffle
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
@@ -60,7 +60,7 @@ fun FolderMenu(
     val context = LocalContext.current
     val database = LocalDatabase.current
     val playerConnection = LocalPlayerConnection.current ?: return
-    val queueBoard by playerConnection.queueBoard.collectAsState()
+    val queueBoard by playerConnection.queueBoard.collectAsStateWithLifecycle()
 
     val allFolderSongs = remember { mutableStateListOf<Song>() }
     var subDirSongCount by remember {

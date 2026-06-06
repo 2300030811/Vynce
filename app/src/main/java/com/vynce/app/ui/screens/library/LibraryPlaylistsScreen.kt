@@ -1,5 +1,6 @@
 package com.vynce.app.ui.screens.library
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import android.content.pm.PackageManager
 import android.util.Log
 import androidx.compose.foundation.background
@@ -40,7 +41,6 @@ import androidx.compose.material3.pulltorefresh.pullToRefresh
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -117,8 +117,8 @@ fun LibraryPlaylistsScreen(
     val (sortDescending, onSortDescendingChange) = rememberPreference(PlaylistSortDescendingKey, true)
     val (showLikedAndDownloadedPlaylist) = rememberPreference(ShowLikedAndDownloadedPlaylist, true)
 
-    val playlists by viewModel.allPlaylists.collectAsState()
-    val isSyncingRemotePlaylists by viewModel.isSyncingRemotePlaylists.collectAsState()
+    val playlists by viewModel.allPlaylists.collectAsStateWithLifecycle()
+    val isSyncingRemotePlaylists by viewModel.isSyncingRemotePlaylists.collectAsStateWithLifecycle()
     val pullRefreshState = rememberPullToRefreshState()
 
     val likedPlaylist = PlaylistEntity(id = "liked", name = stringResource(id = R.string.liked_songs))

@@ -1,5 +1,6 @@
 package com.vynce.app.ui.screens.stats
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
@@ -11,7 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.vynce.app.ui.theme.*
 
 
@@ -20,10 +21,10 @@ fun StatsScreen(
     navController: androidx.navigation.NavHostController,
     viewModel: StatsViewModel = hiltViewModel()
 ) {
-    val topSongs by viewModel.topSongs.collectAsState()
-    val topArtists by viewModel.topArtists.collectAsState()
-    val totalMinutes by viewModel.totalMinutes.collectAsState()
-    val totalSongs by viewModel.totalSongs.collectAsState()
+    val topSongs by viewModel.topSongs.collectAsStateWithLifecycle()
+    val topArtists by viewModel.topArtists.collectAsStateWithLifecycle()
+    val totalMinutes by viewModel.totalMinutes.collectAsStateWithLifecycle()
+    val totalSongs by viewModel.totalSongs.collectAsStateWithLifecycle()
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),

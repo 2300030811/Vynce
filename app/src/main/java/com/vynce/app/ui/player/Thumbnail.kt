@@ -9,6 +9,7 @@
 
 package com.vynce.app.ui.player
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import android.annotation.SuppressLint
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -29,7 +30,6 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -66,9 +66,9 @@ fun Thumbnail(
 
     var showLyrics by rememberPreference(ShowLyricsKey, defaultValue = false)
 
-    val playerMediaMetadata by playerConnection.mediaMetadata.collectAsState()
-    val error by playerConnection.error.collectAsState()
-    val isPlaying by playerConnection.isPlaying.collectAsState()
+    val playerMediaMetadata by playerConnection.mediaMetadata.collectAsStateWithLifecycle()
+    val error by playerConnection.error.collectAsStateWithLifecycle()
+    val isPlaying by playerConnection.isPlaying.collectAsStateWithLifecycle()
     val mediaMetadata = customMediaMetadata ?: playerMediaMetadata
 
     DisposableEffect(showLyrics) {

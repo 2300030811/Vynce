@@ -1,5 +1,6 @@
 package com.vynce.app.ui.screens.settings.fragments
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -37,7 +38,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateListOf
@@ -237,7 +237,7 @@ fun ColumnScope.DownloadsFrag() {
 
     // advanced
     val (dlPathExtra, onDlPathExtraChange) = rememberPreference(DownloadExtraPathKey, "")
-    val isLoading by downloadUtil.isProcessingDownloads.collectAsState()
+    val isLoading by downloadUtil.isProcessingDownloads.collectAsStateWithLifecycle()
     var showMigrationDialog by rememberSaveable {
         mutableStateOf(false)
     }

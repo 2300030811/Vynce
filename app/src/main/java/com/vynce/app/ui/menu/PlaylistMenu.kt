@@ -1,5 +1,6 @@
 package com.vynce.app.ui.menu
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -28,7 +29,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -82,18 +82,19 @@ fun PlaylistMenu(
     val database = LocalDatabase.current
     val downloadUtil = LocalDownloadUtil.current
     val playerConnection = LocalPlayerConnection.current ?: return
-    val queueBoard by playerConnection.queueBoard.collectAsState()
+    val queueBoard by playerConnection.queueBoard.collectAsStateWithLifecycle()
     val isNetworkConnected = LocalNetworkConnected.current
-    val dbPlaylist by database.playlist(playlist.id).collectAsState(initial = playlist)
+    val dbPlaylist by database.playlist(playlist.id).collectAsStateWithLifecycle(initialValue = playlist)
     var songs by remember {
         mutableStateOf(emptyList<Song>())
     }
 
+    val appScope = com.vynce.app.LocalAppScope.current
     val m3uLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("audio/x-mpegurl")
     ) { uri: Uri? ->
         uri?.let {
-            CoroutineScope(lmScannerCoroutine).launch {
+            appScope.launch(lmScannerCoroutine) {
                 try {
                     var result = "#EXTM3U\n"
                     songs.forEach { s ->

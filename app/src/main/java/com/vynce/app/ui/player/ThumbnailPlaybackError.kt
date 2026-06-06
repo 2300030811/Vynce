@@ -9,6 +9,7 @@
 
 package com.vynce.app.ui.player
 
+import androidx.compose.runtime.saveable.rememberSaveable
 import android.annotation.SuppressLint
 import android.content.ClipData
 import android.os.Build
@@ -81,7 +82,7 @@ fun ThumbnailPlaybackError(
                 MaterialTheme.colorScheme.onPrimary
     }
 
-    var showStackTrace by remember { mutableStateOf(false) }
+    var showStackTrace by rememberSaveable { mutableStateOf(false) }
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,

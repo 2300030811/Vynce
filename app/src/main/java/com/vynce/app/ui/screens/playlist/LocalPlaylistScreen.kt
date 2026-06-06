@@ -1,5 +1,6 @@
 package com.vynce.app.ui.screens.playlist
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
@@ -53,7 +54,6 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -157,10 +157,10 @@ fun LocalPlaylistScreen(
     val playerConnection = LocalPlayerConnection.current ?: return
     val snackbarHostState = LocalSnackbarHostState.current
 
-    val playlistWithSongs by viewModel.playlistWithSongs.collectAsState()
+    val playlistWithSongs by viewModel.playlistWithSongs.collectAsStateWithLifecycle()
 
-    val isPlaying by playerConnection.isPlaying.collectAsState()
-    val mediaMetadata by playerConnection.mediaMetadata.collectAsState()
+    val isPlaying by playerConnection.isPlaying.collectAsStateWithLifecycle()
+    val mediaMetadata by playerConnection.mediaMetadata.collectAsStateWithLifecycle()
     val mutableSongs = remember { mutableStateListOf<PlaylistSong>() }
 
     val (sortType, onSortTypeChange) = rememberEnumPreference(PlaylistSongSortTypeKey, PlaylistSongSortType.CUSTOM)

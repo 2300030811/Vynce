@@ -1,5 +1,6 @@
 package com.vynce.app.ui.screens.search
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -23,8 +24,8 @@ fun OnlineSearchResult(
     viewModel: OnlineSearchViewModel = hiltViewModel(),
 ) {
     val playerConnection = LocalPlayerConnection.current ?: return
-    val results by viewModel.searchResults.collectAsState()
-    val isLoading by viewModel.isLoading.collectAsState()
+    val results by viewModel.searchResults.collectAsStateWithLifecycle()
+    val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),

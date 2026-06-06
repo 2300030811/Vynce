@@ -1,5 +1,6 @@
 package com.vynce.app.ui.menu
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import android.content.Intent
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -21,7 +22,6 @@ import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -68,10 +68,9 @@ fun AlbumMenu(
     val database = LocalDatabase.current
     val downloadUtil = LocalDownloadUtil.current
     val playerConnection = LocalPlayerConnection.current ?: return
-    val queueBoard by playerConnection.queueBoard.collectAsState()
+    val queueBoard by playerConnection.queueBoard.collectAsStateWithLifecycle()
     val isNetworkConnected = LocalNetworkConnected.current
-    val scope = rememberCoroutineScope()
-    val libraryAlbum by database.album(originalAlbum.id).collectAsState(initial = originalAlbum)
+    val libraryAlbum by database.album(originalAlbum.id).collectAsStateWithLifecycle(initialValue = originalAlbum)
     val album = libraryAlbum ?: originalAlbum
     var songs by remember {
         mutableStateOf(emptyList<Song>())
@@ -84,8 +83,6 @@ fun AlbumMenu(
 //    val allLocal by remember(songs) { // if only local songs in this selection
 //        mutableStateOf(songs.isNotEmpty() && songs.all { it.song.isLocal })
 //    }
-
-    val coroutineScope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
         database.albumSongs(album.id).collect {

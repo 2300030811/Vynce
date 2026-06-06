@@ -9,6 +9,7 @@
 
 package com.vynce.app.ui.component
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import android.annotation.SuppressLint
 import android.content.res.Configuration
 import androidx.compose.animation.core.LinearEasing
@@ -145,11 +146,11 @@ fun Lyrics(
     val lyricsUpdateSpeed by rememberEnumPreference(LyricUpdateSpeed, Speed.MEDIUM)
     val (lyricOffset, onLyricOffsetChange) = rememberPreference(LyricOffsetKey, 0L)
 
-    val mediaMetadata by playerConnection.mediaMetadata.collectAsState()
+    val mediaMetadata by playerConnection.mediaMetadata.collectAsStateWithLifecycle()
 
     // NOTE: lyricsModel is the current display lyrics that is updated by playerLyrics AND/OR manually
-    val playerLyrics by playerConnection.currentLyrics.collectAsState(initial = null)
-    var lyricsModel by remember { mutableStateOf(playerLyrics) }
+    val playerLyrics by playerConnection.currentLyrics.collectAsStateWithLifecycle(initialValue = null)
+    var lyricsModel by remember { mutableStateOf<SemanticLyrics?>(playerLyrics) }
 
     val lines: SnapshotStateList<LyricLine> = remember { mutableStateListOf<LyricLine>() }
 
@@ -161,7 +162,7 @@ fun Lyrics(
         mediaMetadata?.id?.let { id ->
             playerConnection.service.database.lyrics(id)
         } ?: flowOf(null)
-    }.collectAsState(initial = null)
+    }.collectAsStateWithLifecycle(initialValue = null)
 
     val currentDbLyrics = remember(dbLyrics, mediaMetadata) {
         var lyrics = dbLyrics

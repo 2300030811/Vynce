@@ -9,6 +9,7 @@
 
 package com.vynce.app
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import android.annotation.SuppressLint
 import android.app.NotificationManager
 import android.content.Intent
@@ -73,7 +74,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -109,7 +109,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import androidx.window.core.layout.WindowWidthSizeClass
+
 import com.vynce.app.constants.AppBarHeight
 import com.vynce.app.constants.DEFAULT_ENABLED_TABS
 import com.vynce.app.constants.DarkMode
@@ -288,7 +288,7 @@ class MainActivity : ComponentActivity() {
             val tabMode = this@MainActivity.tabMode()
             val useNavRail by remember {
                 derivedStateOf {
-                    windowSizeClass.windowWidthSizeClass == WindowWidthSizeClass.EXPANDED && !tabMode
+                    windowSizeClass.isWidthAtLeastBreakpoint(840) && !tabMode
                 }
             }
 
@@ -329,7 +329,7 @@ class MainActivity : ComponentActivity() {
             val connectivityObs = remember {
                 connectivityObserver
             }
-            val isNetworkConnected by connectivityObs.networkStatus.collectAsState(true)
+            val isNetworkConnected by connectivityObs.networkStatus.collectAsStateWithLifecycle(true)
 
 
             VynceTheme(
@@ -433,6 +433,7 @@ class MainActivity : ComponentActivity() {
                         LocalPlayerAwareWindowInsets provides playerAwareWindowInsets,
                         LocalDownloadUtil provides downloadUtil,
                         LocalShimmerTheme provides ShimmerTheme,
+                        LocalAppScope provides coroutineScope,
 
                         LocalNetworkConnected provides isNetworkConnected,
                         LocalSnackbarHostState provides snackbarHostState,
@@ -674,7 +675,7 @@ class MainActivity : ComponentActivity() {
 
                                 if (oobeStatus >= OOBE_VERSION) {
                                     if (!navigationItems.contains(Screens.Player)) {
-                                        val playbackState by playerConnection?.playbackState?.collectAsState() ?: remember { mutableStateOf(Player.STATE_IDLE) }
+                                        val playbackState by playerConnection?.playbackState?.collectAsStateWithLifecycle() ?: remember { mutableStateOf(Player.STATE_IDLE) }
                                         val mediaItemCount = playerConnection?.player?.mediaItemCount ?: 0
                                         if (playbackState != Player.STATE_IDLE && mediaItemCount > 0) {
                                             BottomSheetPlayer(
@@ -768,6 +769,7 @@ class MainActivity : ComponentActivity() {
 
         // sdk24 support
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
+            @Suppress("DEPRECATION")
             window.navigationBarColor = (if (isDark) Color.Transparent else Color.Black.copy(alpha = 0.2f)).toArgb()
         }
     }
@@ -787,4 +789,5 @@ val LocalPlayerAwareWindowInsets = compositionLocalOf<WindowInsets> { error("No 
 val LocalDownloadUtil = staticCompositionLocalOf<DownloadUtil> { error("No DownloadUtil provided") }
 val LocalNetworkConnected = staticCompositionLocalOf<Boolean> { error("No Network Status provided") }
 val LocalSnackbarHostState = staticCompositionLocalOf<SnackbarHostState> { error("No SnackbarHostState provided") }
+val LocalAppScope = staticCompositionLocalOf<kotlinx.coroutines.CoroutineScope> { error("No AppScope provided") }
 

@@ -1,5 +1,6 @@
 package com.vynce.app.ui.screens.library
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import android.content.pm.PackageManager
 import android.util.Log
 import androidx.activity.compose.BackHandler
@@ -35,7 +36,6 @@ import androidx.compose.material3.pulltorefresh.pullToRefresh
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -122,11 +122,11 @@ fun LibrarySongsScreen(
     val (sortDescending, onSortDescendingChange) = rememberPreference(SongSortDescendingKey, true)
     val swipeEnabled by rememberPreference(SwipeToQueueKey, true)
 
-    val songs by viewModel.allSongs.collectAsState()
-    val isPlaying by playerConnection.isPlaying.collectAsState()
-    val isSyncingRemoteLikedSongs by viewModel.isSyncingRemoteLikedSongs.collectAsState()
-    val isSyncingRemoteSongs by viewModel.isSyncingRemoteSongs.collectAsState()
-    val mediaMetadata by playerConnection.mediaMetadata.collectAsState()
+    val songs by viewModel.allSongs.collectAsStateWithLifecycle()
+    val isPlaying by playerConnection.isPlaying.collectAsStateWithLifecycle()
+    val isSyncingRemoteLikedSongs by viewModel.isSyncingRemoteLikedSongs.collectAsStateWithLifecycle()
+    val isSyncingRemoteSongs by viewModel.isSyncingRemoteSongs.collectAsStateWithLifecycle()
+    val mediaMetadata by playerConnection.mediaMetadata.collectAsStateWithLifecycle()
     val pullRefreshState = rememberPullToRefreshState()
 
     val lazyListState = rememberLazyListState()

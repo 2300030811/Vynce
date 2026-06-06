@@ -8,10 +8,10 @@
 
 package com.vynce.app.ui.component
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.navigation.NavController
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -19,7 +19,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 @Composable
 fun ScrollToTopManager(navController: NavController, lazyListState : LazyListState) {
     val backStackEntry by navController.currentBackStackEntryAsState()
-    val scrollToTop = backStackEntry?.savedStateHandle?.getStateFlow("scrollToTop", false)?.collectAsState()
+    val scrollToTop = backStackEntry?.savedStateHandle?.getStateFlow("scrollToTop", false)?.collectAsStateWithLifecycle()
 
     LaunchedEffect(scrollToTop?.value) {
         if (scrollToTop?.value == true) {
