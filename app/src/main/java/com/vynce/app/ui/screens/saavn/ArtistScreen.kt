@@ -1,5 +1,6 @@
 package com.vynce.app.ui.screens.saavn
 
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -40,7 +41,7 @@ fun ArtistScreen(
     var artistInfo by remember { mutableStateOf(SaavnArtistInfo()) }
     var songs by remember { mutableStateOf<List<SaavnSong>>(emptyList()) }
     var albums by remember { mutableStateOf<List<SaavnAlbumInfo>>(emptyList()) }
-    var isLoading by remember { mutableStateOf(true) }
+    var isLoading by rememberSaveable { mutableStateOf(true) }
 
     LaunchedEffect(artistId) {
         val (info, songList, albumList) = JioSaavn.getArtistDetail(artistId)

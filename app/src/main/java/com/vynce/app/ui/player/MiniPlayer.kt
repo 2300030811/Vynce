@@ -9,6 +9,7 @@
 
 package com.vynce.app.ui.player
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import android.annotation.SuppressLint
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -42,7 +43,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -85,13 +85,13 @@ fun MiniPlayer(
     modifier: Modifier = Modifier,
 ) {
     val playerConnection = LocalPlayerConnection.current ?: return
-    val queueBoard by playerConnection.queueBoard.collectAsState()
+    val queueBoard by playerConnection.queueBoard.collectAsStateWithLifecycle()
 
-    val isPlaying by playerConnection.isPlaying.collectAsState()
-    val playbackState by playerConnection.playbackState.collectAsState()
-    val error by playerConnection.error.collectAsState()
-    val mediaMetadata by playerConnection.mediaMetadata.collectAsState()
-    val canSkipNext by playerConnection.canSkipNext.collectAsState()
+    val isPlaying by playerConnection.isPlaying.collectAsStateWithLifecycle()
+    val playbackState by playerConnection.playbackState.collectAsStateWithLifecycle()
+    val error by playerConnection.error.collectAsStateWithLifecycle()
+    val mediaMetadata by playerConnection.mediaMetadata.collectAsStateWithLifecycle()
+    val canSkipNext by playerConnection.canSkipNext.collectAsStateWithLifecycle()
 
 
     var position by rememberSaveable(playbackState) {
@@ -215,8 +215,8 @@ fun MiniMediaInfo(
 ) {
     val density = LocalDensity.current
     val playerConnection = LocalPlayerConnection.current
-    val isWaitingForNetwork by playerConnection?.waitingForNetworkConnection?.collectAsState(initial = false)
-        ?: remember { mutableStateOf(false) }
+    val isWaitingForNetwork by playerConnection?.waitingForNetworkConnection?.collectAsStateWithLifecycle(initialValue = false)
+        ?: rememberSaveable { mutableStateOf(false) }
 
     val px = (ListThumbnailSize.value * density.density).roundToInt()
 

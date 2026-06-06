@@ -1,5 +1,6 @@
 package com.vynce.app.ui.screens.library
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import android.content.pm.PackageManager
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
@@ -35,7 +36,6 @@ import androidx.compose.material3.pulltorefresh.pullToRefresh
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -107,8 +107,8 @@ fun LibraryScreen(
     val context = LocalContext.current
 
     val playerConnection = LocalPlayerConnection.current ?: return
-    val isPlaying by playerConnection.isPlaying.collectAsState()
-    val mediaMetadata by playerConnection.mediaMetadata.collectAsState()
+    val isPlaying by playerConnection.isPlaying.collectAsStateWithLifecycle()
+    val mediaMetadata by playerConnection.mediaMetadata.collectAsStateWithLifecycle()
 
     val coroutineScope = rememberCoroutineScope()
 
@@ -121,13 +121,13 @@ fun LibraryScreen(
     val (sortDescending, onSortDescendingChange) = rememberPreference(LibrarySortDescendingKey, true)
     val (showLikedAndDownloadedPlaylist) = rememberPreference(ShowLikedAndDownloadedPlaylist, true)
 
-    val allItems by viewModel.allItems.collectAsState()
+    val allItems by viewModel.allItems.collectAsStateWithLifecycle()
 
-    val isSyncingRemotePlaylists by viewModel.isSyncingRemotePlaylists.collectAsState()
-    val isSyncingRemoteAlbums by viewModel.isSyncingRemoteAlbums.collectAsState()
-    val isSyncingRemoteArtists by viewModel.isSyncingRemoteArtists.collectAsState()
-    val isSyncingRemoteSongs by viewModel.isSyncingRemoteSongs.collectAsState()
-    val isSyncingRemoteLikedSongs by viewModel.isSyncingRemoteLikedSongs.collectAsState()
+    val isSyncingRemotePlaylists by viewModel.isSyncingRemotePlaylists.collectAsStateWithLifecycle()
+    val isSyncingRemoteAlbums by viewModel.isSyncingRemoteAlbums.collectAsStateWithLifecycle()
+    val isSyncingRemoteArtists by viewModel.isSyncingRemoteArtists.collectAsStateWithLifecycle()
+    val isSyncingRemoteSongs by viewModel.isSyncingRemoteSongs.collectAsStateWithLifecycle()
+    val isSyncingRemoteLikedSongs by viewModel.isSyncingRemoteLikedSongs.collectAsStateWithLifecycle()
     val pullRefreshState = rememberPullToRefreshState()
 
     val likedPlaylist = PlaylistEntity(id = "liked", name = stringResource(id = R.string.liked_songs))
@@ -136,7 +136,7 @@ fun LibraryScreen(
     val lazyListState = rememberLazyListState()
     val lazyGridState = rememberLazyGridState()
     val backStackEntry by navController.currentBackStackEntryAsState()
-    val scrollToTop = backStackEntry?.savedStateHandle?.getStateFlow("scrollToTop", false)?.collectAsState()
+    val scrollToTop = backStackEntry?.savedStateHandle?.getStateFlow("scrollToTop", false)?.collectAsStateWithLifecycle()
 
     val filterString = when (filter) {
         LibraryFilter.ALBUMS -> stringResource(R.string.albums)

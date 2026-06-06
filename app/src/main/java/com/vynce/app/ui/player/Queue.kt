@@ -9,6 +9,7 @@
 
 package com.vynce.app.ui.player
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import android.content.res.Configuration
 import android.util.Log
 import androidx.activity.compose.BackHandler
@@ -47,7 +48,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.DragHandle
 import androidx.compose.material.icons.rounded.ExpandLess
 import androidx.compose.material.icons.rounded.ExpandMore
@@ -59,6 +60,7 @@ import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.Radio
 import androidx.compose.material.icons.rounded.Replay
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.SkipNext
@@ -78,7 +80,6 @@ import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
@@ -257,21 +258,22 @@ fun BoxScope.QueueContent(
     val haptic = LocalHapticFeedback.current
     val menuState = LocalMenuState.current
     val playerConnection = LocalPlayerConnection.current ?: return
-    val qb by playerConnection.queueBoard.collectAsState()
+    val qb by playerConnection.queueBoard.collectAsStateWithLifecycle()
 
     // preferences
     var lockQueue by rememberPreference(LockQueueKey, defaultValue = false)
+    var autoplay by rememberPreference(com.vynce.app.constants.AutoplayKey, defaultValue = false)
 
     // player
-    val currentWindowIndex by playerConnection.currentWindowIndex.collectAsState()
-    val isPlaying by playerConnection.isPlaying.collectAsState()
-    val playbackState by playerConnection.playbackState.collectAsState()
+    val currentWindowIndex by playerConnection.currentWindowIndex.collectAsStateWithLifecycle()
+    val isPlaying by playerConnection.isPlaying.collectAsStateWithLifecycle()
+    val playbackState by playerConnection.playbackState.collectAsStateWithLifecycle()
 
     // player controls
-    val shuffleModeEnabled by playerConnection.shuffleModeEnabled.collectAsState()
-    val canSkipPrevious by playerConnection.canSkipPrevious.collectAsState()
-    val canSkipNext by playerConnection.canSkipNext.collectAsState()
-    val repeatMode by playerConnection.repeatMode.collectAsState()
+    val shuffleModeEnabled by playerConnection.shuffleModeEnabled.collectAsStateWithLifecycle()
+    val canSkipPrevious by playerConnection.canSkipPrevious.collectAsStateWithLifecycle()
+    val canSkipNext by playerConnection.canSkipNext.collectAsStateWithLifecycle()
+    val repeatMode by playerConnection.repeatMode.collectAsStateWithLifecycle()
     val seekIncrement by rememberEnumPreference(
         key = SeekIncrementKey,
         defaultValue = SeekIncrement.OFF
@@ -308,7 +310,7 @@ fun BoxScope.QueueContent(
     }
 
 
-    val queueWindows by playerConnection.queueWindows.collectAsState()
+    val queueWindows by playerConnection.queueWindows.collectAsStateWithLifecycle()
 
     // multi queue vars
     val fallBackQueue = if (queueWindows.isEmpty()) qb.getCurrentQueue() else null
@@ -672,12 +674,19 @@ fun BoxScope.QueueContent(
                     }
                 )
             } else if (!isSearching) {
-                ResizableIconButton(
-                    icon = Icons.Rounded.Search,
-                    onClick = {
-                        isSearching = true
-                    }
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    ResizableIconButton(
+                        icon = Icons.Rounded.Radio,
+                        color = if (autoplay) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                        onClick = { autoplay = !autoplay }
+                    )
+                    ResizableIconButton(
+                        icon = Icons.Rounded.Search,
+                        onClick = {
+                            isSearching = true
+                        }
+                    )
+                }
             }
         }
     }

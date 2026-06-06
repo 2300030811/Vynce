@@ -3,7 +3,7 @@ package com.vynce.app.ui.theme
 import androidx.compose.ui.graphics.Color
 
 val VyncePurple      = Color(0xFF9B6EEA)
-val VyncePurpleDim   = Color(0xFFC04451)
+val VyncePurpleDim   = Color(0xFF6F4CA6) // A dimmed version of VyncePurple (0xFF9B6EEA)
 val VynceSurface     = Color(0xFF000000)
 val VynceSurfaceHigh = Color(0xFF0A0A0A)
 val VynceSurfaceCard = Color(0xFF0E0E0E)

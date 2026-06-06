@@ -1,5 +1,6 @@
 package com.vynce.app.ui.screens.home
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
@@ -27,7 +28,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.*
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavController
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
@@ -52,7 +53,7 @@ fun HomeScreen(
     playerConnection: PlayerConnection?,
     viewModel: HomeViewModel = hiltViewModel()
 ) {
-    val state by viewModel.state.collectAsState()
+    val state by viewModel.state.collectAsStateWithLifecycle()
     val lazyListState = rememberLazyListState()
     val pullToRefreshState = rememberPullToRefreshState()
     val context = LocalContext.current
@@ -335,8 +336,8 @@ fun SongCard(song: com.zionhuang.jiosaavn.SaavnSong, onClick: () -> Unit) {
                 AsyncImage(
                     model = ImageRequest.Builder(LocalContext.current)
                         .data(song.image.saavnHighResHttps()).build(),
-                    placeholder = ColorPainter(Color(0xFF1A1A2E)),
-                    fallback = ColorPainter(Color(0xFF1A1A2E)),
+                    placeholder = ColorPainter(MaterialTheme.colorScheme.surfaceVariant),
+                    fallback = ColorPainter(MaterialTheme.colorScheme.surfaceVariant),
                     contentDescription = null, contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize()
                 )
@@ -440,8 +441,8 @@ fun LocalSongCard(song: com.vynce.app.db.entities.Song, onClick: () -> Unit) {
                 AsyncImage(
                     model = ImageRequest.Builder(LocalContext.current)
                         .data(song.thumbnailUrl).build(),
-                    placeholder = ColorPainter(Color(0xFF1A1A2E)),
-                    fallback = ColorPainter(Color(0xFF1A1A2E)),
+                    placeholder = ColorPainter(MaterialTheme.colorScheme.surfaceVariant),
+                    fallback = ColorPainter(MaterialTheme.colorScheme.surfaceVariant),
                     contentDescription = null, contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize()
                 )
@@ -472,8 +473,8 @@ fun AlbumCard(album: com.zionhuang.jiosaavn.SaavnAlbumInfo, onClick: () -> Unit)
                 AsyncImage(
                     model = ImageRequest.Builder(LocalContext.current)
                         .data(album.image.saavnHighResHttps()).build(),
-                    placeholder = ColorPainter(Color(0xFF1A1A2E)),
-                    fallback = ColorPainter(Color(0xFF1A1A2E)),
+                    placeholder = ColorPainter(MaterialTheme.colorScheme.surfaceVariant),
+                    fallback = ColorPainter(MaterialTheme.colorScheme.surfaceVariant),
                     contentDescription = null, contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize()
                 )
@@ -497,8 +498,8 @@ fun PlaylistCard(playlist: com.zionhuang.jiosaavn.SaavnPlaylistInfo, onClick: ()
                 AsyncImage(
                     model = ImageRequest.Builder(LocalContext.current)
                         .data(playlist.image.saavnHighResHttps()).build(),
-                    placeholder = ColorPainter(Color(0xFF1A1A2E)),
-                    fallback = ColorPainter(Color(0xFF1A1A2E)),
+                    placeholder = ColorPainter(MaterialTheme.colorScheme.surfaceVariant),
+                    fallback = ColorPainter(MaterialTheme.colorScheme.surfaceVariant),
                     contentDescription = null, contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize()
                 )

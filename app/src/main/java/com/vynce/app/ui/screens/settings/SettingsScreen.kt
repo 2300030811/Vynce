@@ -9,6 +9,7 @@
 
 package com.vynce.app.ui.screens.settings
 
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -71,7 +72,7 @@ fun SettingsScreen(
     val lastVer by rememberPreference(LastVersionKey, defaultValue = "0.0.0")
     val (updateAvailable, onUpdateAvailableChange) = rememberPreference(UpdateAvailableKey, defaultValue = false)
 
-    var newVersion by remember { mutableStateOf("") }
+    var newVersion by rememberSaveable { mutableStateOf("") }
     ColumnWithContentPadding(
         modifier = Modifier.fillMaxHeight(),
         columnModifier = Modifier

@@ -1,5 +1,6 @@
 package com.vynce.app.ui.screens.library
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import android.content.pm.PackageManager
 import android.util.Log
 import androidx.activity.compose.BackHandler
@@ -42,7 +43,6 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -158,10 +158,10 @@ fun FolderScreen(
     val lazyListState = rememberLazyListState()
 
 
-    val isPlaying by playerConnection.isPlaying.collectAsState()
-    val mediaMetadata by playerConnection.mediaMetadata.collectAsState()
-    val currDir: DirectoryTree by viewModel.localSongDirectoryTree.collectAsState()
-    val subDirSongCount by viewModel.localSongDtSongCount.collectAsState()
+    val isPlaying by playerConnection.isPlaying.collectAsStateWithLifecycle()
+    val mediaMetadata by playerConnection.mediaMetadata.collectAsStateWithLifecycle()
+    val currDir: DirectoryTree by viewModel.localSongDirectoryTree.collectAsStateWithLifecycle()
+    val subDirSongCount by viewModel.localSongDtSongCount.collectAsStateWithLifecycle()
 
     LaunchedEffect(lastLocalScan) {
         if (viewModel.uiInit && !currDir.isSkeleton && viewModel.lastLocalScan != lastLocalScan) {

@@ -9,6 +9,7 @@
 
 package com.vynce.app.ui.component.items
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import android.annotation.SuppressLint
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
@@ -53,7 +54,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -340,7 +340,7 @@ fun MediaMetadataListItem(
             Icon.Library()
         }
         if (showDownloadIcon && !mediaMetadata.isLocal) {
-            val download by LocalDownloadUtil.current.getDownload(mediaMetadata.id).collectAsState(initial = null)
+            val download by LocalDownloadUtil.current.getDownload(mediaMetadata.id).collectAsStateWithLifecycle(initialValue = null)
             Icon.Download(download)
         }
     },

@@ -1,5 +1,6 @@
 package com.vynce.app.ui.screens.settings.fragments
 
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.VolumeUp
 import androidx.compose.material.icons.rounded.Autorenew
@@ -112,7 +113,7 @@ fun AudioEffectsFrag() {
         defaultValue = 0
     )
 
-    var showCrossfadeDialog by remember { mutableStateOf(false) }
+    var showCrossfadeDialog by rememberSaveable { mutableStateOf(false) }
 
     val crossfadeOptions = listOf(0, 1000, 2000, 3000, 4000, 5000, 8000, 10000, 12000)
     val crossfadeLabels = listOf("Off", "1s", "2s", "3s", "4s", "5s", "8s", "10s", "12s")

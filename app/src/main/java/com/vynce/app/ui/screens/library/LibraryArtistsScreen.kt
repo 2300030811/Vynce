@@ -1,5 +1,6 @@
 package com.vynce.app.ui.screens.library
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import android.content.pm.PackageManager
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -34,7 +35,6 @@ import androidx.compose.material3.pulltorefresh.pullToRefresh
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -102,8 +102,8 @@ fun LibraryArtistsScreen(
     val (sortType, onSortTypeChange) = rememberEnumPreference(ArtistSortTypeKey, ArtistSortType.CREATE_DATE)
     val (sortDescending, onSortDescendingChange) = rememberPreference(ArtistSortDescendingKey, true)
 
-    val artists by viewModel.allArtists.collectAsState()
-    val isSyncingRemoteArtists by viewModel.isSyncingRemoteArtists.collectAsState()
+    val artists by viewModel.allArtists.collectAsStateWithLifecycle()
+    val isSyncingRemoteArtists by viewModel.isSyncingRemoteArtists.collectAsStateWithLifecycle()
     val pullRefreshState = rememberPullToRefreshState()
 
     val lazyListState = rememberLazyListState()

@@ -1,5 +1,6 @@
 package com.vynce.app.ui.component.items
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
@@ -65,8 +66,8 @@ fun SaavnSongListItem(
     val playerConnection = LocalPlayerConnection.current ?: return
 
     val mediaMetadata = remember(song) { song.toSaavnMediaMetadata() }
-    val isActive by playerConnection.mediaMetadata.collectAsState()
-    val isPlaying by playerConnection.isPlaying.collectAsState()
+    val isActive by playerConnection.mediaMetadata.collectAsStateWithLifecycle()
+    val isPlaying by playerConnection.isPlaying.collectAsStateWithLifecycle()
 
     val active = isActive?.id == mediaMetadata.id
 

@@ -9,6 +9,7 @@
 
 package com.vynce.app.ui.player
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import android.annotation.SuppressLint
 import android.content.res.Configuration
 import android.util.Log
@@ -79,7 +80,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
@@ -165,10 +165,7 @@ import com.vynce.app.utils.coilCoroutine
 import com.vynce.app.utils.makeTimeString
 import com.vynce.app.utils.rememberEnumPreference
 import com.vynce.app.utils.rememberPreference
-import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.HazeStyle
-import dev.chrisbanes.haze.hazeEffect
-import dev.chrisbanes.haze.hazeSource
+import androidx.compose.ui.draw.blur
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
@@ -187,7 +184,7 @@ fun BottomSheetPlayer(
 
     val context = LocalContext.current
     val playerConnection = LocalPlayerConnection.current ?: return
-    val queueBoard by playerConnection.service.queueBoard.collectAsState()
+    val queueBoard by playerConnection.service.queueBoard.collectAsStateWithLifecycle()
 
     val playerBackground by rememberEnumPreference(
         key = PlayerBackgroundStyleKey,
@@ -202,9 +199,7 @@ fun BottomSheetPlayer(
 
     val showLyrics by rememberPreference(ShowLyricsKey, defaultValue = false)
 
-    val qbInit by playerConnection.service.qbInit.collectAsState()
-
-    val hazeState = remember { HazeState() }
+    val qbInit by playerConnection.service.qbInit.collectAsStateWithLifecycle()
 
     LaunchedEffect(qbInit, queueBoard.masterQueues.toList()) {
         Log.d(TAG, "Queues changed. qbInit = $qbInit")
@@ -224,7 +219,6 @@ fun BottomSheetPlayer(
                 playerBackground = playerBackground,
                 showLyrics = showLyrics,
                 useDarkTheme = useDarkTheme,
-                hazeState = hazeState,
             )
         },
         collapsedBackgroundColor = MaterialTheme.colorScheme.surfaceColorAtElevation(6.dp),
@@ -238,9 +232,9 @@ fun BottomSheetPlayer(
         Log.v(TAG, "PLR-3.0")
 
         if (LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE && !context.tabMode() && context.supportsWideScreen()) {
-            LandscapePlayer(state, navController, queueBoard, hazeState)
+            LandscapePlayer(state, navController, queueBoard)
         } else {
-            PortraitPlayer(state, navController, queueBoard, hazeState)
+            PortraitPlayer(state, navController, queueBoard)
         }
     }
 }
@@ -251,15 +245,12 @@ fun PortraitPlayer(
     playerSheetState: BottomSheetState,
     navController: NavController,
     queueBoard: QueueBoard,
-    hazeState: HazeState? = null,
     enableQueueSheet: Boolean = true,
 ) {
     val TAG = "BottomSheetPlayer"
     Log.v(TAG, "PLR-3.1b")
 
     val playerConnection = LocalPlayerConnection.current ?: return
-
-    val localHazeState = hazeState ?: remember { HazeState() }
 
     val dismissedBound = WindowInsets.systemBars.asPaddingValues().calculateBottomPadding()
 
@@ -275,7 +266,6 @@ fun PortraitPlayer(
         modifier = Modifier
             .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Horizontal))
             .padding(bottom = queueSheetState.collapsedBound)
-            .hazeEffect(localHazeState, HazeStyle(tints = listOf(dev.chrisbanes.haze.HazeTint(Color.Black.copy(alpha = 0.1f)))))
     ) {
         BoxWithConstraints(
             contentAlignment = Alignment.Center,
@@ -284,11 +274,11 @@ fun PortraitPlayer(
                 .nestedScroll(playerSheetState.preUpPostDownNestedScrollConnection)
         ) {
             Log.v(TAG, "PLR-3.2b")
-            val mediaMetadata by playerConnection.mediaMetadata.collectAsState()
+            val mediaMetadata by playerConnection.mediaMetadata.collectAsStateWithLifecycle()
 
 
-            val canSkipPrevious by playerConnection.canSkipPrevious.collectAsState()
-            val canSkipNext by playerConnection.canSkipNext.collectAsState()
+            val canSkipPrevious by playerConnection.canSkipPrevious.collectAsStateWithLifecycle()
+            val canSkipNext by playerConnection.canSkipNext.collectAsStateWithLifecycle()
 
             val swipeToSkip by rememberPreference(SwipeToSkipKey, defaultValue = false)
             val previousMediaMetadata = if (swipeToSkip && playerConnection.player.hasPreviousMediaItem()) {
@@ -407,7 +397,6 @@ fun LandscapePlayer(
     playerSheetState: BottomSheetState,
     navController: NavController,
     queueBoard: QueueBoard,
-    hazeState: HazeState? = null,
     enableQueueSheet: Boolean = true,
 ) {
     val TAG = "BottomSheetPlayer"
@@ -415,13 +404,11 @@ fun LandscapePlayer(
     val context = LocalContext.current
     val playerConnection = LocalPlayerConnection.current ?: return
 
-    val localHazeState = hazeState ?: remember { HazeState() }
-
-    val mediaMetadata by playerConnection.mediaMetadata.collectAsState()
+    val mediaMetadata by playerConnection.mediaMetadata.collectAsStateWithLifecycle()
 
 
-    val canSkipPrevious by playerConnection.canSkipPrevious.collectAsState()
-    val canSkipNext by playerConnection.canSkipNext.collectAsState()
+    val canSkipPrevious by playerConnection.canSkipPrevious.collectAsStateWithLifecycle()
+    val canSkipNext by playerConnection.canSkipNext.collectAsStateWithLifecycle()
 
     val swipeToSkip by rememberPreference(SwipeToSkipKey, defaultValue = false)
     val previousMediaMetadata = if (swipeToSkip && playerConnection.player.hasPreviousMediaItem()) {
@@ -464,7 +451,6 @@ fun LandscapePlayer(
                 WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal).add(verticalInsets)
             )
             .fillMaxSize()
-            .hazeEffect(localHazeState, HazeStyle(tints = listOf(dev.chrisbanes.haze.HazeTint(Color.Black.copy(alpha = 0.1f)))))
     ) {
         BoxWithConstraints(
             contentAlignment = Alignment.Center,
@@ -585,8 +571,8 @@ fun ActionButtons(
     val menuState = LocalMenuState.current
 
 
-    val currentSong by playerConnection.currentSong.collectAsState(initial = null)
-    val mediaMetadata by playerConnection.mediaMetadata.collectAsState()
+    val currentSong by playerConnection.currentSong.collectAsStateWithLifecycle(initialValue = null)
+    val mediaMetadata by playerConnection.mediaMetadata.collectAsStateWithLifecycle()
 
     Spacer(modifier = Modifier.width(10.dp))
 
@@ -651,13 +637,13 @@ fun ControlsContent(
 
     val haptic = LocalHapticFeedback.current
     val playerConnection = LocalPlayerConnection.current ?: return
-    val mediaMetadata by playerConnection.mediaMetadata.collectAsState()
+    val mediaMetadata by playerConnection.mediaMetadata.collectAsStateWithLifecycle()
 
 
-    val isPlaying by playerConnection.isPlaying.collectAsState()
-    val repeatMode by playerConnection.repeatMode.collectAsState()
-    val canSkipPrevious by playerConnection.canSkipPrevious.collectAsState()
-    val canSkipNext by playerConnection.canSkipNext.collectAsState()
+    val isPlaying by playerConnection.isPlaying.collectAsStateWithLifecycle()
+    val repeatMode by playerConnection.repeatMode.collectAsStateWithLifecycle()
+    val canSkipPrevious by playerConnection.canSkipPrevious.collectAsStateWithLifecycle()
+    val canSkipNext by playerConnection.canSkipNext.collectAsStateWithLifecycle()
 
     val playPauseRoundness by animateDpAsState(
         targetValue = if (isPlaying) 24.dp else 36.dp,
@@ -714,7 +700,7 @@ fun ControlsContent(
     }
 
 
-    val playbackState by playerConnection.playbackState.collectAsState()
+    val playbackState by playerConnection.playbackState.collectAsStateWithLifecycle()
     var duration by rememberSaveable(playbackState) {
         mutableLongStateOf(playerConnection.player.duration)
     }
@@ -884,7 +870,7 @@ fun ControlsContent(
                     .fillMaxWidth()
                     .padding(horizontal = PlayerHorizontalPadding)
             ) {
-                val shuffleModeEnabled by playerConnection.shuffleModeEnabled.collectAsState()
+                val shuffleModeEnabled by playerConnection.shuffleModeEnabled.collectAsStateWithLifecycle()
 
                 Box(modifier = Modifier.weight(1f)) {
                     ResizableIconButton(
@@ -1070,13 +1056,11 @@ fun PlayerBackground(
     playerBackground: PlayerBackgroundStyle,
     showLyrics: Boolean,
     useDarkTheme: Boolean,
-    hazeState: HazeState? = null,
 ) {
     val TAG = "PlayerBackground"
     Log.v(TAG, "PLR_BG-1")
 
     val context = LocalContext.current
-    val localHazeState = hazeState ?: remember { HazeState() }
 
     Box(
         modifier = Modifier
@@ -1084,70 +1068,29 @@ fun PlayerBackground(
             .fillMaxSize()
     ) {
 
-        // Haze backdrop - source content
-        val mediaMetadata by playerConnection.mediaMetadata.collectAsState()
-        AsyncImage(
-            model = ImageRequest.Builder(LocalContext.current)
-                .data((mediaMetadata?.getThumbnailModel(100, 100) as? String)?.replace("http://", "https://"))
-                .build(),
-            contentDescription = null,
-            contentScale = ContentScale.Crop,
-            modifier = Modifier
-                .fillMaxSize()
-                .hazeSource(localHazeState)
-                .alpha(0.3f)
-        )
-        // Dark scrim over it
-        Box(
-            modifier = Modifier.fillMaxSize().background(
-                Brush.verticalGradient(listOf(Color(0x99000000), Color(0xEE000000)))
-            )
-        )
-
+        val mediaMetadata by playerConnection.mediaMetadata.collectAsStateWithLifecycle()
         var gradientColors by remember {
             mutableStateOf<List<Color>>(emptyList())
         }
 
-        var partyColorIndex by remember { mutableStateOf(0) }
-        var partyColor by remember { mutableStateOf<Color>(Color.Transparent) }
-
-
         // gradient colours
         LaunchedEffect(mediaMetadata, playerBackground) {
-            if (playerBackground == PlayerBackgroundStyle.GRADIENT || playerBackground == PlayerBackgroundStyle.PARTY) {
-                if (context.isPowerSaver()) return@LaunchedEffect
+            if (playerBackground != PlayerBackgroundStyle.GRADIENT || context.isPowerSaver()) return@LaunchedEffect
 
-                withContext(coilCoroutine) {
-                    val result = context.imageLoader.execute(
-                        ImageRequest.Builder(context)
-                            .data((mediaMetadata?.getThumbnailModel(100, 100) as? String)?.replace("http://", "https://"))
-                            .allowHardware(false)
-                            .build()
-                    )
+            withContext(coilCoroutine) {
+                val result = context.imageLoader.execute(
+                    ImageRequest.Builder(context)
+                        .data((mediaMetadata?.getThumbnailModel(100, 100) as? String)?.replace("http://", "https://"))
+                        .allowHardware(false)
+                        .build()
+                )
 
-                    val bitmap = result.image?.toBitmap()?.extractGradientColors()
-                    bitmap?.let {
-                        gradientColors = it
-                        if (playerBackground == PlayerBackgroundStyle.PARTY && it.isNotEmpty()) {
-                            partyColorIndex = 0
-                            partyColor = it.first()
-                        }
-                    }
+                val bitmap = result.image?.toBitmap()?.extractGradientColors()
+                bitmap?.let {
+                    gradientColors = it
                 }
             }
         }
-
-        // Party mode: cycle through colors
-        LaunchedEffect(gradientColors, playerBackground) {
-            if (playerBackground != PlayerBackgroundStyle.PARTY || gradientColors.size < 2) return@LaunchedEffect
-
-            while (true) {
-                delay(3000)
-                partyColorIndex = (partyColorIndex + 1) % gradientColors.size
-                partyColor = gradientColors[partyColorIndex]
-            }
-        }
-
 
         AnimatedContent(
             targetState = mediaMetadata,
@@ -1163,7 +1106,7 @@ fun PlayerBackground(
                     contentScale = ContentScale.FillBounds,
                     modifier = Modifier
                         .fillMaxSize()
-                .hazeSource(localHazeState)
+                        .blur(100.dp)
                         .alpha(0.5f)
                 )
             }
@@ -1181,22 +1124,6 @@ fun PlayerBackground(
                     modifier = Modifier
                         .fillMaxSize()
                         .background(Brush.verticalGradient(colors), alpha = 0.4f)
-                )
-            }
-        }
-
-        // Party mode: animated color cycling
-        if (playerBackground == PlayerBackgroundStyle.PARTY && partyColor != Color.Transparent) {
-            AnimatedContent(
-                targetState = partyColor,
-                transitionSpec = {
-                    fadeIn(tween(2000)).togetherWith(fadeOut(tween(2000)))
-                }
-            ) { color ->
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(color.copy(alpha = 0.3f))
                 )
             }
         }

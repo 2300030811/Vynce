@@ -6,6 +6,7 @@
 
 package com.vynce.app.extensions
 
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.animation.core.AnimationSpec
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
@@ -98,7 +99,7 @@ fun Modifier.throttleClick(
     throttleTime: Long = 500L,
     onClick: () -> Unit
 ): Modifier = composed {
-    var lastClickTime by remember { mutableStateOf(0L) }
+    var lastClickTime by rememberSaveable { mutableStateOf(0L) }
     clickable {
         val now = System.currentTimeMillis()
         if (now - lastClickTime >= throttleTime) {

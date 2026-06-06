@@ -8,6 +8,7 @@
 
 package com.vynce.app.ui.screens
 
+import androidx.compose.runtime.saveable.rememberSaveable
 import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.BackHandler
@@ -398,7 +399,7 @@ fun SetupWizard(
                         val downloadUtil = LocalDownloadUtil.current
                         val (downloadPath, onDownloadPathChange) = rememberPreference(DownloadPathKey, "")
                         val (maxCacheSize, onMaxCacheChange) = rememberPreference(MaxSongCacheSizeKey, 0)
-                        var showPathDialog by remember { mutableStateOf(false) }
+                        var showPathDialog by rememberSaveable { mutableStateOf(false) }
 
                         SetupHeader(
                             icon = Icons.Rounded.Download,

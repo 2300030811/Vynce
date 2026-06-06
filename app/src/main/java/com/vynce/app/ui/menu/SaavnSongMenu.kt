@@ -1,5 +1,6 @@
 package com.vynce.app.ui.menu
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import android.content.Intent
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
@@ -21,7 +22,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -70,10 +70,10 @@ fun SaavnSongMenu(
     val downloadUtil = LocalDownloadUtil.current
     val database = LocalDatabase.current
     val playerConnection = LocalPlayerConnection.current ?: return
-    val queueBoard by playerConnection.queueBoard.collectAsState()
+    val queueBoard by playerConnection.queueBoard.collectAsStateWithLifecycle()
     val mediaMetadata = remember(song) { song.toSaavnMediaMetadata() }
-    val librarySong by database.song(mediaMetadata.id).collectAsState(initial = null)
-    val download by LocalDownloadUtil.current.getDownload(mediaMetadata.id).collectAsState(initial = null)
+    val librarySong by database.song(mediaMetadata.id).collectAsStateWithLifecycle(initialValue = null)
+    val download by LocalDownloadUtil.current.getDownload(mediaMetadata.id).collectAsStateWithLifecycle(initialValue = null)
     
     val artists = remember(song) {
         mediaMetadata.artists
@@ -142,16 +142,19 @@ fun SaavnSongMenu(
             bottom = 8.dp + WindowInsets.systemBars.asPaddingValues().calculateBottomPadding()
         )
     ) {
-        // Radio is not supported for Saavn yet, might add later if possible
-        /*
         GridMenuItem(
             icon = Icons.Rounded.Radio,
             title = R.string.start_radio
         ) {
-            // Radio logic for Saavn?
+            playerConnection.playQueue(
+                queue = ListQueue(
+                    title = song.name,
+                    items = listOf(mediaMetadata)
+                ),
+                isRadio = true
+            )
             onDismiss()
         }
-        */
         GridMenuItem(
             icon = Icons.Rounded.PlayArrow,
             title = R.string.play

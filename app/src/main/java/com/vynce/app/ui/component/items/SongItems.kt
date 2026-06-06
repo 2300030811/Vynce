@@ -7,6 +7,7 @@
  */
 package com.vynce.app.ui.component.items
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.media3.common.Player
 import androidx.compose.foundation.background
@@ -29,7 +30,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
@@ -129,7 +129,7 @@ fun SongListItem(
                     Icon.Library()
                 }
                 if (showDownloadIcon && !song.song.isLocal) {
-                    val download by LocalDownloadUtil.current.getDownload(song.id).collectAsState(initial = null)
+                    val download by LocalDownloadUtil.current.getDownload(song.id).collectAsStateWithLifecycle(initialValue = null)
                     Icon.Download(download)
                 }
             },
@@ -274,7 +274,7 @@ fun SongFolderItem(
     }
     LaunchedEffect(Unit) {
         if (subtitle == null) {
-            CoroutineScope(Dispatchers.IO).launch {
+            launch(Dispatchers.IO) {
                 database.localSongCountInPath(folder.getFullSquashedDir()).first()
                 subDirSongCount = database.localSongCountInPath(folder.getFullSquashedDir()).first()
             }
@@ -344,7 +344,7 @@ fun SongGridItem(
             )
         }
         if (showDownloadIcon) {
-            val download by LocalDownloadUtil.current.getDownload(song.id).collectAsState(initial = null)
+            val download by LocalDownloadUtil.current.getDownload(song.id).collectAsStateWithLifecycle(initialValue = null)
             Icon.Download(download)
         }
     },
@@ -401,8 +401,8 @@ fun SaavnSongGridItem(
     val menuState = LocalMenuState.current
     val haptic = LocalHapticFeedback.current
     val playerConnection = LocalPlayerConnection.current ?: return
-    val isActive by playerConnection.mediaMetadata.collectAsState()
-    val isPlaying by playerConnection.isPlaying.collectAsState()
+    val isActive by playerConnection.mediaMetadata.collectAsStateWithLifecycle()
+    val isPlaying by playerConnection.isPlaying.collectAsStateWithLifecycle()
 
     with(JioSaavn) {
         GridItem(

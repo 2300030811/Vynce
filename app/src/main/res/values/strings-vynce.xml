@@ -127,8 +127,6 @@ while also allowing users to translate our app as well. New, specific strings to
     <string name="player_background_blur">Blur</string>
     <string name="player_background_default">Follow theme</string>
     <string name="player_background_gradient">Gradient</string>
-    <string name="player_background_party">Party mode</string>
-    <string name="player_background_party_desc">Cycle through album art colors during playback</string>
     <string name="player_background_style">Player background style</string>
     <string name="show_liked_and_downloaded_playlist">Show playlists for liked and downloaded songs in library</string>
     <string name="slim_navbar_title">Slim navbar</string>

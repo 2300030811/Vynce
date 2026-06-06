@@ -175,6 +175,19 @@ fun SongMenu(
             onDismiss()
         }
         GridMenuItem(
+            icon = Icons.Rounded.Radio,
+            title = R.string.start_radio
+        ) {
+            playerConnection.playQueue(
+                queue = ListQueue(
+                    title = song.title,
+                    items = listOf(song.toMediaMetadata())
+                ),
+                isRadio = true
+            )
+            onDismiss()
+        }
+        GridMenuItem(
             icon = Icons.AutoMirrored.Rounded.PlaylistPlay,
             title = R.string.play_next
         ) {

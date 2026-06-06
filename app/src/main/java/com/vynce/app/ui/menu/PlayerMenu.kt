@@ -1,5 +1,6 @@
 package com.vynce.app.ui.menu
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import android.content.Intent
 import android.media.audiofx.AudioEffect
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -51,7 +52,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -130,14 +130,14 @@ fun PlayerMenu(
     var showLyrics by rememberPreference<Boolean>(ShowLyricsKey, defaultValue = false)
 
     val playerConnection = LocalPlayerConnection.current ?: return
-    val playerVolume = playerConnection.service.playerVolume.collectAsState()
-    val queueBoard by playerConnection.queueBoard.collectAsState()
-    val currentFormatState = database.format(mediaMetadata.id).collectAsState(initial = null)
+    val playerVolume = playerConnection.service.playerVolume.collectAsStateWithLifecycle()
+    val queueBoard by playerConnection.queueBoard.collectAsStateWithLifecycle()
+    val currentFormatState = database.format(mediaMetadata.id).collectAsStateWithLifecycle(initialValue = null)
     val currentFormat = currentFormatState.value
-    val librarySong by database.song(mediaMetadata.id).collectAsState(initial = null)
+    val librarySong by database.song(mediaMetadata.id).collectAsStateWithLifecycle(initialValue = null)
     val coroutineScope = rememberCoroutineScope()
 
-    val download by LocalDownloadUtil.current.getDownload(mediaMetadata.id).collectAsState(initial = null)
+    val download by LocalDownloadUtil.current.getDownload(mediaMetadata.id).collectAsStateWithLifecycle(initialValue = null)
 
     val activityResultLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { }
 

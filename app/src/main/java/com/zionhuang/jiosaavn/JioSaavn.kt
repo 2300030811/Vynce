@@ -315,6 +315,24 @@ object JioSaavn {
         }
     }
 
+    suspend fun getSongSuggestions(id: String, limit: Int = 10): List<SaavnSong> {
+        val obj = getJson("/api/songs/$id/suggestions", mapOf("limit" to limit.toString())) ?: return emptyList()
+        return try {
+            val results = obj["data"]?.jsonArray ?: return emptyList()
+            results.mapNotNull { el ->
+                try {
+                    parseSong(el.jsonObject)
+                } catch (e: Exception) {
+                    android.util.Log.e("JioSaavn", "Failed parsing suggestion: ${e.message}")
+                    null
+                }
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("JioSaavn", "Suggestions parse error: ${e.message}")
+            emptyList()
+        }
+    }
+
     suspend fun getCharts(): List<SaavnSong> {
         // Use search with trending queries since /api/charts isn't supported on some endpoints
         return searchSongs("arijit singh hits 2024")

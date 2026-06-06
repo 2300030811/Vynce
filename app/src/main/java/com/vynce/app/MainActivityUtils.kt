@@ -186,14 +186,15 @@ private suspend fun scanInitInternal(
             playerConnection?.service?.initQueue()
             Log.i(MAIN_TAG, "Local media and downloads scan completed")
         } else if (perms == PackageManager.PERMISSION_DENIED) {
+            val mainActivity = context as? MainActivity ?: return
             // Check if we should show rationale or if it's "don't ask again"
-            if ((context as MainActivity).shouldShowRequestPermissionRationale(MEDIA_PERMISSION_LEVEL)) {
+            if (mainActivity.shouldShowRequestPermissionRationale(MEDIA_PERMISSION_LEVEL)) {
                 Log.w(MAIN_TAG, "Permission denied previously, rationale should be shown")
                 // Still launch the request, the setContent block in MainActivity should ideally handle the UI
-                context.permissionLauncher.launch(MEDIA_PERMISSION_LEVEL)
+                mainActivity.permissionLauncher.launch(MEDIA_PERMISSION_LEVEL)
             } else {
                 Log.w(MAIN_TAG, "Permission denied (possibly don't ask again). Direct request may fail.")
-                context.permissionLauncher.launch(MEDIA_PERMISSION_LEVEL)
+                mainActivity.permissionLauncher.launch(MEDIA_PERMISSION_LEVEL)
             }
         }
     } else if (localLibEnable) {
@@ -239,10 +240,11 @@ suspend fun triggerMediaScan(
 
     val perms = context.checkSelfPermission(MEDIA_PERMISSION_LEVEL)
     if (perms != PackageManager.PERMISSION_GRANTED) {
-        if ((context as MainActivity).shouldShowRequestPermissionRationale(MEDIA_PERMISSION_LEVEL)) {
+        val mainActivity = context as? MainActivity ?: return
+        if (mainActivity.shouldShowRequestPermissionRationale(MEDIA_PERMISSION_LEVEL)) {
              Log.w(MAIN_TAG, "Manual scan: Permission denied previously, showing rationale implicitly")
         }
-        (context as MainActivity).permissionLauncher.launch(MEDIA_PERMISSION_LEVEL)
+        mainActivity.permissionLauncher.launch(MEDIA_PERMISSION_LEVEL)
         return
     }
 

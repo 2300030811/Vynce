@@ -1,5 +1,6 @@
 package com.vynce.app.ui.screens.playlist
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -50,7 +51,6 @@ import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -152,10 +152,10 @@ fun AutoPlaylistScreen(
     val (sortDescending, onSortDescendingChange) = rememberPreference<Boolean>(SongSortDescendingKey, true)
     val swipeEnabled by rememberPreference<Boolean>(SwipeToQueueKey, true)
 
-    val isPlaying by playerConnection.isPlaying.collectAsState()
-    val mediaMetadata by playerConnection.mediaMetadata.collectAsState()
-    val songs by viewModel.songs.collectAsState()
-    val isSyncingRemoteLikedSongs by viewModel.isSyncingRemoteLikedSongs.collectAsState()
+    val isPlaying by playerConnection.isPlaying.collectAsStateWithLifecycle()
+    val mediaMetadata by playerConnection.mediaMetadata.collectAsStateWithLifecycle()
+    val songs by viewModel.songs.collectAsStateWithLifecycle()
+    val isSyncingRemoteLikedSongs by viewModel.isSyncingRemoteLikedSongs.collectAsStateWithLifecycle()
 
     // multiselect
     var inSelectMode by rememberSaveable { mutableStateOf(false) }
@@ -230,7 +230,7 @@ fun AutoPlaylistScreen(
 
     val pullRefreshState = rememberPullToRefreshState()
 
-    val thumbnail by viewModel.thumbnail.collectAsState()
+    val thumbnail by viewModel.thumbnail.collectAsStateWithLifecycle()
     val mutableSongs = remember { mutableStateListOf<Song>() }
 
     val snackbarHostState = LocalSnackbarHostState.current

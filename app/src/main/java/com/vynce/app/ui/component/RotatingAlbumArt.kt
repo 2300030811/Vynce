@@ -31,8 +31,7 @@ fun RotatingAlbumArt(
     val shape = RoundedCornerShape(16.dp)
     val processedUrl = artworkUrl
         ?.replace("http://", "https://")
-        ?.replace("150x150", "500x500")
-        ?.replace("50x50", "500x500")
+        ?.replace(Regex("\\b(150x150|50x50)\\b"), "500x500")
 
     SubcomposeAsyncImage(
         model = ImageRequest.Builder(LocalContext.current)
