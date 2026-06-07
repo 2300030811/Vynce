@@ -279,7 +279,7 @@ fun PortraitPlayer(
             .padding(bottom = queueSheetState.collapsedBound)
             .hazeEffect(localHazeState, HazeStyle(tints = listOf(dev.chrisbanes.haze.HazeTint(Color.Black.copy(alpha = 0.1f)))))
     ) {
-        BoxWithConstraints(
+        Box(
             contentAlignment = Alignment.Center,
             modifier = Modifier
                 .weight(1f)
@@ -455,7 +455,7 @@ fun LandscapePlayer(
             .fillMaxSize()
             .hazeEffect(localHazeState, HazeStyle(tints = listOf(dev.chrisbanes.haze.HazeTint(Color.Black.copy(alpha = 0.1f)))))
     ) {
-        BoxWithConstraints(
+        Box(
             contentAlignment = Alignment.Center,
             modifier = Modifier
                 .weight(1f)
