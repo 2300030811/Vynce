@@ -82,6 +82,7 @@ fun ImportM3uDialog(
     val context = LocalContext.current
     val database = LocalDatabase.current
     val snackbarHostState = LocalSnackbarHostState.current
+    val m3uImportFailedMessage = stringResource(R.string.m3u_import_failed)
 
     var scannerSensitivity by remember {
         mutableStateOf(ScannerM3uMatchCriteria.LEVEL_1)
@@ -108,7 +109,7 @@ fun ImportM3uDialog(
                     )
                     if (result.first.isEmpty()) {
                         snackbarHostState.showSnackbar(
-                            message = context.getString(R.string.m3u_import_failed),
+                            message = m3uImportFailedMessage,
                             withDismissAction = true,
                             duration = SnackbarDuration.Long
                         )
