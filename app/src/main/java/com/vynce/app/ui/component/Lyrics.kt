@@ -59,7 +59,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.snapshots.SnapshotStateList
+import androidx.compose.runtime.withFrameMillis
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -251,11 +253,21 @@ fun Lyrics(
             Speed.SLOW.toLrcRefreshMillis()
         }
         while (isActive) {
-            delay(lyricRefreshRate)
-            if (lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED).not()) continue
+            if (lyricRefreshRate <= 16L) {
+                withFrameMillis { }
+            } else {
+                delay(lyricRefreshRate)
+            }
+            if (lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED).not()) {
+                delay(100) // Don't burn CPU/Frames when not visible
+                continue
+            }
             val sliderPosition = sliderPositionProvider()
             isSeeking = sliderPosition != null
-            if (!playerConnection.isPlaying.value && !isSeeking) continue
+            if (!playerConnection.isPlaying.value && !isSeeking) {
+                delay(100) // Fallback delay when paused
+                continue
+            }
             val playerPosition = sliderPosition ?: playerConnection.player.currentPosition
             val lyricPosition = (playerPosition - lyricOffset).coerceAtLeast(0L)
             currentLineIndex = findCurrentLineIndex(syncedLines, lyricPosition)

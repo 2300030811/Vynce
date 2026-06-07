@@ -13,6 +13,7 @@ import android.net.Uri
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -95,15 +96,12 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.platform.LocalLayoutDirection
-import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import com.vynce.app.BuildConfig
 import com.vynce.app.LocalDownloadUtil
 import com.vynce.app.R
 import com.vynce.app.constants.AutomaticScannerKey
@@ -112,28 +110,18 @@ import com.vynce.app.constants.DEFAULT_ENABLED_TABS
 import com.vynce.app.constants.DownloadPathKey
 import com.vynce.app.constants.EnabledFiltersKey
 import com.vynce.app.constants.EnabledTabsKey
-import com.vynce.app.constants.LibraryFilterKey
 import com.vynce.app.constants.LocalLibraryEnableKey
 import com.vynce.app.constants.MaxSongCacheSizeKey
-import com.vynce.app.constants.NavigationBarHeight
 import com.vynce.app.constants.OOBE_VERSION
 import com.vynce.app.constants.OobeStatusKey
-import com.vynce.app.constants.ScanPathsKey
-import com.vynce.app.constants.ThumbnailCornerRadius
 import com.vynce.app.ui.component.ListPreference
 import com.vynce.app.ui.component.PreferenceEntry
 import com.vynce.app.ui.component.PreferenceGroupTitle
 import com.vynce.app.ui.component.SwitchPreference
-import com.vynce.app.ui.component.button.IconLabelButton
-import com.vynce.app.ui.dialog.ActionPromptDialog
-import com.vynce.app.ui.dialog.InfoLabel
-import com.vynce.app.ui.screens.Screens.LibraryFilter
 import com.vynce.app.ui.screens.settings.fragments.LocalScannerFrag
 import com.vynce.app.ui.screens.settings.fragments.LocalizationFrag
 import com.vynce.app.ui.screens.settings.fragments.ThemeAppFrag
-import com.vynce.app.utils.dlCoroutine
 import com.vynce.app.utils.formatFileSize
-import com.vynce.app.utils.rememberEnumPreference
 import com.vynce.app.utils.rememberPreference
 import com.vynce.app.utils.scanners.stringFromUriList
 import com.vynce.app.utils.scanners.uriListFromString
@@ -148,13 +136,8 @@ fun SetupWizard(
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     val haptic = LocalHapticFeedback.current
-    val layoutDirection = LocalLayoutDirection.current
-    val uriHandler = LocalUriHandler.current
 
     var oobeStatus by rememberPreference(OobeStatusKey, defaultValue = 0)
-
-    // content prefs
-    var filter by rememberEnumPreference(LibraryFilterKey, LibraryFilter.ALL)
 
     // local media prefs
     val (localLibEnable, onLocalLibEnableChange) = rememberPreference(LocalLibraryEnableKey, defaultValue = true)
@@ -220,7 +203,6 @@ fun SetupWizard(
 
                         Button(
                             onClick = {
-                                if (oobeStatus == 1) filter = LibraryFilter.ALL
                                 if (oobeStatus < OOBE_VERSION) oobeStatus += 1
                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                             },
@@ -398,7 +380,21 @@ fun SetupWizard(
                         val downloadUtil = LocalDownloadUtil.current
                         val (downloadPath, onDownloadPathChange) = rememberPreference(DownloadPathKey, "")
                         val (maxCacheSize, onMaxCacheChange) = rememberPreference(MaxSongCacheSizeKey, 0)
-                        var showPathDialog by remember { mutableStateOf(false) }
+
+                        val dirPickerLauncher = rememberLauncherForActivityResult(
+                            ActivityResultContracts.OpenDocumentTree()
+                        ) { uri ->
+                            if (uri?.path != null) {
+                                val contentResolver = context.contentResolver
+                                val takeFlags: Int = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                                contentResolver.takePersistableUriPermission(uri, takeFlags)
+                                onDownloadPathChange(stringFromUriList(listOf(uri)))
+                                coroutineScope.launch {
+                                    delay(1000)
+                                    downloadUtil.cd()
+                                }
+                            }
+                        }
 
                         SetupHeader(
                             icon = Icons.Rounded.Download,
@@ -410,8 +406,11 @@ fun SetupWizard(
                             Column(modifier = Modifier.padding(8.dp)) {
                                 PreferenceEntry(
                                     title = { Text("Download Location") },
+                                    description = if (downloadPath.isNotEmpty())
+                                        uriListFromString(downloadPath).firstOrNull()?.path
+                                    else null,
                                     icon = { Icon(Icons.Rounded.SdCard, null) },
-                                    onClick = { showPathDialog = true }
+                                    onClick = { dirPickerLauncher.launch(null) }
                                 )
                                 HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp).alpha(0.3f))
                                 ListPreference(
@@ -426,10 +425,6 @@ fun SetupWizard(
                                     onValueSelected = onMaxCacheChange
                                 )
                             }
-                        }
-
-                        if (showPathDialog) {
-                            // Reuse existing path dialog logic
                         }
                     }
 

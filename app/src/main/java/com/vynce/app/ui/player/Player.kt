@@ -58,6 +58,8 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyHorizontalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ExpandLess
@@ -321,59 +323,46 @@ fun PortraitPlayer(
                     customMediaMetadata = mediaMetadata
                 )
             } else {
-                val thumbnailLazyGridState = rememberLazyGridState()
-                val currentItem by remember { derivedStateOf { thumbnailLazyGridState.firstVisibleItemIndex } }
-                val itemScrollOffset by remember { derivedStateOf { thumbnailLazyGridState.firstVisibleItemScrollOffset } }
+                val pagerState = rememberPagerState(
+                    initialPage = maxOf(0, currentMediaIndex),
+                    pageCount = { mediaItems.size }
+                )
 
-                LaunchedEffect(itemScrollOffset) {
-                    if (!thumbnailLazyGridState.isScrollInProgress || itemScrollOffset != 0) return@LaunchedEffect
-
-                    if (currentItem > currentMediaIndex)
-                        playerConnection.player.seekToNext()
-                    else if (currentItem < currentMediaIndex)
-                        playerConnection.player.seekToPreviousMediaItem()
+                LaunchedEffect(pagerState.currentPage, pagerState.isScrollInProgress) {
+                    if (!pagerState.isScrollInProgress && pagerState.currentPage != currentMediaIndex) {
+                        if (pagerState.currentPage > currentMediaIndex) {
+                            playerConnection.player.seekToNext()
+                        } else if (pagerState.currentPage < currentMediaIndex) {
+                            playerConnection.player.seekToPreviousMediaItem()
+                        }
+                    }
                 }
 
                 LaunchedEffect(mediaMetadata, canSkipPrevious, canSkipNext) {
-                    // When the media item changes, scroll to it
-                    val index = maxOf(0, currentMediaIndex)
-
-                    // Only animate scroll when player expanded, otherwise animated scroll won't work
-                    if (playerSheetState.isExpanded)
-                        thumbnailLazyGridState.animateScrollToItem(index)
-                    else
-                        thumbnailLazyGridState.scrollToItem(index)
-                }
-
-                val horizontalLazyGridItemWidthFactor = 1f
-                val thumbnailSnapLayoutInfoProvider = remember(thumbnailLazyGridState) {
-                    SnapLayoutInfoProvider(
-                        lazyGridState = thumbnailLazyGridState,
-                        positionInLayout = { layoutSize, itemSize ->
-                            (layoutSize * horizontalLazyGridItemWidthFactor / 2f - itemSize / 2f)
+                    val targetPage = maxOf(0, currentMediaIndex)
+                    if (pagerState.currentPage != targetPage) {
+                        if (playerSheetState.isExpanded) {
+                            pagerState.animateScrollToPage(targetPage)
+                        } else {
+                            pagerState.scrollToPage(targetPage)
                         }
-                    )
+                    }
                 }
-                val horizontalLazyGridItemWidth = maxWidth * horizontalLazyGridItemWidthFactor
 
-                LazyHorizontalGrid(
-                    state = thumbnailLazyGridState,
-                    rows = GridCells.Fixed(1),
-                    flingBehavior = rememberSnapFlingBehavior(thumbnailSnapLayoutInfoProvider),
+                HorizontalPager(
+                    state = pagerState,
                     userScrollEnabled = playerSheetState.isExpanded,
                     modifier = Modifier.padding(vertical = QueuePeekHeight / 2)
-                ) {
-                    items(
-                        items = mediaItems,
-                        key = { it.id }
-                    ) {
+                ) { page ->
+                    val metadata = mediaItems.getOrNull(page)
+                    if (metadata != null) {
                         Thumbnail(
                             modifier = Modifier
-                                .width(horizontalLazyGridItemWidth)
+                                .fillMaxWidth()
                                 .animateContentSize(),
                             sliderPositionProvider = { sliderPosition },
                             showLyricsOnClick = true,
-                            customMediaMetadata = it
+                            customMediaMetadata = metadata
                         )
                     }
                 }
@@ -483,60 +472,46 @@ fun LandscapePlayer(
                     customMediaMetadata = mediaMetadata
                 )
             } else {
-                val thumbnailLazyGridState = rememberLazyGridState()
-                val currentItem by remember { derivedStateOf { thumbnailLazyGridState.firstVisibleItemIndex } }
-                val itemScrollOffset by remember { derivedStateOf { thumbnailLazyGridState.firstVisibleItemScrollOffset } }
+                val pagerState = rememberPagerState(
+                    initialPage = maxOf(0, currentMediaIndex),
+                    pageCount = { mediaItems.size }
+                )
 
-                LaunchedEffect(itemScrollOffset) {
-                    if (!thumbnailLazyGridState.isScrollInProgress || itemScrollOffset != 0) return@LaunchedEffect
-
-                    if (currentItem > currentMediaIndex)
-                        playerConnection.player.seekToNext()
-                    else if (currentItem < currentMediaIndex)
-                        playerConnection.player.seekToPreviousMediaItem()
+                LaunchedEffect(pagerState.currentPage, pagerState.isScrollInProgress) {
+                    if (!pagerState.isScrollInProgress && pagerState.currentPage != currentMediaIndex) {
+                        if (pagerState.currentPage > currentMediaIndex) {
+                            playerConnection.player.seekToNext()
+                        } else if (pagerState.currentPage < currentMediaIndex) {
+                            playerConnection.player.seekToPreviousMediaItem()
+                        }
+                    }
                 }
 
                 LaunchedEffect(mediaMetadata, canSkipPrevious, canSkipNext) {
-                    // When the media item changes, scroll to it
-                    val index = maxOf(0, currentMediaIndex)
-
-                    // Only animate scroll when player expanded, otherwise animated scroll won't work
-                    if (playerSheetState.isExpanded)
-                        thumbnailLazyGridState.animateScrollToItem(index)
-                    else
-                        thumbnailLazyGridState.scrollToItem(index)
-                }
-
-                val horizontalLazyGridItemWidthFactor = 1f
-                val thumbnailSnapLayoutInfoProvider = remember(thumbnailLazyGridState) {
-                    SnapLayoutInfoProvider(
-                        lazyGridState = thumbnailLazyGridState,
-                        positionInLayout = { layoutSize, itemSize ->
-                            (layoutSize * horizontalLazyGridItemWidthFactor / 2f - itemSize / 2f)
+                    val targetPage = maxOf(0, currentMediaIndex)
+                    if (pagerState.currentPage != targetPage) {
+                        if (playerSheetState.isExpanded) {
+                            pagerState.animateScrollToPage(targetPage)
+                        } else {
+                            pagerState.scrollToPage(targetPage)
                         }
-                    )
+                    }
                 }
-                val horizontalLazyGridItemWidth = maxWidth * horizontalLazyGridItemWidthFactor
 
-
-                LazyHorizontalGrid(
-                    state = thumbnailLazyGridState,
-                    rows = GridCells.Fixed(1),
+                HorizontalPager(
+                    state = pagerState,
                     contentPadding = PaddingValues(vertical = 16.dp),
-                    flingBehavior = rememberSnapFlingBehavior(thumbnailSnapLayoutInfoProvider),
                     userScrollEnabled = playerSheetState.isExpanded && swipeToSkip
-                ) {
-                    items(
-                        items = mediaItems,
-                        key = { it.id }
-                    ) {
+                ) { page ->
+                    val metadata = mediaItems.getOrNull(page)
+                    if (metadata != null) {
                         Thumbnail(
                             sliderPositionProvider = { sliderPosition },
                             modifier = Modifier
-                                .width(horizontalLazyGridItemWidth)
+                                .fillMaxWidth()
                                 .animateContentSize(),
                             showLyricsOnClick = true,
-                            customMediaMetadata = it
+                            customMediaMetadata = metadata
                         )
                     }
                 }

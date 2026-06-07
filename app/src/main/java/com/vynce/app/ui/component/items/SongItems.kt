@@ -275,7 +275,6 @@ fun SongFolderItem(
     LaunchedEffect(Unit) {
         if (subtitle == null) {
             CoroutineScope(Dispatchers.IO).launch {
-                database.localSongCountInPath(folder.getFullSquashedDir()).first()
                 subDirSongCount = database.localSongCountInPath(folder.getFullSquashedDir()).first()
             }
         }

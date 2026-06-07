@@ -133,6 +133,7 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
@@ -591,7 +592,7 @@ class MusicService : MediaLibraryService(),
             val pos = player.currentPosition
             queueBoard.value.shutdown()
             if (dataStore.get(PersistentQueueKey, true)) {
-                runBlocking(Dispatchers.IO) {
+                CoroutineScope(NonCancellable).launch(Dispatchers.IO) {
                     saveQueueToDisk(pos)
                 }
             }

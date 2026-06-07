@@ -103,10 +103,16 @@ fun ImportM3uDialog(
                     val result = loadM3u(
                         context = context,
                         database = database,
-                        snackbarHostState = snackbarHostState,
                         uri = uri,
                         matchStrength = scannerSensitivity
                     )
+                    if (result.first.isEmpty()) {
+                        snackbarHostState.showSnackbar(
+                            message = context.getString(R.string.m3u_import_failed),
+                            withDismissAction = true,
+                            duration = SnackbarDuration.Long
+                        )
+                    }
                     importedSongs.clear()
                     importedSongs.addAll(result.first)
                     rejectedSongs.clear()
@@ -304,7 +310,6 @@ fun ImportM3uDialog(
 suspend fun loadM3u(
     context: Context,
     database: MusicDatabase,
-    snackbarHostState: SnackbarHostState,
     uri: Uri,
     matchStrength: ScannerM3uMatchCriteria = ScannerM3uMatchCriteria.LEVEL_1,
 ): Triple<ArrayList<Song>, ArrayList<String>, String> {
@@ -377,15 +382,6 @@ suspend fun loadM3u(
         Toast.makeText(context, R.string.m3u_import_playlist_failed, Toast.LENGTH_SHORT).show()
     }
 
-    if (songs.isEmpty()) {
-        CoroutineScope(Dispatchers.Main).launch {
-            snackbarHostState.showSnackbar(
-                message = context.getString(R.string.m3u_import_failed),
-                withDismissAction = true,
-                duration = SnackbarDuration.Long
-            )
-        }
-    }
     return Triple(songs, rejectedSongs, uri.path?.substringAfterLast('/')?.substringBeforeLast('.') ?: "")
 }
 

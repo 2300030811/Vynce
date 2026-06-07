@@ -142,7 +142,6 @@ import com.vynce.app.ui.player.BottomSheetPlayer
 import com.vynce.app.ui.screens.home.HomeScreen
 import com.vynce.app.ui.screens.PlayerScreen
 import com.vynce.app.ui.screens.Screens
-import com.vynce.app.ui.screens.SetupWizard
 import com.vynce.app.ui.screens.StatsScreen
 import com.vynce.app.ui.screens.artist.ArtistAlbumsScreen
 import com.vynce.app.ui.screens.library.FolderScreen
