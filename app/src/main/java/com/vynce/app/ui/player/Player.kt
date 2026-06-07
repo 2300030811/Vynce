@@ -167,10 +167,7 @@ import com.vynce.app.utils.coilCoroutine
 import com.vynce.app.utils.makeTimeString
 import com.vynce.app.utils.rememberEnumPreference
 import com.vynce.app.utils.rememberPreference
-import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.HazeStyle
-import dev.chrisbanes.haze.hazeEffect
-import dev.chrisbanes.haze.hazeSource
+import androidx.compose.ui.draw.blur
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
@@ -206,8 +203,6 @@ fun BottomSheetPlayer(
 
     val qbInit by playerConnection.service.qbInit.collectAsState()
 
-    val hazeState = remember { HazeState() }
-
     LaunchedEffect(qbInit, queueBoard.masterQueues.toList()) {
         Log.d(TAG, "Queues changed. qbInit = $qbInit")
         if (qbInit && !queueBoard.masterQueues.isEmpty() && state.isDismissed) {
@@ -226,7 +221,6 @@ fun BottomSheetPlayer(
                 playerBackground = playerBackground,
                 showLyrics = showLyrics,
                 useDarkTheme = useDarkTheme,
-                hazeState = hazeState,
             )
         },
         collapsedBackgroundColor = MaterialTheme.colorScheme.surfaceColorAtElevation(6.dp),
@@ -240,9 +234,9 @@ fun BottomSheetPlayer(
         Log.v(TAG, "PLR-3.0")
 
         if (LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE && !context.tabMode() && context.supportsWideScreen()) {
-            LandscapePlayer(state, navController, queueBoard, hazeState)
+            LandscapePlayer(state, navController, queueBoard)
         } else {
-            PortraitPlayer(state, navController, queueBoard, hazeState)
+            PortraitPlayer(state, navController, queueBoard)
         }
     }
 }
@@ -253,15 +247,12 @@ fun PortraitPlayer(
     playerSheetState: BottomSheetState,
     navController: NavController,
     queueBoard: QueueBoard,
-    hazeState: HazeState? = null,
     enableQueueSheet: Boolean = true,
 ) {
     val TAG = "BottomSheetPlayer"
     Log.v(TAG, "PLR-3.1b")
 
     val playerConnection = LocalPlayerConnection.current ?: return
-
-    val localHazeState = hazeState ?: remember { HazeState() }
 
     val dismissedBound = WindowInsets.systemBars.asPaddingValues().calculateBottomPadding()
 
@@ -277,7 +268,6 @@ fun PortraitPlayer(
         modifier = Modifier
             .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Horizontal))
             .padding(bottom = queueSheetState.collapsedBound)
-            .hazeEffect(localHazeState, HazeStyle(tints = listOf(dev.chrisbanes.haze.HazeTint(Color.Black.copy(alpha = 0.1f)))))
     ) {
         Box(
             contentAlignment = Alignment.Center,
@@ -396,15 +386,12 @@ fun LandscapePlayer(
     playerSheetState: BottomSheetState,
     navController: NavController,
     queueBoard: QueueBoard,
-    hazeState: HazeState? = null,
     enableQueueSheet: Boolean = true,
 ) {
     val TAG = "BottomSheetPlayer"
 
     val context = LocalContext.current
     val playerConnection = LocalPlayerConnection.current ?: return
-
-    val localHazeState = hazeState ?: remember { HazeState() }
 
     val mediaMetadata by playerConnection.mediaMetadata.collectAsState()
 
@@ -453,7 +440,6 @@ fun LandscapePlayer(
                 WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal).add(verticalInsets)
             )
             .fillMaxSize()
-            .hazeEffect(localHazeState, HazeStyle(tints = listOf(dev.chrisbanes.haze.HazeTint(Color.Black.copy(alpha = 0.1f)))))
     ) {
         Box(
             contentAlignment = Alignment.Center,
@@ -1045,13 +1031,11 @@ fun PlayerBackground(
     playerBackground: PlayerBackgroundStyle,
     showLyrics: Boolean,
     useDarkTheme: Boolean,
-    hazeState: HazeState? = null,
 ) {
     val TAG = "PlayerBackground"
     Log.v(TAG, "PLR_BG-1")
 
     val context = LocalContext.current
-    val localHazeState = hazeState ?: remember { HazeState() }
 
     Box(
         modifier = Modifier
@@ -1069,7 +1053,7 @@ fun PlayerBackground(
             contentScale = ContentScale.Crop,
             modifier = Modifier
                 .fillMaxSize()
-                .hazeSource(localHazeState)
+                .blur(80.dp)
                 .alpha(0.3f)
         )
         // Dark scrim over it
@@ -1138,7 +1122,7 @@ fun PlayerBackground(
                     contentScale = ContentScale.FillBounds,
                     modifier = Modifier
                         .fillMaxSize()
-                .hazeSource(localHazeState)
+                        .blur(100.dp)
                         .alpha(0.5f)
                 )
             }
