@@ -45,28 +45,28 @@ interface DatabaseDao : SongsDao, AlbumsDao, ArtistsDao, PlaylistsDao, QueueDao 
     @Transaction
     @Query("""
         SELECT song.*
-        FROM (SELECT *, COUNT(1) AS referredCount
+        FROM (SELECT relatedSongId, COUNT(1) AS referredCount
               FROM related_song_map
+              WHERE songId IN (SELECT songId
+                               FROM (SELECT songId
+                                     FROM event
+                                     ORDER BY ROWID DESC
+                                     LIMIT 5)
+                               UNION
+                               SELECT songId
+                               FROM (SELECT songId
+                                     FROM event
+                                     WHERE timestamp > :now - 86400000 * 7
+                                     GROUP BY songId
+                                     ORDER BY SUM(playTime) DESC
+                                     LIMIT 5)
+                               UNION
+                               SELECT id
+                               FROM (SELECT id
+                                     FROM song
+                                     LIMIT 10))
               GROUP BY relatedSongId) map
                  JOIN song ON song.id = map.relatedSongId
-        WHERE songId IN (SELECT songId
-                         FROM (SELECT songId
-                               FROM event
-                               ORDER BY ROWID DESC
-                               LIMIT 5)
-                         UNION
-                         SELECT songId
-                         FROM (SELECT songId
-                               FROM event
-                               WHERE timestamp > :now - 86400000 * 7
-                               GROUP BY songId
-                               ORDER BY SUM(playTime) DESC
-                               LIMIT 5)
-                         UNION
-                         SELECT id
-                         FROM (SELECT id
-                               FROM song
-                               LIMIT 10))
         ORDER BY referredCount DESC
         LIMIT 100
     """)

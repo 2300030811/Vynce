@@ -17,6 +17,7 @@ import android.graphics.drawable.Drawable
 import android.media.MediaMetadataRetriever
 import android.net.Uri
 import androidx.core.content.ContextCompat
+import androidx.core.graphics.createBitmap
 import androidx.core.graphics.scale
 import androidx.media3.common.util.BitmapLoader
 import coil3.ImageLoader
@@ -151,7 +152,7 @@ class CoilBitmapLoader @Inject constructor(
             val squareTop = ((y - squareLength) / 2)
 
             val drawable: Drawable? = ContextCompat.getDrawable(context, R.drawable.placeholder_icon)
-            val bitmap = Bitmap.createBitmap(x, y, Bitmap.Config.ARGB_8888)
+            val bitmap = createBitmap(x, y)
             val canvas = Canvas(bitmap)
 
             drawable?.setBounds(squareLeft, squareTop, squareLeft + squareLength, squareTop + squareLength)

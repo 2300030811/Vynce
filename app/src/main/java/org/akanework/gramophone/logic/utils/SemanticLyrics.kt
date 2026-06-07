@@ -21,7 +21,7 @@ import kotlin.math.min
 
 private const val TAG = "SemanticLyrics"
 
-/*
+/**
  * Syntactic-semantic lyric parser.
  *   First parse lrc syntax into custom objects, then parse these into usable representation
  *   for playback. This should be more testable and stable than the old parser.
@@ -436,7 +436,7 @@ fun findBidirectionalBarriers(text: CharSequence): List<Pair<Int, Boolean>> {
 }
 
 
-/*
+/**
  * Syntactic lyric parser. Parse custom objects into usable representation for playback.
  *
  * Formats we have to consider in this component are:

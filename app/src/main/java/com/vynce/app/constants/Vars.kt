@@ -41,8 +41,8 @@ const val LYRIC_FETCH_TIMEOUT = 60000L
 const val SNACKBAR_VERY_SHORT = 2000L
 
 /**
- * 5: pre 0.10.0-rc1
- * 6: 0.10.0-rc1 +
+ * Current OOBE (Out-Of-Box Experience) wizard version.
+ * Increment when adding new wizard steps to re-trigger the wizard for existing users.
  */
 const val OOBE_VERSION = 5
 

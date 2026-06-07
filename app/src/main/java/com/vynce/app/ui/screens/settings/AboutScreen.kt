@@ -60,7 +60,6 @@ import com.vynce.app.R
 import com.vynce.app.constants.ENABLE_FFMETADATAEX
 import com.vynce.app.constants.LYRIC_FETCH_TIMEOUT
 import com.vynce.app.constants.MAX_LM_SCANNER_JOBS
-import com.vynce.app.constants.OOBE_VERSION
 import com.vynce.app.constants.SNACKBAR_VERY_SHORT
 import com.vynce.app.constants.TopBarInsets
 import com.vynce.app.ui.component.ColumnWithContentPadding
@@ -223,8 +222,6 @@ fun AboutScreen(
                     val info = mutableListOf<String>(
                         "FFMetadataEx: $ENABLE_FFMETADATAEX",
                         "LM scanner concurrency: $MAX_LM_SCANNER_JOBS",
-                        "LYRIC_FETCH_TIMEOUT: $LYRIC_FETCH_TIMEOUT",
-                        "OOBE_VERSION: $OOBE_VERSION",
                         "LYRIC_FETCH_TIMEOUT: $LYRIC_FETCH_TIMEOUT",
                         "SNACKBAR_VERY_SHORT: $SNACKBAR_VERY_SHORT"
                     )

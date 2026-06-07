@@ -27,7 +27,7 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
+
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -70,7 +70,7 @@ fun AlbumMenu(
     val playerConnection = LocalPlayerConnection.current ?: return
     val queueBoard by playerConnection.queueBoard.collectAsState()
     val isNetworkConnected = LocalNetworkConnected.current
-    val scope = rememberCoroutineScope()
+
     val libraryAlbum by database.album(originalAlbum.id).collectAsState(initial = originalAlbum)
     val album = libraryAlbum ?: originalAlbum
     var songs by remember {
@@ -85,7 +85,7 @@ fun AlbumMenu(
 //        mutableStateOf(songs.isNotEmpty() && songs.all { it.song.isLocal })
 //    }
 
-    val coroutineScope = rememberCoroutineScope()
+
 
     LaunchedEffect(Unit) {
         database.albumSongs(album.id).collect {

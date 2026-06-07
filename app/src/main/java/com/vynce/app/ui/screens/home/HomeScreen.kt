@@ -118,7 +118,7 @@ fun HomeScreen(
                         contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        items(state.availableLanguages) { lang ->
+                        items(state.availableLanguages, key = { it }) { lang ->
                             val selected = lang == state.selectedLanguage
                             FilterChip(
                                 selected = selected,
@@ -143,15 +143,15 @@ fun HomeScreen(
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        QuickActionCard(Icons.Rounded.History, "History", Color(0xFF4CAF50), Modifier.weight(1f)) {
+                        QuickActionCard(Icons.Rounded.History, "History", MaterialTheme.colorScheme.tertiary, Modifier.weight(1f)) {
                             if (navController.graph.findNode(Screens.History.route) != null) navController.navigate(Screens.History.route)
                             else Toast.makeText(context, "History not available", Toast.LENGTH_SHORT).show()
                         }
-                        QuickActionCard(Icons.Rounded.Favorite, "Liked", Color(0xFFE91E63), Modifier.weight(1f)) {
+                        QuickActionCard(Icons.Rounded.Favorite, "Liked", MaterialTheme.colorScheme.secondary, Modifier.weight(1f)) {
                             if (navController.graph.findNode(Screens.Liked.route) != null) navController.navigate(Screens.Liked.route)
                             else Toast.makeText(context, "Liked not available", Toast.LENGTH_SHORT).show()
                         }
-                        QuickActionCard(Icons.Rounded.LibraryMusic, "Local", Color(0xFF2196F3), Modifier.weight(1f)) {
+                        QuickActionCard(Icons.Rounded.LibraryMusic, "Local", MaterialTheme.colorScheme.primary, Modifier.weight(1f)) {
                             if (navController.graph.findNode(Screens.Songs.route) != null) navController.navigate(Screens.Songs.route)
                             else Toast.makeText(context, "Local not available", Toast.LENGTH_SHORT).show()
                         }
@@ -171,13 +171,15 @@ fun HomeScreen(
                 } else if (state.isLoading) {
                     item(key = "artists_shimmer_h") { SectionHeader("Top Artists") }
                     item(key = "artists_shimmer") {
-                        LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                            items(6) {
-                                val placeholderColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
-                                Column(Modifier.width(96.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Box(Modifier.size(96.dp).clip(CircleShape).background(placeholderColor).shimmer())
-                                    Spacer(Modifier.height(8.dp))
-                                    Box(Modifier.width(56.dp).height(12.dp).clip(RoundedCornerShape(4.dp)).background(placeholderColor).shimmer())
+                        ShimmerHost {
+                            LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                                items(6, key = { it }) {
+                                    val placeholderColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
+                                    Column(Modifier.width(96.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                                        Box(Modifier.size(96.dp).clip(CircleShape).background(placeholderColor))
+                                        Spacer(Modifier.height(8.dp))
+                                        Box(Modifier.width(56.dp).height(12.dp).clip(RoundedCornerShape(4.dp)).background(placeholderColor))
+                                    }
                                 }
                             }
                         }
