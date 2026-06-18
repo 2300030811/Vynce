@@ -252,6 +252,7 @@ object JioSaavn {
                 val text = response.bodyAsText()
                 return json.parseToJsonElement(text).jsonObject
             } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
                 android.util.Log.e("JioSaavn", "Failed $base$path: ${e.message}")
             }
         }

@@ -128,8 +128,7 @@ fun SearchBarContainer(
 
 
     val shouldShowSearchBar = remember(searchActive, navBackStackEntry) {
-        (searchActive || navigationItems.fastAny { it.route == navBackStackEntry?.destination?.route } ||
-                navBackStackEntry?.destination?.route?.startsWith("search/") == true)
+        (searchActive || navigationItems.fastAny { it.route == navBackStackEntry?.destination?.route })
     }
 
     LaunchedEffect(navBackStackEntry) {

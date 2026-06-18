@@ -35,7 +35,7 @@ import com.vynce.app.ui.screens.playlist.LocalPlaylistScreen
 import com.vynce.app.ui.screens.saavn.AlbumScreen
 import com.vynce.app.ui.screens.saavn.ArtistScreen
 import com.vynce.app.ui.screens.saavn.PlaylistScreen
-import com.vynce.app.ui.screens.search.OnlineSearchResult
+import com.vynce.app.ui.screens.search.UnifiedSearchScreen
 import com.vynce.app.ui.screens.search.SearchBarContainer
 import com.vynce.app.ui.screens.settings.*
 import com.vynce.app.ui.screens.settings.AboutScreen
@@ -169,7 +169,7 @@ fun VynceNavHost(
                 }
             )
         ) {
-            OnlineSearchResult(navController)
+            UnifiedSearchScreen(navController, scrollBehavior)
         }
         composable(
             route = "local_playlist/{playlistId}",

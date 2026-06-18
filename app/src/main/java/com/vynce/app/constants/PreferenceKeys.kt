@@ -174,6 +174,13 @@ val LastFmScrobblingEnabledKey = booleanPreferencesKey("lastfmScrobblingEnabled"
 val LastFmSessionKey = stringPreferencesKey("lastfmSessionKey")
 val LastFmUsernameKey = stringPreferencesKey("lastfmUsername")
 
+/**
+ * AI Integration (Groq)
+ */
+val AiEnabledKey = booleanPreferencesKey("aiEnabled")
+val AiApiKeyKey = stringPreferencesKey("aiApiKey")
+val AiModelKey = stringPreferencesKey("aiModel")
+
 
 /**
  * Misc

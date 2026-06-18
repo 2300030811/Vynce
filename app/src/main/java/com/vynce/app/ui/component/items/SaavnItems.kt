@@ -4,6 +4,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.MoreVert
@@ -36,6 +37,9 @@ import com.vynce.app.utils.makeTimeString
 import com.vynce.app.utils.toSaavnMediaMetadata
 import com.zionhuang.jiosaavn.JioSaavn
 import com.zionhuang.jiosaavn.SaavnSong
+import com.zionhuang.jiosaavn.SaavnArtist
+import com.zionhuang.jiosaavn.SaavnAlbum
+import com.zionhuang.jiosaavn.SaavnPlaylist
 
 import com.vynce.app.extensions.decodeHtml
 
@@ -180,4 +184,80 @@ fun SaavnSongCard(
             )
         }
     }
+}
+
+@Composable
+fun SaavnArtistListItem(
+    artist: SaavnArtist,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    ListItem(
+        title = artist.name,
+        subtitle = "Artist",
+        thumbnailContent = {
+            AsyncImage(
+                model = artist.image.takeIf { it.isNotEmpty() },
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .size(ListThumbnailSize)
+                    .clip(CircleShape)
+            )
+        },
+        modifier = modifier.clickable(onClick = onClick)
+    )
+}
+
+@Composable
+fun SaavnAlbumListItem(
+    album: SaavnAlbum,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    ListItem(
+        title = album.name,
+        subtitle = joinByBullet(
+            album.artists.takeIf { it.isNotEmpty() } ?: "Various Artists",
+            album.year.takeIf { it.isNotEmpty() }?.let { it } ?: "",
+            album.songCount.takeIf { it != "0" }?.let { "$it songs" } ?: ""
+        ),
+        thumbnailContent = {
+            AsyncImage(
+                model = album.image.takeIf { it.isNotEmpty() },
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .size(ListThumbnailSize)
+                    .clip(RoundedCornerShape(ThumbnailCornerRadius))
+            )
+        },
+        modifier = modifier.clickable(onClick = onClick)
+    )
+}
+
+@Composable
+fun SaavnPlaylistListItem(
+    playlist: SaavnPlaylist,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    ListItem(
+        title = playlist.name,
+        subtitle = joinByBullet(
+            "Playlist",
+            playlist.songCount.takeIf { it != "0" }?.let { "$it songs" } ?: ""
+        ),
+        thumbnailContent = {
+            AsyncImage(
+                model = playlist.image.takeIf { it.isNotEmpty() },
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .size(ListThumbnailSize)
+                    .clip(RoundedCornerShape(ThumbnailCornerRadius))
+            )
+        },
+        modifier = modifier.clickable(onClick = onClick)
+    )
 }

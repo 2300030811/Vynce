@@ -12,6 +12,7 @@ package com.vynce.app.playback
 import android.app.PendingIntent
 import android.content.ComponentName
 import android.content.Context
+import com.vynce.app.utils.ScrobbleManager
 import android.content.Intent
 import android.database.SQLException
 import android.media.audiofx.AudioEffect
@@ -159,6 +160,14 @@ import javax.inject.Inject
 import kotlin.math.min
 import kotlin.math.pow
 import com.vynce.app.utils.reportException
+import com.vynce.app.data.stats.ListeningStatsTracker
+import com.vynce.app.widget.PlayerInfo
+import com.vynce.app.widget.PlayerInfoStateDefinition
+import com.vynce.app.widget.VynceBarWidget
+import com.vynce.app.widget.VynceControlWidget
+import androidx.glance.appwidget.GlanceAppWidgetManager
+import androidx.glance.appwidget.state.updateAppWidgetState
+import kotlinx.coroutines.Job
 
 private val AudioDecoderPreferenceKey = intPreferencesKey("audio_decoder")
 private val AudioGaplessOffloadPreferenceKey = booleanPreferencesKey("audio_gapless_offload")
@@ -181,6 +190,9 @@ class MusicService : MediaLibraryService(),
 
     @Inject
     lateinit var lyricsHelper: LyricsHelper
+
+    @Inject
+    lateinit var listeningStatsTracker: ListeningStatsTracker
 
     @Inject
     lateinit var mediaLibrarySessionCallback: MediaLibrarySessionCallback
@@ -214,6 +226,7 @@ class MusicService : MediaLibraryService(),
     private val isNetworkConnected = MutableStateFlow(true)
 
     lateinit var sleepTimer: SleepTimer
+    lateinit var crossfadeController: CrossfadeController
 
     // Player vars
     val currentMediaMetadata = MutableStateFlow<MediaMetadata?>(null)
@@ -248,6 +261,7 @@ class MusicService : MediaLibraryService(),
     }.stateIn(offloadScope, SharingStarted.Lazily, null)
 
     private val lastFmScrobbler by lazy { LastFmScrobbler() }
+    private val scrobbleManager by lazy { ScrobbleManager(scope, lastFmScrobbler) }
 
     private var previousMediaId: String? = null
 
@@ -265,10 +279,18 @@ class MusicService : MediaLibraryService(),
     private var isAudioEffectSessionOpened = false
 
     var consecutivePlaybackErr = 0
+    private val trackRetryCount = mutableMapOf<String, Int>()
+
+    // ── Widget state pipeline ──────────────────────────────────────
+    private var debouncedWidgetUpdateJob: Job? = null
+    private var lastWidgetPlayerInfo: PlayerInfo? = null
+    private val widgetStateDebounceMs = 300L
 
     override fun onCreate() {
         Log.i(TAG, "Starting MusicService")
         super.onCreate()
+
+        listeningStatsTracker.initialize(scope)
 
         playerVolume.value = dataStore.get(PlayerVolumeKey, 1f).coerceIn(0f, 1f)
 
@@ -292,6 +314,12 @@ class MusicService : MediaLibraryService(),
                 sleepTimer = SleepTimer(scope, this)
                 addListener(sleepTimer)
                 addAnalyticsListener(PlaybackStatsListener(false, this@MusicService))
+
+                // Crossfade controller
+                crossfadeController = CrossfadeController(scope)
+                crossfadeController.crossfadeDurationMs = crossfadeDuration.toLong() * 1000
+                crossfadeController.setBaseVolume(playerVolume.value)
+                crossfadeController.attach(this)
 
                 // misc
                 setOffloadEnabled(dataStore.get(AudioOffloadKey, false))
@@ -356,6 +384,7 @@ class MusicService : MediaLibraryService(),
             }.collectLatest(scope) {
                 withContext(Dispatchers.Main) {
                     player.volume = it
+                    crossfadeController.setBaseVolume(it)
                 }
             }
         }
@@ -376,6 +405,15 @@ class MusicService : MediaLibraryService(),
                     withContext(Dispatchers.Main) {
                         player.skipSilenceEnabled = it
                     }
+                }
+        }
+
+        offloadScope.launch {
+            dataStore.data
+                .map { it[CrossfadeDurationKey] ?: 0 }
+                .distinctUntilChanged()
+                .collectLatest(scope) { durationSec ->
+                    crossfadeController.crossfadeDurationMs = durationSec.toLong() * 1000
                 }
         }
 
@@ -737,6 +775,9 @@ class MusicService : MediaLibraryService(),
 // Misc
 
     fun updateNotification() {
+        // Push widget state update (debounced)
+        requestWidgetUpdate()
+
         mediaSession.setCustomLayout(
             listOf(
                 CommandButton.Builder(ICON_UNDEFINED)
@@ -779,6 +820,83 @@ class MusicService : MediaLibraryService(),
         )
     }
 
+    // ── Widget update pipeline ─────────────────────────────────────
+
+    private fun requestWidgetUpdate() {
+        debouncedWidgetUpdateJob?.cancel()
+        debouncedWidgetUpdateJob = offloadScope.launch {
+            delay(widgetStateDebounceMs)
+            val playerInfo = buildPlayerInfo()
+            val oldInfo = lastWidgetPlayerInfo
+            if (oldInfo != null && !shouldUpdateWidget(oldInfo, playerInfo)) return@launch
+            lastWidgetPlayerInfo = playerInfo
+            updateGlanceWidgets(playerInfo)
+        }
+    }
+
+    private fun shouldUpdateWidget(old: PlayerInfo, new: PlayerInfo): Boolean {
+        if (old.songTitle != new.songTitle) return true
+        if (old.artistName != new.artistName) return true
+        if (old.isPlaying != new.isPlaying) return true
+        if (old.albumArtUri != new.albumArtUri) return true
+        if (old.isFavorite != new.isFavorite) return true
+        if (old.isShuffleEnabled != new.isShuffleEnabled) return true
+        if (old.repeatMode != new.repeatMode) return true
+        if (old.totalDurationMs != new.totalDurationMs) return true
+        val drift = kotlin.math.abs(old.currentPositionMs - new.currentPositionMs)
+        return drift > 3000L
+    }
+
+    private suspend fun buildPlayerInfo(): PlayerInfo {
+        val currentItem = withContext(Dispatchers.Main) { player.currentMediaItem }
+        val metadata = currentItem?.mediaMetadata
+        val isPlaying = withContext(Dispatchers.Main) { player.isPlaying }
+        val repeatMode = withContext(Dispatchers.Main) { player.repeatMode }
+        val currentPosition = withContext(Dispatchers.Main) { player.currentPosition }
+        val totalDuration = withContext(Dispatchers.Main) { player.duration.coerceAtLeast(0) }
+        val shuffleEnabled = queueBoard.value.getCurrentQueue()?.shuffled ?: false
+        val isFavorite = currentSong.value?.song?.liked ?: false
+
+        val artworkUri = metadata?.artworkUri?.toString()
+            ?: currentItem?.vynceMetadata?.thumbnailUrl
+
+        return PlayerInfo(
+            songTitle = metadata?.title?.toString().orEmpty(),
+            artistName = metadata?.artist?.toString().orEmpty(),
+            albumArtUri = artworkUri,
+            isPlaying = isPlaying,
+            currentPositionMs = currentPosition,
+            totalDurationMs = totalDuration,
+            isFavorite = isFavorite,
+            repeatMode = repeatMode,
+            isShuffleEnabled = shuffleEnabled,
+        )
+    }
+
+    private suspend fun updateGlanceWidgets(playerInfo: PlayerInfo) = withContext(Dispatchers.IO) {
+        try {
+            val glanceManager = GlanceAppWidgetManager(applicationContext)
+
+            val barGlanceIds = glanceManager.getGlanceIds(VynceBarWidget::class.java)
+            barGlanceIds.forEach { id ->
+                updateAppWidgetState(applicationContext, PlayerInfoStateDefinition, id) { playerInfo }
+                VynceBarWidget().update(applicationContext, id)
+            }
+
+            val controlGlanceIds = glanceManager.getGlanceIds(VynceControlWidget::class.java)
+            controlGlanceIds.forEach { id ->
+                updateAppWidgetState(applicationContext, PlayerInfoStateDefinition, id) { playerInfo }
+                VynceControlWidget().update(applicationContext, id)
+            }
+
+            if (barGlanceIds.isNotEmpty() || controlGlanceIds.isNotEmpty()) {
+                Log.d(TAG, "Widgets updated: ${playerInfo.songTitle} (Bar: ${barGlanceIds.size}, Control: ${controlGlanceIds.size})")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error updating widgets", e)
+        }
+    }
+
     fun waitOnNetworkError() {
         waitingForNetworkConnection.value = true
         Toast.makeText(this@MusicService, getString(R.string.wait_to_reconnect), Toast.LENGTH_LONG).show()
@@ -819,10 +937,34 @@ class MusicService : MediaLibraryService(),
     override fun onPlayerError(error: PlaybackException) {
         super.onPlayerError(error)
 
+        val rootCause = generateSequence<Throwable>(error) { it.cause }
+        val is403Error = rootCause.any { cause ->
+            cause is androidx.media3.datasource.HttpDataSource.InvalidResponseCodeException &&
+            cause.responseCode == 403
+        }
+
+        if (is403Error) {
+            val mediaId = player.currentMediaItem?.mediaId
+            if (mediaId != null && mediaId.startsWith("saavn:")) {
+                val retries = trackRetryCount[mediaId] ?: 0
+                if (retries < 2) {
+                    trackRetryCount[mediaId] = retries + 1
+                    val cleanId = mediaId.removePrefix("saavn:")
+                    saavnStreamResolver.invalidate(cleanId)
+                    Log.w(TAG, "403 error for $mediaId. Invalidated cache, retry count: ${retries + 1}. Retrying playback.")
+                    player.seekTo(player.currentMediaItemIndex, player.currentPosition)
+                    player.prepare()
+                    player.play()
+                    return
+                } else {
+                    Log.e(TAG, "403 error for $mediaId. Maximum retry limit reached. Falling back to normal error handling.")
+                }
+            }
+        }
+
         // Detect network/connection errors by walking the cause chain.
         // ExoPlayer wraps IO errors in a MediaSourceException; the real cause is typically
         // UnknownHostException, ConnectException, SocketTimeoutException, or similar.
-        val rootCause = generateSequence<Throwable>(error) { it.cause }
         val isConnectionError = rootCause.any { cause ->
             cause is java.net.UnknownHostException ||
             cause is java.net.ConnectException ||
@@ -855,13 +997,21 @@ class MusicService : MediaLibraryService(),
             q?.lastSongPos = pos
         }
         super.onIsPlayingChanged(isPlaying)
+        listeningStatsTracker.onPlayStateChanged(isPlaying, player.currentPosition)
+        crossfadeController.onPlaybackStateChanged(isPlaying)
+        scrobbleManager.onPlayerStateChanged(isPlaying)
+        updateNotification() // Update widget play/pause state
     }
 
     override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
         super.onMediaItemTransition(mediaItem, reason)
 
+        mediaItem?.mediaId?.let { trackRetryCount.remove(it) }
+
         // Cache is managed by LRU, no need to clear
         previousMediaId = mediaItem?.mediaId
+        listeningStatsTracker.onSongChanged(currentSong.value, player.currentPosition, player.duration, player.isPlaying)
+        crossfadeController.onMediaItemTransition()
         // +2 when and error happens, and -1 when transition. Thus when error, number increments by 1, else doesn't change
         if (consecutivePlaybackErr > 0) {
             consecutivePlaybackErr--
@@ -877,32 +1027,19 @@ class MusicService : MediaLibraryService(),
         queueBoard.value.setCurrQueuePosIndex(player.currentMediaItemIndex)
 
         val lastFmEnabled = dataStore.get(LastFmScrobblingEnabledKey, false)
-        if (lastFmEnabled) {
-            val artist = mediaItem?.vynceMetadata?.artists?.firstOrNull()?.name ?: "Unknown"
-            val track = mediaItem?.vynceMetadata?.title ?: currentSong.value?.song?.title ?: "Unknown"
+        scrobbleManager.isEnabled = lastFmEnabled
+        if (lastFmEnabled && mediaItem != null) {
+            val artist = mediaItem.vynceMetadata?.artists?.firstOrNull()?.name ?: "Unknown"
+            val track = mediaItem.vynceMetadata?.title ?: currentSong.value?.song?.title ?: "Unknown"
             val album: String? = null
+            val durationMs = player.duration.coerceAtLeast(0L)
 
-            if (track.isNotBlank()) {
-                scope.launch {
-                    lastFmScrobbler.updateNowPlaying(
-                        artist = artist,
-                        track = track,
-                        album = album
-                    )
-                }
-
-                scope.launch {
-                    delay(30_000)
-                    if (player.isPlaying) {
-                        lastFmScrobbler.scrobble(
-                            artist = artist,
-                            track = track,
-                            album = album,
-                            timestamp = System.currentTimeMillis()
-                        )
-                    }
-                }
-            }
+            scrobbleManager.onSongStart(
+                artist = artist,
+                track = track,
+                album = album,
+                durationMs = durationMs,
+            )
         }
 
         // reshuffle queue when shuffle AND repeat all are enabled
@@ -929,6 +1066,9 @@ class MusicService : MediaLibraryService(),
     }
 
     override fun onEvents(player: Player, events: Player.Events) {
+        if (events.contains(Player.EVENT_PLAYBACK_STATE_CHANGED) && player.playbackState == Player.STATE_READY) {
+            player.currentMediaItem?.mediaId?.let { trackRetryCount.remove(it) }
+        }
         if (events.containsAny(Player.EVENT_PLAYBACK_STATE_CHANGED, Player.EVENT_PLAY_WHEN_READY_CHANGED)) {
             val isBufferingOrReady =
                 player.playbackState == Player.STATE_BUFFERING || player.playbackState == Player.STATE_READY
@@ -1007,6 +1147,8 @@ class MusicService : MediaLibraryService(),
 
     override fun onDestroy() {
         Log.i(TAG, "Terminating MusicService.")
+        listeningStatsTracker.onCleared()
+        crossfadeController.release()
         deInitQueue()
 
         mediaSession.player.stop()

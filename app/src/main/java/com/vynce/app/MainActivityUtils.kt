@@ -186,14 +186,18 @@ private suspend fun scanInitInternal(
             playerConnection?.service?.initQueue()
             Log.i(MAIN_TAG, "Local media and downloads scan completed")
         } else if (perms == PackageManager.PERMISSION_DENIED) {
-            // Check if we should show rationale or if it's "don't ask again"
-            if ((context as MainActivity).shouldShowRequestPermissionRationale(MEDIA_PERMISSION_LEVEL)) {
-                Log.w(MAIN_TAG, "Permission denied previously, rationale should be shown")
-                // Still launch the request, the setContent block in MainActivity should ideally handle the UI
-                context.permissionLauncher.launch(MEDIA_PERMISSION_LEVEL)
+            val activity = context as MainActivity
+            if (activity.shouldShowRequestPermissionRationale(MEDIA_PERMISSION_LEVEL)) {
+                Log.w(MAIN_TAG, "Permission denied previously, showing rationale dialog")
+                activity.showPermissionRationale = true
             } else {
-                Log.w(MAIN_TAG, "Permission denied (possibly don't ask again). Direct request may fail.")
-                context.permissionLauncher.launch(MEDIA_PERMISSION_LEVEL)
+                // User selected "Don't ask again" or permission was never requested yet.
+                // On first launch after OOBE, the system hasn't shown the dialog yet,
+                // so shouldShowRequestPermissionRationale returns false — launch normally.
+                // On subsequent denials with "Don't ask again", the system will silently deny,
+                // and the permissionLauncher callback will show the settings redirect.
+                Log.i(MAIN_TAG, "Requesting media permission for the first time or after permanent denial")
+                activity.permissionLauncher.launch(MEDIA_PERMISSION_LEVEL)
             }
         }
     } else if (localLibEnable) {
@@ -239,10 +243,14 @@ suspend fun triggerMediaScan(
 
     val perms = context.checkSelfPermission(MEDIA_PERMISSION_LEVEL)
     if (perms != PackageManager.PERMISSION_GRANTED) {
-        if ((context as MainActivity).shouldShowRequestPermissionRationale(MEDIA_PERMISSION_LEVEL)) {
-             Log.w(MAIN_TAG, "Manual scan: Permission denied previously, showing rationale implicitly")
+        val activity = context as MainActivity
+        if (activity.shouldShowRequestPermissionRationale(MEDIA_PERMISSION_LEVEL)) {
+            Log.w(MAIN_TAG, "Manual scan: Permission denied previously, showing rationale dialog")
+            activity.showPermissionRationale = true
+        } else {
+            // Either first time or "Don't ask again" — try launching, callback handles denial
+            activity.permissionLauncher.launch(MEDIA_PERMISSION_LEVEL)
         }
-        (context as MainActivity).permissionLauncher.launch(MEDIA_PERMISSION_LEVEL)
         return
     }
 

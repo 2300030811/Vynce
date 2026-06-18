@@ -3,9 +3,11 @@ package com.vynce.app.viewmodels
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
 import android.util.Log
 import android.widget.Toast
 import androidx.datastore.preferences.core.edit
+import com.vynce.app.BuildConfig
 import com.vynce.app.MainActivity
 import com.vynce.app.R
 import com.vynce.app.constants.AutoBackupFrequency
@@ -13,6 +15,9 @@ import com.vynce.app.constants.AutoBackupFrequencyKey
 import com.vynce.app.constants.AutoBackupKey
 import com.vynce.app.constants.LastAutoBackupKey
 import com.vynce.app.constants.MaxAutoBackupsKey
+import com.vynce.app.data.backup.BackupManifest
+import com.vynce.app.data.backup.BackupSection
+import com.vynce.app.data.backup.BackupValidator
 import com.vynce.app.db.InternalDatabase
 import com.vynce.app.db.MusicDatabase
 import com.vynce.app.extensions.div
@@ -24,6 +29,8 @@ import com.vynce.app.utils.reportException
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
@@ -45,13 +52,33 @@ class BackupRestoreViewModel @Inject constructor(
 ) : ContextDatabaseViewModel(context, database) {
     val TAG = BackupRestoreViewModel::class.simpleName.toString()
 
+    /** Backup/restore progress (0.0 to 1.0) */
+    private val _progress = MutableStateFlow(0f)
+    val progress: StateFlow<Float> = _progress
+
+    /** Whether a backup/restore operation is in progress */
+    private val _isOperating = MutableStateFlow(false)
+    val isOperating: StateFlow<Boolean> = _isOperating
+
+    /** Selected backup sections */
+    val selectedSections = MutableStateFlow(BackupSection.DEFAULT_SELECTION)
+
+    /** Validation result for the most recent file */
+    private val _validationResult = MutableStateFlow<BackupValidator.ValidationResult?>(null)
+    val validationResult: StateFlow<BackupValidator.ValidationResult?> = _validationResult
+
+    val backupValidator = BackupValidator(context)
+
     fun backup(uri: Uri) {
         ioScope.launch(Dispatchers.IO) {
+            _isOperating.value = true
+            _progress.value = 0f
             runCatching {
                 context.applicationContext.contentResolver.openOutputStream(uri)?.use { outputStream ->
-                    writeBackup(outputStream)
+                    writeBackup(outputStream, selectedSections.value)
                 } ?: error("Could not open backup destination")
             }.onSuccess {
+                _progress.value = 1f
                 android.os.Handler(android.os.Looper.getMainLooper()).post {
                     Toast.makeText(context, R.string.backup_create_success, Toast.LENGTH_SHORT).show()
                 }
@@ -61,71 +88,93 @@ class BackupRestoreViewModel @Inject constructor(
                     Toast.makeText(context, R.string.backup_create_failed, Toast.LENGTH_SHORT).show()
                 }
             }
+            _isOperating.value = false
+        }
+    }
+
+    fun validateBackup(uri: Uri) {
+        ioScope.launch(Dispatchers.IO) {
+            _validationResult.value = backupValidator.validate(uri)
         }
     }
 
     fun restore(uri: Uri) {
         ioScope.launch(Dispatchers.IO) {
+            _isOperating.value = true
+            _progress.value = 0f
             runCatching {
                 context.applicationContext.contentResolver.openInputStream(uri)?.use {
                     it.zipInputStream().use { inputStream ->
                         var entry = inputStream.nextEntry
+                        val totalEntries = 4f // approximate
+                        var processedEntries = 0
                         while (entry != null) {
                             when (entry.name) {
+                                BackupManifest.MANIFEST_FILENAME -> {
+                                    // Skip manifest during restore (it's for validation only)
+                                    inputStream.readBytes() // consume entry
+                                }
                                 SETTINGS_FILENAME -> {
-                                    (context.filesDir / "datastore" / SETTINGS_FILENAME).outputStream()
-                                        .use { outputStream ->
-                                            inputStream.copyTo(outputStream)
-                                        }
+                                    if (selectedSections.value.contains(BackupSection.SETTINGS)) {
+                                        (context.filesDir / "datastore" / SETTINGS_FILENAME).outputStream()
+                                            .use { outputStream ->
+                                                inputStream.copyTo(outputStream)
+                                            }
+                                    }
                                 }
 
                                 InternalDatabase.DB_NAME -> {
-                                    Log.i(TAG, "Starting database restore")
-                                    database.checkpoint()
-                                    database.close()
+                                    if (selectedSections.value.contains(BackupSection.DATABASE)) {
+                                        Log.i(TAG, "Starting database restore")
+                                        database.checkpoint()
+                                        database.close()
 
-                                    Log.i(TAG, "Testing new database for compatibility...")
-                                    val destFile = context.getDatabasePath(InternalDatabase.TEST_DB_NAME)
-                                    destFile.parentFile?.apply {
-                                        if (!exists()) mkdirs()
-                                    }
-                                    FileOutputStream(destFile).use { outputStream ->
-                                        inputStream.copyTo(outputStream)
-                                    }
-
-                                    val status = try {
-                                        val t = InternalDatabase.newTestInstance(context, InternalDatabase.TEST_DB_NAME)
-                                        val integrity = t.openHelper.writableDatabase.isDatabaseIntegrityOk
-                                        t.close()
-                                        integrity
-                                    } catch (e: Exception) {
-                                        Log.e(TAG, "DB validation failed", e)
-                                        false
-                                    }
-
-                                    if (status) {
-                                        Log.i(TAG, "Found valid database, proceeding with restore")
-                                        destFile.inputStream().use { inputStream ->
-                                            FileOutputStream(database.openHelper.writableDatabase.path).use { outputStream ->
-                                                inputStream.copyTo(outputStream)
-                                            }
+                                        Log.i(TAG, "Testing new database for compatibility...")
+                                        val destFile = context.getDatabasePath(InternalDatabase.TEST_DB_NAME)
+                                        destFile.parentFile?.apply {
+                                            if (!exists()) mkdirs()
                                         }
-                                    } else {
-                                        Log.e(TAG, "Incompatible database, aborting restore")
-                                        android.os.Handler(android.os.Looper.getMainLooper()).post {
-                                            Toast.makeText(
-                                                context,
-                                                context.getString(R.string.err_restore_incompatible_database),
-                                                Toast.LENGTH_SHORT
-                                            ).show()
+                                        FileOutputStream(destFile).use { outputStream ->
+                                            inputStream.copyTo(outputStream)
+                                        }
+
+                                        val status = try {
+                                            val t = InternalDatabase.newTestInstance(context, InternalDatabase.TEST_DB_NAME)
+                                            val integrity = t.openHelper.writableDatabase.isDatabaseIntegrityOk
+                                            t.close()
+                                            integrity
+                                        } catch (e: Exception) {
+                                            Log.e(TAG, "DB validation failed", e)
+                                            false
+                                        }
+
+                                        if (status) {
+                                            Log.i(TAG, "Found valid database, proceeding with restore")
+                                            destFile.inputStream().use { dbInputStream ->
+                                                FileOutputStream(database.openHelper.writableDatabase.path).use { outputStream ->
+                                                    dbInputStream.copyTo(outputStream)
+                                                }
+                                            }
+                                        } else {
+                                            Log.e(TAG, "Incompatible database, aborting restore")
+                                            android.os.Handler(android.os.Looper.getMainLooper()).post {
+                                                Toast.makeText(
+                                                    context,
+                                                    context.getString(R.string.err_restore_incompatible_database),
+                                                    Toast.LENGTH_SHORT
+                                                ).show()
+                                            }
                                         }
                                     }
                                 }
                             }
+                            processedEntries++
+                            _progress.value = (processedEntries / totalEntries).coerceAtMost(0.9f)
                             entry = inputStream.nextEntry
                         }
                     }
                 }
+                _progress.value = 1f
 
                 android.os.Handler(android.os.Looper.getMainLooper()).post {
                     val stopIntent = Intent(context, MusicService::class.java)
@@ -141,6 +190,7 @@ class BackupRestoreViewModel @Inject constructor(
                     Toast.makeText(context, it.message, Toast.LENGTH_SHORT).show()
                 }
             }
+            _isOperating.value = false
         }
     }
 
@@ -180,25 +230,50 @@ class BackupRestoreViewModel @Inject constructor(
         }
     }
 
-    private fun writeBackup(outputStream: OutputStream) {
+    private fun writeBackup(
+        outputStream: OutputStream,
+        sections: Set<BackupSection> = BackupSection.DEFAULT_SELECTION
+    ) {
         outputStream.buffered().zipOutputStream().use { zipStream ->
             zipStream.setLevel(Deflater.BEST_COMPRESSION)
+            _progress.value = 0.1f
 
-            val settingsFile = context.filesDir / "datastore" / SETTINGS_FILENAME
-            if (settingsFile.exists()) {
-                settingsFile.inputStream().buffered().use { inputStream ->
-                    zipStream.putNextEntry(ZipEntry(SETTINGS_FILENAME))
+            // Write manifest first
+            val manifest = BackupManifest(
+                appVersion = BuildConfig.VERSION_NAME,
+                appVersionCode = BuildConfig.VERSION_CODE.toLong(),
+                dbSchemaVersion = MusicDatabase.MUSIC_DATABASE_VERSION,
+                createdAt = System.currentTimeMillis(),
+                deviceModel = "${Build.MANUFACTURER} ${Build.MODEL}",
+                androidSdk = Build.VERSION.SDK_INT,
+                includedSections = sections.map { it.name },
+            )
+            zipStream.putNextEntry(ZipEntry(BackupManifest.MANIFEST_FILENAME))
+            zipStream.write(manifest.toJson().toByteArray())
+            zipStream.closeEntry()
+            _progress.value = 0.2f
+
+            if (sections.contains(BackupSection.SETTINGS)) {
+                val settingsFile = context.filesDir / "datastore" / SETTINGS_FILENAME
+                if (settingsFile.exists()) {
+                    settingsFile.inputStream().buffered().use { inputStream ->
+                        zipStream.putNextEntry(ZipEntry(SETTINGS_FILENAME))
+                        inputStream.copyTo(zipStream)
+                        zipStream.closeEntry()
+                    }
+                }
+            }
+            _progress.value = 0.5f
+
+            if (sections.contains(BackupSection.DATABASE)) {
+                database.checkpoint()
+                FileInputStream(database.openHelper.writableDatabase.path).use { inputStream ->
+                    zipStream.putNextEntry(ZipEntry(InternalDatabase.DB_NAME))
                     inputStream.copyTo(zipStream)
                     zipStream.closeEntry()
                 }
             }
-
-            database.checkpoint()
-            FileInputStream(database.openHelper.writableDatabase.path).use { inputStream ->
-                zipStream.putNextEntry(ZipEntry(InternalDatabase.DB_NAME))
-                inputStream.copyTo(zipStream)
-                zipStream.closeEntry()
-            }
+            _progress.value = 0.9f
         }
     }
 
@@ -222,4 +297,3 @@ class BackupRestoreViewModel @Inject constructor(
         const val SETTINGS_FILENAME = "settings.preferences_pb"
     }
 }
-

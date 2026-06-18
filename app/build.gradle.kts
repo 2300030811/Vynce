@@ -50,6 +50,7 @@ android {
         
         buildConfigField("String", "LASTFM_API_KEY", "\"${localProperties.getProperty("LASTFM_API_KEY", "")}\"")
         buildConfigField("String", "LASTFM_API_SECRET", "\"${localProperties.getProperty("LASTFM_API_SECRET", "")}\"")
+        buildConfigField("String", "GROQ_API_KEY", "\"${localProperties.getProperty("GROQ_API_KEY", "")}\"")
     }
 
     signingConfigs {
@@ -216,6 +217,7 @@ ksp {
 
 dependencies {
     implementation(libs.guava)
+    implementation(libs.gson)
     implementation(libs.coroutines.guava)
     implementation(libs.concurrent.futures)
 
@@ -239,6 +241,8 @@ dependencies {
     implementation(libs.lazycolumnscrollbar)
     implementation(libs.shimmer)
 
+    // Force unified WorkManager version to resolve duplicate class conflicts
+    implementation("androidx.work:work-runtime-ktx:2.9.0")
 
     // material
     implementation(libs.adaptive)
@@ -279,6 +283,12 @@ dependencies {
 
     // misc
     implementation(libs.aboutlibraries.compose.m3)
+    implementation(libs.timber)
+    implementation(libs.kotlinx.serialization.json)
+
+    // widgets (Glance)
+    implementation(libs.glance.appwidget)
+    implementation(libs.glance.material3)
 
     // sdk24 support
     // Support for N is officially unsupported even it the app should still work. Leave this outside of the version catalog.

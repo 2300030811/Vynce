@@ -25,6 +25,7 @@ import com.vynce.app.utils.LocalArtworkPathKeyer
 import com.vynce.app.utils.dataStore
 import com.vynce.app.utils.get
 import dagger.hilt.android.HiltAndroidApp
+import timber.log.Timber
 
 @HiltAndroidApp
 class App : Application(), SingletonImageLoader.Factory {
@@ -35,6 +36,7 @@ class App : Application(), SingletonImageLoader.Factory {
 
         if (BuildConfig.DEBUG) {
             System.setProperty("kotlinx.coroutines.debug", "on")
+            Timber.plant(Timber.DebugTree())
         }
 
         instance = this

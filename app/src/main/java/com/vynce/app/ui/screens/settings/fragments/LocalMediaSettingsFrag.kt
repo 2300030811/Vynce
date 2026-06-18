@@ -179,15 +179,13 @@ fun ColumnScope.LocalScannerFrag() {
                 if (context.checkSelfPermission(MEDIA_PERMISSION_LEVEL)
                     != PackageManager.PERMISSION_GRANTED
                 ) {
-                    coroutineScope.launch {
-                        snackbarHostState.showSnackbar(
-                            message = scannerMissingPermText,
-                            withDismissAction = true,
-                            duration = SnackbarDuration.Short
-                        )
+                    val activity = context as MainActivity
+                    if (activity.shouldShowRequestPermissionRationale(MEDIA_PERMISSION_LEVEL)) {
+                        activity.showPermissionRationale = true
+                    } else {
+                        // First time or "Don't ask again" — launch, callback handles denial
+                        activity.permissionLauncher.launch(MEDIA_PERMISSION_LEVEL)
                     }
-
-                    (context as MainActivity).permissionLauncher.launch(MEDIA_PERMISSION_LEVEL)
                     return@Button
                 }
 

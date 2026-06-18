@@ -13,7 +13,9 @@ import javax.inject.Singleton
 @Singleton
 class SaavnStreamResolver @Inject constructor() {
     private val TAG = "SaavnStreamResolver"
-    private val streamUrlCache = LruCache<String, String>(50)
+    
+    private data class CachedUrl(val url: String, val resolvedAt: Long)
+    private val streamUrlCache = LruCache<String, CachedUrl>(50)
 
     /**
      * Resolves a Saavn ID to a stream URL.
@@ -21,8 +23,19 @@ class SaavnStreamResolver @Inject constructor() {
      * It is designed to be used within ExoPlayer's ResolvingDataSource resolver.
      */
     fun resolve(saavnId: String): String? {
-        val cachedUrl = streamUrlCache.get(saavnId)
-        if (cachedUrl != null) return cachedUrl
+        val cached = synchronized(streamUrlCache) {
+            streamUrlCache.get(saavnId)
+        }
+        if (cached != null) {
+            val age = android.os.SystemClock.elapsedRealtime() - cached.resolvedAt
+            if (age < 2 * 60 * 60 * 1000L) { // 2 hours
+                return cached.url
+            } else {
+                synchronized(streamUrlCache) {
+                    streamUrlCache.remove(saavnId)
+                }
+            }
+        }
 
         return try {
             // This is called from ExoPlayer's internal loading thread.
@@ -33,12 +46,23 @@ class SaavnStreamResolver @Inject constructor() {
             }
             val streamUrl = with(JioSaavn) { song?.streamUrl() }
             if (streamUrl != null) {
-                streamUrlCache.put(saavnId, streamUrl)
+                synchronized(streamUrlCache) {
+                    streamUrlCache.put(saavnId, CachedUrl(streamUrl, android.os.SystemClock.elapsedRealtime()))
+                }
             }
             streamUrl
         } catch (e: Exception) {
             Log.e(TAG, "Failed to resolve Saavn stream URL for $saavnId", e)
             null
+        }
+    }
+
+    /**
+     * Invalidates a cached stream URL for a given Saavn ID.
+     */
+    fun invalidate(saavnId: String) {
+        synchronized(streamUrlCache) {
+            streamUrlCache.remove(saavnId)
         }
     }
 }

@@ -97,6 +97,38 @@
             </intent-filter>
         </receiver>
 
+        <!-- Glance Widgets -->
+        <receiver
+            android:name=".widget.VynceBarWidgetReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/vynce_bar_widget_info" />
+        </receiver>
+
+        <receiver
+            android:name=".widget.VynceControlWidgetReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/vynce_control_widget_info" />
+        </receiver>
+
+        <receiver
+            android:name=".widget.WidgetUpdateReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.vynce.app.ACTION_WIDGET_UPDATE_PLAYBACK_STATE" />
+            </intent-filter>
+        </receiver>
+
+
         <service
             android:name=".playback.ExoDownloadService"
             android:exported="false"

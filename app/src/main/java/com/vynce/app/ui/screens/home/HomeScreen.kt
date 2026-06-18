@@ -8,6 +8,7 @@ import androidx.compose.foundation.lazy.*
 import androidx.compose.foundation.shape.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
+import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
 import androidx.compose.material3.pulltorefresh.pullToRefresh
@@ -44,6 +45,8 @@ import kotlinx.coroutines.launch
 import android.widget.Toast
 import com.vynce.app.ui.component.shimmer.*
 import com.vynce.app.ui.utils.shimmer
+import com.vynce.app.ui.component.AiPlaylistDialog
+import com.vynce.app.viewmodels.AiPlaylistViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -56,6 +59,30 @@ fun HomeScreen(
     val lazyListState = rememberLazyListState()
     val pullToRefreshState = rememberPullToRefreshState()
     val context = LocalContext.current
+    val aiViewModel: AiPlaylistViewModel = hiltViewModel()
+    var showAiDialog by remember { mutableStateOf(false) }
+
+    if (showAiDialog) {
+        AiPlaylistDialog(
+            viewModel = aiViewModel,
+            onDismiss = { 
+                showAiDialog = false
+                aiViewModel.clearPlaylist()
+            },
+            onPlaylistGenerated = { 
+                val generatedSongs = aiViewModel.generatedPlaylist.value
+                if (generatedSongs.isNotEmpty()) {
+                    playerConnection?.playQueue(
+                        ListQueue(
+                            title = "AI Playlist",
+                            items = generatedSongs.map { it.toMediaMetadata() }
+                        ),
+                        replace = true
+                    )
+                }
+            }
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -112,30 +139,7 @@ fun HomeScreen(
                     }
                 }
 
-                // ── LANGUAGE CHIPS ──────────────────────────────
-                item(key = "lang_chips") {
-                    LazyRow(
-                        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        items(state.availableLanguages, key = { it }) { lang ->
-                            val selected = lang == state.selectedLanguage
-                            FilterChip(
-                                selected = selected,
-                                onClick = { viewModel.setLanguage(lang) },
-                                label = { Text(lang, fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium) },
-                                colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = MaterialTheme.colorScheme.primary,
-                                    selectedLabelColor = MaterialTheme.colorScheme.onPrimary
-                                ),
-                                border = FilterChipDefaults.filterChipBorder(
-                                    borderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
-                                    enabled = true, selected = selected
-                                )
-                            )
-                        }
-                    }
-                }
+
 
                 // ── QUICK ACTIONS ───────────────────────────────
                 item(key = "quick_actions") {
@@ -154,6 +158,49 @@ fun HomeScreen(
                         QuickActionCard(Icons.Rounded.LibraryMusic, "Local", MaterialTheme.colorScheme.primary, Modifier.weight(1f)) {
                             if (navController.graph.findNode(Screens.Songs.route) != null) navController.navigate(Screens.Songs.route)
                             else Toast.makeText(context, "Local not available", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
+
+                // ── AI PLAYLIST BANNER ────────────────────────
+                item(key = "ai_playlist_banner") {
+                    Surface(
+                        onClick = { showAiDialog = true },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp)
+                            .height(84.dp),
+                        shape = RoundedCornerShape(16.dp),
+                        color = MaterialTheme.colorScheme.tertiaryContainer,
+                        tonalElevation = 4.dp
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(horizontal = 20.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column {
+                                Text(
+                                    text = "✨ Generate AI Playlist",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onTertiaryContainer
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = "Type a vibe, get a mix instantly",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.8f)
+                                )
+                            }
+                            Icon(
+                                Icons.Rounded.AutoAwesome,
+                                contentDescription = "AI",
+                                tint = MaterialTheme.colorScheme.onTertiaryContainer,
+                                modifier = Modifier.size(32.dp)
+                            )
                         }
                     }
                 }

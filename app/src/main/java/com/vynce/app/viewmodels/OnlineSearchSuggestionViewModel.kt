@@ -6,15 +6,18 @@ import com.zionhuang.jiosaavn.JioSaavn
 import com.zionhuang.jiosaavn.SaavnSong
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-@OptIn(ExperimentalCoroutinesApi::class)
+@OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 @HiltViewModel
 class OnlineSearchSuggestionViewModel @Inject constructor(
     database: MusicDatabase,
@@ -25,29 +28,32 @@ class OnlineSearchSuggestionViewModel @Inject constructor(
 
     init {
         ioScope.launch {
-            query.flatMapLatest { query ->
-                if (query.isEmpty()) {
-                    database.searchHistory().map { history ->
-                        SearchSuggestionViewState(
-                            history = history
-                        )
-                    }
-                } else {
-                    // Use JioSaavn search for suggestions
-                    val results = JioSaavn.searchSongs(query)
-                    database.searchHistory(query)
-                        .map { it.take(3) }
-                        .map { history ->
+            query
+                .debounce(300)
+                .distinctUntilChanged()
+                .flatMapLatest { query ->
+                    if (query.isEmpty()) {
+                        database.searchHistory().map { history ->
                             SearchSuggestionViewState(
-                                history = history,
-                                suggestions = results.map { it.name }.distinct().take(5),
-                                items = results.take(10)
+                                history = history
                             )
                         }
+                    } else {
+                        // Use JioSaavn search for suggestions
+                        val results = JioSaavn.searchSongs(query)
+                        database.searchHistory(query)
+                            .map { it.take(3) }
+                            .map { history ->
+                                SearchSuggestionViewState(
+                                    history = history,
+                                    suggestions = results.map { it.name }.distinct().take(5),
+                                    items = results.take(10)
+                                )
+                            }
+                    }
+                }.collect {
+                    _viewState.value = it
                 }
-            }.collect {
-                _viewState.value = it
-            }
         }
     }
 }
