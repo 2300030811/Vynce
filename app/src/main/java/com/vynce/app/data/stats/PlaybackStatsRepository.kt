@@ -281,15 +281,26 @@ class PlaybackStatsRepository @Inject constructor(
 
         val allSongs = segmentsBySong
             .mapNotNull { (songId, segmentsForSong) ->
-                val song = songMap[songId] ?: return@mapNotNull null
-                val title = song.title.takeIf { it.isNotBlank() }
-                    ?: song.song.localPath?.substringAfterLast('/')?.ifBlank { return@mapNotNull null } ?: return@mapNotNull null
-                val artist = song.artists.joinToString { it.name }.takeIf { it.isNotBlank() } ?: "Unknown Artist"
+                val song = songMap[songId]
+                val firstEvent = normalizedEvents.lastOrNull { it.songId == songId && !it.title.isNullOrBlank() } 
+                    ?: normalizedEvents.firstOrNull { it.songId == songId }
+                
+                val title = song?.title?.takeIf { it.isNotBlank() }
+                    ?: song?.song?.localPath?.substringAfterLast('/')?.ifBlank { null }
+                    ?: firstEvent?.title?.takeIf { it.isNotBlank() }
+                    ?: return@mapNotNull null
+                
+                val artist = song?.artists?.joinToString { it.name }?.takeIf { it.isNotBlank() }
+                    ?: firstEvent?.artist?.takeIf { it.isNotBlank() }
+                    ?: "Unknown Artist"
+                    
+                val albumArtUri = song?.thumbnailUrl ?: firstEvent?.thumbnail
+                
                 SongPlaybackSummary(
                     songId = songId,
                     title = title,
                     artist = artist,
-                    albumArtUri = song.thumbnailUrl,
+                    albumArtUri = albumArtUri,
                     totalDurationMs = segmentsForSong.sumOf { it.durationMs },
                     playCount = segmentsForSong.size
                 )
@@ -312,7 +323,8 @@ class PlaybackStatsRepository @Inject constructor(
                 val flattened = groupedSongs.flatMap { it.value }
                 val uniqueArtists = groupedSongs
                     .flatMap { (songId, _) ->
-                        statsArtistNames(songMap[songId])
+                        val lastEvent = normalizedEvents.lastOrNull { it.songId == songId }
+                        statsArtistNames(songMap[songId], lastEvent)
                     }
                     .distinctBy { it.normalizedArtistKey() }
                     .size
@@ -378,7 +390,8 @@ class PlaybackStatsRepository @Inject constructor(
 
         val topArtists = segmentsBySong.entries
             .flatMap { (songId, segmentsForSong) ->
-                statsArtistNames(songMap[songId]).map { artist ->
+                val lastEvent = normalizedEvents.lastOrNull { it.songId == songId && !it.artist.isNullOrBlank() }
+                statsArtistNames(songMap[songId], lastEvent).map { artist ->
                     ArtistSongPlayback(
                         artist = artist,
                         songId = songId,
@@ -487,6 +500,55 @@ class PlaybackStatsRepository @Inject constructor(
 
     suspend fun exportEventsForBackup(): List<PlaybackEvent> = withContext(Dispatchers.IO) {
         readEvents().map { event -> sanitizeEvent(event) }
+    }
+
+    suspend fun getRediscoverSongs(
+        limit: Int = 20,
+        minPlayCount: Int = 2,
+        minDaysSinceLastPlay: Int = 14,
+        nowMillis: Long = System.currentTimeMillis(),
+        excludeSongIds: Set<String> = emptySet()
+    ): List<SongPlaybackSummary> = withContext(Dispatchers.IO) {
+        val allEvents = readEvents()
+        if (allEvents.isEmpty()) return@withContext emptyList()
+
+        val cutoffMillis = nowMillis - TimeUnit.DAYS.toMillis(minDaysSinceLastPlay.toLong())
+
+        val songGroups = allEvents.groupBy { it.songId }
+        var candidatesCount = 0
+
+        val candidates = songGroups.mapNotNull { (songId, events) ->
+            if (excludeSongIds.contains(songId)) return@mapNotNull null
+
+            val lastPlayed = events.maxOf { it.timestamp }
+            val daysSinceLastPlay = java.util.concurrent.TimeUnit.MILLISECONDS.toDays(nowMillis - lastPlayed)
+
+            val segments = mergeSongEvents(events)
+            val totalPlays = segments.size
+            
+            val firstEvent = events.lastOrNull { !it.title.isNullOrBlank() } ?: events.first()
+
+            if (lastPlayed >= cutoffMillis || totalPlays < minPlayCount) {
+                if (candidatesCount < 20) {
+                    android.util.Log.d("PlaybackStats", "Rediscover Reject: ${firstEvent.title} (plays=$totalPlays/$minPlayCount, daysSince=$daysSinceLastPlay/$minDaysSinceLastPlay)")
+                }
+                candidatesCount++
+                return@mapNotNull null
+            }
+            
+            candidatesCount++
+
+            SongPlaybackSummary(
+                songId = songId,
+                title = firstEvent.title ?: "Unknown",
+                artist = firstEvent.artist ?: "Unknown Artist",
+                albumArtUri = firstEvent.thumbnail,
+                totalDurationMs = segments.sumOf { it.durationMs },
+                playCount = totalPlays
+            )
+        }
+
+        candidates.sortedByDescending { it.playCount }.take(limit)
     }
 
     suspend fun loadPlaybackHistory(limit: Int = DEFAULT_PLAYBACK_HISTORY_LIMIT): List<PlaybackHistoryEntry> = withContext(Dispatchers.IO) {
@@ -656,8 +718,14 @@ class PlaybackStatsRepository @Inject constructor(
         val segments: List<PlaybackSegment>
     )
 
-    private fun statsArtistNames(song: Song?): List<String> {
-        if (song == null) return listOf(UNKNOWN_ARTIST)
+    private fun statsArtistNames(song: Song?, lastEvent: PlaybackEvent? = null): List<String> {
+        if (song == null) {
+            val eventArtist = lastEvent?.artist
+            if (!eventArtist.isNullOrBlank() && eventArtist != UNKNOWN_ARTIST) {
+                return eventArtist.split(",").map { it.trim() }.filter { it.isNotBlank() }
+            }
+            return listOf(UNKNOWN_ARTIST)
+        }
 
         val separatedArtists = song.artists
             .map { it.name.trim() }
@@ -1112,6 +1180,48 @@ class PlaybackStatsRepository @Inject constructor(
                 current + 1L
             }
         }
+    }
+
+    fun calculatePersonality(summary: PlaybackStatsSummary): Pair<String, String> {
+        if (summary.totalPlayCount < 30) return "🎧 Finding Your Style" to "Keep listening to unlock deeper insights."
+
+        val uniqueRatio = summary.uniqueSongs.toFloat() / summary.totalPlayCount.toFloat()
+        
+        // 1. Night Owl Check
+        val nightRatio = summary.dayListeningDistribution?.let { dist ->
+            val nightDuration = dist.buckets.filter { it.startMinute < 300 || it.startMinute >= 1320 }.sumOf { it.totalDurationMs } // midnight to 5am, and 10pm to midnight
+            nightDuration.toFloat() / summary.totalDurationMs.toFloat().coerceAtLeast(1f)
+        } ?: 0f
+
+        if (nightRatio > 0.4f) {
+            val percentage = (nightRatio * 100).toInt()
+            return "🌙 Night Owl" to "Most of your listening happens after dark. Late night listening represents $percentage% of your total play time."
+        }
+
+        // Use top artist sorted by playCount then totalDurationMs
+        val sortedArtists = summary.topArtists.sortedWith(
+            compareByDescending<ArtistPlaybackSummary> { it.playCount }
+                .thenByDescending { it.totalDurationMs }
+        )
+        val topArtistSummary = sortedArtists.firstOrNull()
+        val topArtistRatio = topArtistSummary?.let {
+            it.totalDurationMs.toFloat() / summary.totalDurationMs.toFloat().coerceAtLeast(1f)
+        } ?: 0f
+
+        if (topArtistRatio > 0.35f && topArtistSummary != null) {
+            val percentage = (topArtistRatio * 100).toInt()
+            return "🎤 Artist Loyalist" to "Nearly $percentage% of your listening was dedicated to ${topArtistSummary.artist}."
+        }
+
+        // 3. Melody Hunter vs Repeat Listener
+        if (uniqueRatio > 0.6f) {
+            return "🎵 Melody Hunter" to "You rarely repeat songs. You're always exploring new music, playing ${summary.uniqueSongs} unique songs across ${summary.totalPlayCount} plays."
+        }
+        if (uniqueRatio < 0.35f) {
+            return "🔁 Repeat Listener" to "You replay your favorites more often than most listeners. Only ${summary.uniqueSongs} unique songs were played across ${summary.totalPlayCount} plays."
+        }
+
+        return "🎧 Daily Vibe" to "Music is a consistent and balanced part of your daily routine. You listened to ${summary.uniqueSongs} unique songs across ${summary.totalPlayCount} plays."
     }
 
     companion object {

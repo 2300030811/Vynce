@@ -34,9 +34,10 @@ import com.vynce.app.models.MediaMetadata
 import com.zionhuang.jiosaavn.JioSaavn
 import com.zionhuang.jiosaavn.SaavnSong
 import com.vynce.app.playback.DownloadUtil.Companion.STATE_DOWNLOADING
-import com.vynce.app.playback.DownloadUtil.Companion.STATE_INVALID
 import com.vynce.app.playback.downloadManager.DownloadDirectoryManagerOt
 import com.vynce.app.playback.downloadManager.DownloadManagerOt
+import com.vynce.app.playback.downloadManager.DownloadEvent
+import com.vynce.app.ui.utils.clearDtCache
 import com.vynce.app.utils.dataStore
 import com.vynce.app.utils.SaavnStreamResolver
 import com.vynce.app.utils.dlCoroutine
@@ -49,6 +50,7 @@ import com.vynce.app.utils.scanners.uriListFromString
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
@@ -120,6 +122,7 @@ class DownloadUtil @Inject constructor(
                 )
             )
         }
+    private val coroutineScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     val downloads = MutableStateFlow<Map<String, LocalDateTime>>(emptyMap())
 
     var localMgr = DownloadDirectoryManagerOt(
@@ -280,7 +283,7 @@ class DownloadUtil @Inject constructor(
         val removedIds = missingFiles.map { it.id }.toSet()
         dbDownloads.forEach { s ->
             if (s.song.dateDownload != null && s.song.id !in removedIds) {
-                result[s.song.id] = s.song.dateDownload!!
+                result[s.song.id] = s.song.dateDownload
             }
         }
 
@@ -357,8 +360,21 @@ class DownloadUtil @Inject constructor(
 
     init {
         Log.i(TAG, "DownloadUtil init")
-        CoroutineScope(dlCoroutine).launch {
+        coroutineScope.launch {
             rescanDownloads()
+        }
+
+        coroutineScope.launch {
+            downloadMgr.events.collect { event ->
+                when (event) {
+                    is DownloadEvent.Success -> {
+                        database.updateDownloadStatus(event.mediaId, LocalDateTime.now())
+                        rescanDownloads()
+                        clearDtCache()
+                    }
+                    else -> {}
+                }
+            }
         }
 
         downloadManager.addListener(
@@ -380,21 +396,26 @@ class DownloadUtil @Inject constructor(
                         }
                     }
 
-                    CoroutineScope(Dispatchers.IO).launch {
+                    coroutineScope.launch {
                         when (download.state) {
                             Download.STATE_COMPLETED -> {
                                 val updateTime =
                                     Instant.ofEpochMilli(download.updateTimeMs).atZone(ZoneOffset.UTC).toLocalDateTime()
                                 database.updateDownloadStatus(download.request.id, updateTime)
+                                rescanDownloads()
+                                clearDtCache()
                             }
                             Download.STATE_QUEUED, Download.STATE_DOWNLOADING -> {
                                 database.updateDownloadStatus(download.request.id, STATE_DOWNLOADING)
+                                rescanDownloads()
                             }
                             Download.STATE_FAILED -> {
                                 database.updateDownloadStatus(download.request.id, STATE_INVALID)
+                                rescanDownloads()
                             }
                             else -> {
                                 database.updateDownloadStatus(download.request.id, null)
+                                rescanDownloads()
                             }
                         }
                     }
@@ -410,7 +431,7 @@ fun stateToLocalDateTime(download: Download): LocalDateTime {
             Instant.ofEpochMilli(download.updateTimeMs).atZone(ZoneOffset.UTC).toLocalDateTime()
         }
 
-        Download.STATE_DOWNLOADING, Download.STATE_QUEUED -> STATE_DOWNLOADING
-        else -> STATE_INVALID
+        Download.STATE_DOWNLOADING, Download.STATE_QUEUED -> DownloadUtil.STATE_DOWNLOADING
+        else -> DownloadUtil.STATE_INVALID
     }
 }

@@ -17,6 +17,9 @@ import java.time.ZoneOffset
     indices = [
         Index(
             value = ["albumId"]
+        ),
+        Index(
+            value = ["artistsString"]
         )
     ]
 )
@@ -43,6 +46,8 @@ data class SongEntity(
     val year: Int? = null,
     val date: LocalDateTime? = null, // ID3 tag property
     val dateModified: LocalDateTime? = null, // file property
+    @ColumnInfo(collate = ColumnInfo.NOCASE)
+    val artistsString: String? = null,
 ) {
 
     fun localToggleLike() = copy(

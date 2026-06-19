@@ -1,8 +1,8 @@
 package com.vynce.app.viewmodels
 
+import com.vynce.app.data.search.SearchRepository
 import com.vynce.app.db.MusicDatabase
 import com.vynce.app.db.entities.SearchHistory
-import com.zionhuang.jiosaavn.JioSaavn
 import com.zionhuang.jiosaavn.SaavnSong
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -12,7 +12,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -21,6 +20,7 @@ import javax.inject.Inject
 @HiltViewModel
 class OnlineSearchSuggestionViewModel @Inject constructor(
     database: MusicDatabase,
+    private val searchRepository: SearchRepository
 ) : DatabaseViewModel(database) {
     val query = MutableStateFlow("")
     private val _viewState = MutableStateFlow(SearchSuggestionViewState())
@@ -31,17 +31,23 @@ class OnlineSearchSuggestionViewModel @Inject constructor(
             query
                 .debounce(300)
                 .distinctUntilChanged()
-                .flatMapLatest { query ->
-                    if (query.isEmpty()) {
+                .flatMapLatest { queryStr ->
+                    if (queryStr.isEmpty()) {
                         database.searchHistory().map { history ->
                             SearchSuggestionViewState(
                                 history = history
                             )
                         }
                     } else {
-                        // Use JioSaavn search for suggestions
-                        val results = JioSaavn.searchSongs(query)
-                        database.searchHistory(query)
+                        // Use SearchRepository for suggestions to coalesce and cache with UnifiedSearchViewModel
+                        val searchResult = try {
+                            searchRepository.performSearch(queryStr)
+                        } catch (e: Exception) {
+                            null
+                        }
+                        
+                        val results = searchResult?.songs ?: emptyList()
+                        database.searchHistory(queryStr)
                             .map { it.take(3) }
                             .map { history ->
                                 SearchSuggestionViewState(

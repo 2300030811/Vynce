@@ -102,8 +102,9 @@ fun PlaylistScreen(
                             contentDescription = null,
                             contentScale = ContentScale.Crop,
                             modifier = Modifier
-                                .fillMaxWidth()
+                                .fillMaxWidth(0.9f)
                                 .aspectRatio(1f)
+                                .align(Alignment.CenterHorizontally)
                                 .clip(RoundedCornerShape(12.dp))
                         )
                         Spacer(Modifier.height(16.dp))

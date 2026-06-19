@@ -9,6 +9,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.unit.Dp
@@ -52,6 +54,14 @@ fun VynceNavHost(
     playerConnection: PlayerConnection?,
     getNavPadding: @Composable () -> Dp
 ) {
+    LaunchedEffect(navController.currentBackStackEntryAsState().value) {
+        val currentRoute = navController.currentBackStackEntry?.destination?.route
+        if (navigationItems.any { it.route == currentRoute }) {
+            scrollBehavior.state.heightOffset = 0f
+            scrollBehavior.state.contentOffset = 0f
+        }
+    }
+
     NavHost(
         navController = navController,
         startDestination = (Screens.getAllScreens()

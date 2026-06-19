@@ -80,7 +80,7 @@ class MusicDatabase(
     fun close() = delegate.close()
 
     companion object {
-        const val MUSIC_DATABASE_VERSION = 21
+        const val MUSIC_DATABASE_VERSION = 22
     }
 }
 
@@ -129,7 +129,8 @@ class MusicDatabase(
         AutoMigration(from = 17, to = 18, spec = Migration17To18::class), // Fix Room nonsense
         AutoMigration(from = 18, to = 19), // Recent activity
         AutoMigration(from = 19, to = 20, spec = Migration19To20::class), // Db optimization, remove totalplaytime, local media fields
-        AutoMigration(from = 20, to = 21)
+        AutoMigration(from = 20, to = 21),
+        AutoMigration(from = 21, to = 22, spec = Migration21To22::class)
     ]
 )
 @TypeConverters(Converters::class)
@@ -701,4 +702,17 @@ class Migration17To18 : AutoMigrationSpec
     DeleteColumn(tableName = "playlist", columnName = "radioEndpointParams"),
 )
 class Migration19To20 : AutoMigrationSpec
+
+class Migration21To22 : AutoMigrationSpec {
+    override fun onPostMigrate(db: SupportSQLiteDatabase) {
+        db.execSQL("""
+            UPDATE song
+            SET artistsString = (
+                SELECT GROUP_CONCAT(name, '')
+                FROM artist
+                WHERE id IN (SELECT artistId FROM song_artist_map WHERE songId = song.id)
+            )
+        """)
+    }
+}
 

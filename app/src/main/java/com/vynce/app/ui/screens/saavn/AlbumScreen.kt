@@ -47,17 +47,44 @@ fun AlbumScreen(
     LaunchedEffect(albumId) {
         val (info, songList) = JioSaavn.getAlbum(albumId)
         albumInfo = info
+        android.util.Log.d("AlbumImage", "Album image URL: ${info.image}")
         songs = songList
         isLoading = false
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    Scaffold(
+        modifier = Modifier
+            .fillMaxSize()
+            .nestedScroll(scrollBehavior.nestedScrollConnection),
+        topBar = {
+            LargeTopAppBar(
+                title = {
+                    if (!isLoading) {
+                        Column {
+                            Text(albumInfo.name, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(albumInfo.artists, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
+                    }
+                },
+                navigationIcon = {
+                    IconButton(
+                        onClick = navController::navigateUp,
+                        onLongClick = navController::backToMain
+                    ) {
+                        Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = null)
+                    }
+                },
+                scrollBehavior = scrollBehavior
+            )
+        }
+    ) { paddingValues ->
         LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .nestedScroll(scrollBehavior.nestedScrollConnection),
+            modifier = Modifier.fillMaxSize(),
             state = listState,
-            contentPadding = PaddingValues(bottom = 100.dp)
+            contentPadding = PaddingValues(
+                top = paddingValues.calculateTopPadding(),
+                bottom = paddingValues.calculateBottomPadding() + 100.dp
+            )
         ) {
             // Header
             item {
@@ -66,7 +93,11 @@ fun AlbumScreen(
                         model = albumInfo.image,
                         contentDescription = null,
                         contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxWidth().aspectRatio(1f).clip(RoundedCornerShape(12.dp))
+                        modifier = Modifier
+                            .fillMaxWidth(0.9f)
+                            .aspectRatio(1f)
+                            .align(Alignment.CenterHorizontally)
+                            .clip(RoundedCornerShape(12.dp))
                     )
                     Spacer(Modifier.height(16.dp))
                     Text(albumInfo.name, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
@@ -112,64 +143,44 @@ fun AlbumScreen(
             }
 
             // Song list — numbered
-        itemsIndexed(songs) { index, song ->
-            with(JioSaavn) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable {
-                            playAllSongs(
-                                title = albumInfo.name,
-                                songs = songs,
-                                playerConnection = playerConnection,
-                                startIndex = index
-                            )
-                        }
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "${index + 1}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.width(28.dp)
-                    )
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(song.name, style = MaterialTheme.typography.bodyMedium,
-                            maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        Text(song.artistNames(), style = MaterialTheme.typography.bodySmall,
+            itemsIndexed(songs) { index, song ->
+                with(JioSaavn) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                playAllSongs(
+                                    title = albumInfo.name,
+                                    songs = songs,
+                                    playerConnection = playerConnection,
+                                    startIndex = index
+                                )
+                            }
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "${index + 1}",
+                            style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            modifier = Modifier.width(28.dp)
+                        )
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(song.name, style = MaterialTheme.typography.bodyMedium,
+                                maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(song.artistNames(), style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
+                        // Duration
+                        Text(
+                            text = formatDuration(song.duration.toIntOrNull() ?: 0),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
-                    // Duration
-                    Text(
-                        text = formatDuration(song.duration.toIntOrNull() ?: 0),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
                 }
             }
         }
-    }
-
-        LargeTopAppBar(
-            title = {
-                if (!isLoading) {
-                    Column {
-                        Text(albumInfo.name, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        Text(albumInfo.artists, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    }
-                }
-            },
-            navigationIcon = {
-                IconButton(
-                    onClick = navController::navigateUp,
-                    onLongClick = navController::backToMain
-                ) {
-                    Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = null)
-                }
-            },
-            scrollBehavior = scrollBehavior
-        )
     }
 }

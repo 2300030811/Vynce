@@ -26,6 +26,12 @@ import androidx.compose.ui.window.DialogProperties
 import com.vynce.app.viewmodels.AiPlaylistViewModel
 import com.vynce.app.viewmodels.AiPlaylistViewModel.AiUiState
 
+/**
+ * Experimental Feature
+ *
+ * AI Playlist is disabled by default and may be removed
+ * in a future release depending on adoption and API costs.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AiPlaylistDialog(
@@ -36,13 +42,7 @@ fun AiPlaylistDialog(
     val uiState by viewModel.uiState.collectAsState()
     var promptText by remember { mutableStateOf("") }
 
-    // If it succeeds, auto close after a moment or let user click View
-    LaunchedEffect(uiState) {
-        if (uiState is AiUiState.Success) {
-            onPlaylistGenerated()
-            onDismiss()
-        }
-    }
+
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -193,9 +193,9 @@ fun AiPlaylistDialog(
                         }
                     }
                     is AiUiState.Success -> {
-                        // Handled by LaunchedEffect above, but just in case
+                        var clicked by remember { mutableStateOf(false) }
                         Column(
-                            modifier = Modifier.padding(vertical = 32.dp),
+                            modifier = Modifier.padding(vertical = 24.dp),
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             Icon(
@@ -210,11 +210,30 @@ fun AiPlaylistDialog(
                                 style = MaterialTheme.typography.titleLarge,
                                 fontWeight = FontWeight.Bold
                             )
+                            Spacer(modifier = Modifier.height(8.dp))
                             Text(
-                                text = "Added ${state.songCount} songs",
+                                text = "Found ${state.songCount} songs matching your vibe",
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center
                             )
+                            Spacer(modifier = Modifier.height(32.dp))
+                            Button(
+                                onClick = {
+                                    if (!clicked) {
+                                        clicked = true
+                                        onPlaylistGenerated()
+                                        onDismiss()
+                                    }
+                                },
+                                enabled = !clicked,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(56.dp),
+                                shape = RoundedCornerShape(16.dp)
+                            ) {
+                                Text("Listen Now", fontWeight = FontWeight.Bold)
+                            }
                         }
                     }
                 }

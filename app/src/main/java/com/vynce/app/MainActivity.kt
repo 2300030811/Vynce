@@ -13,6 +13,7 @@ import android.annotation.SuppressLint
 import android.app.NotificationManager
 import android.content.Intent
 import android.os.Build
+import android.content.pm.PackageManager
 import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
@@ -235,6 +236,15 @@ class MainActivity : ComponentActivity() {
             }
         }
 
+    val notificationPermissionLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
+            if (isGranted) {
+                Log.i(MAIN_TAG, "Notification permission granted")
+            } else {
+                Log.w(MAIN_TAG, "Notification permission denied")
+            }
+        }
+
     override fun onDestroy() {
         Log.i(MAIN_TAG, "onDestroy() called. isFinishing = $isFinishing")
         try {
@@ -268,6 +278,11 @@ class MainActivity : ComponentActivity() {
 
         val backupViewModel = ViewModelProvider(this)[BackupRestoreViewModel::class.java]
         backupViewModel.autoBackup()
+
+        lifecycleScope.launch {
+            com.vynce.app.data.search.SearchBenchmark.runCurrentBenchmarks()
+            com.vynce.app.data.search.SearchBenchmark.runV3Benchmarks()
+        }
 
         setContent {
             val coroutineScope = rememberCoroutineScope()
@@ -749,6 +764,13 @@ class MainActivity : ComponentActivity() {
                                     .getAsync(OobeStatusKey, 0)
                                 if (actualOobeStatus < OOBE_VERSION) {
                                     navController.navigate("setup_wizard")
+                                } else {
+                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                        val notificationPermission = android.Manifest.permission.POST_NOTIFICATIONS
+                                        if (checkSelfPermission(notificationPermission) != PackageManager.PERMISSION_GRANTED) {
+                                            notificationPermissionLauncher.launch(notificationPermission)
+                                        }
+                                    }
                                 }
                             }
 

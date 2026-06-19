@@ -135,6 +135,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
@@ -285,6 +286,33 @@ class MusicService : MediaLibraryService(),
     private var debouncedWidgetUpdateJob: Job? = null
     private var lastWidgetPlayerInfo: PlayerInfo? = null
     private val widgetStateDebounceMs = 300L
+
+    private var progressTrackerJob: Job? = null
+
+    private fun startProgressTracker() {
+        progressTrackerJob?.cancel()
+        progressTrackerJob = scope.launch {
+            while (true) {
+                delay(20000L) // every 20 seconds
+                if (player.isPlaying) {
+                    saveCurrentPositionToDb()
+                    requestWidgetUpdate()
+                }
+            }
+        }
+    }
+
+    private fun stopProgressTracker() {
+        progressTrackerJob?.cancel()
+        progressTrackerJob = null
+    }
+
+    private fun saveCurrentPositionToDb() {
+        val pos = player.currentPosition
+        if (pos >= 0) {
+            queueBoard.value.saveQueuePosition(pos)
+        }
+    }
 
     override fun onCreate() {
         Log.i(TAG, "Starting MusicService")
@@ -616,6 +644,15 @@ class MusicService : MediaLibraryService(),
         val maxQueues = dataStore.get(MaxQueuesKey, 19)
         if (persistQueue) {
             queueBoard.value = QueueBoard(this, queueBoard.value.masterQueues, database.readQueue().toMutableList(), maxQueues)
+            val currentQueue = queueBoard.value.getCurrentQueue()
+            if (currentQueue != null && currentQueue.queue.isNotEmpty()) {
+                withContext(Dispatchers.Main) {
+                    if (player.mediaItemCount == 0) {
+                        queueBoard.value.setCurrQueue(currentQueue, shouldResume = true)
+                        player.playWhenReady = false
+                    }
+                }
+            }
         } else {
             queueBoard.value = QueueBoard(this, queueBoard.value.masterQueues, maxQueues = maxQueues)
         }
@@ -628,12 +665,17 @@ class MusicService : MediaLibraryService(),
         Log.i(TAG, "+deInitQueue()")
         try {
             val pos = player.currentPosition
-            queueBoard.value.shutdown()
             if (dataStore.get(PersistentQueueKey, true)) {
-                CoroutineScope(NonCancellable).launch(Dispatchers.IO) {
-                    saveQueueToDisk(pos)
+                runBlocking {
+                    kotlinx.coroutines.withTimeoutOrNull(200) {
+                        queueBoard.value.flushPendingJobs()
+                        withContext(Dispatchers.IO) {
+                            saveQueueToDisk(pos)
+                        }
+                    }
                 }
             }
+            queueBoard.value.shutdown()
         } catch (e: Exception) {
             Log.e(TAG, "Error during deInitQueue", e)
         }
@@ -995,6 +1037,10 @@ class MusicService : MediaLibraryService(),
             val pos = player.currentPosition
             val q = queueBoard.value.getCurrentQueue()
             q?.lastSongPos = pos
+            saveCurrentPositionToDb()
+            stopProgressTracker()
+        } else {
+            startProgressTracker()
         }
         super.onIsPlayingChanged(isPlaying)
         listeningStatsTracker.onPlayStateChanged(isPlaying, player.currentPosition)
@@ -1083,6 +1129,9 @@ class MusicService : MediaLibraryService(),
         }
         if (events.containsAny(EVENT_TIMELINE_CHANGED, EVENT_POSITION_DISCONTINUITY)) {
             currentMediaMetadata.value = player.currentMetadata
+            if (events.contains(Player.EVENT_POSITION_DISCONTINUITY)) {
+                saveCurrentPositionToDb()
+            }
         }
     }
 
@@ -1147,11 +1196,23 @@ class MusicService : MediaLibraryService(),
 
     override fun onDestroy() {
         Log.i(TAG, "Terminating MusicService.")
+        
+        stopProgressTracker()
+        
+        scope.cancel()
+        offloadScope.cancel()
+
         listeningStatsTracker.onCleared()
         crossfadeController.release()
         deInitQueue()
 
+        player.removeListener(this@MusicService)
+        if (::sleepTimer.isInitialized) {
+            player.removeListener(sleepTimer)
+        }
+
         mediaSession.player.stop()
+        mediaSession.player.release()
         mediaSession.release()
         super.onDestroy()
         Log.i(TAG, "Terminated MusicService.")

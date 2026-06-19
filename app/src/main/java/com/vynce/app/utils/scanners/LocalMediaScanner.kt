@@ -315,6 +315,7 @@ class LocalMediaScanner(scannerImpl: ScannerImpl) {
         val songsByTitle = allLocalSongsList.groupBy { it.song.title.lowercase() }
 
         // Caches for metadata entities to avoid repeated fuzzy searches
+        val allLocalArtistsMap = database.allLocalArtists().associateBy { it.name.trim().lowercase() }
         val artistCache = mutableMapOf<String, ArtistEntity?>()
         val albumCache = mutableMapOf<String, AlbumEntity?>()
         val genreCache = mutableMapOf<String, GenreEntity?>()
@@ -369,8 +370,7 @@ class LocalMediaScanner(scannerImpl: ScannerImpl) {
                         // Full rescan branch
                         val artistsToDo = song.artists.mapIndexed { index, artist ->
                             val dbArtist = artistCache.getOrPut(artist.name) {
-                                val dbQuery = localArtistsByNameFuzzy(artist.name).sortedBy { it.name.length }
-                                closestMatch(artist.name, dbQuery)
+                                allLocalArtistsMap[artist.name.trim().lowercase()]
                             }
                             Pair(dbArtist, artist)
                         }

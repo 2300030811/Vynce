@@ -41,6 +41,14 @@ import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import androidx.glance.text.FontWeight
 import androidx.glance.appwidget.cornerRadius
+import androidx.glance.appwidget.action.actionRunCallback
+import androidx.glance.appwidget.action.ActionCallback
+import androidx.glance.action.ActionParameters
+import android.content.ComponentName
+import androidx.media3.session.MediaController
+import androidx.media3.session.SessionToken
+import com.google.common.util.concurrent.MoreExecutors
+import com.vynce.app.playback.MusicService
 import com.vynce.app.MainActivity
 import com.vynce.app.R
 
@@ -149,7 +157,7 @@ class VynceControlWidget : GlanceAppWidget() {
                     provider = ImageProvider(R.drawable.skip_previous),
                     contentDescription = "Previous",
                     modifier = GlanceModifier.size(48.dp).padding(8.dp)
-                        .clickable(actionStartActivity<MainActivity>()),
+                        .clickable(actionRunCallback<ControlPreviousCallback>()),
                 )
                 Image(
                     provider = ImageProvider(
@@ -157,13 +165,13 @@ class VynceControlWidget : GlanceAppWidget() {
                     ),
                     contentDescription = "Play/Pause",
                     modifier = GlanceModifier.size(56.dp).padding(8.dp)
-                        .clickable(actionStartActivity<MainActivity>()),
+                        .clickable(actionRunCallback<ControlPlayPauseCallback>()),
                 )
                 Image(
                     provider = ImageProvider(R.drawable.skip_next),
                     contentDescription = "Next",
                     modifier = GlanceModifier.size(48.dp).padding(8.dp)
-                        .clickable(actionStartActivity<MainActivity>()),
+                        .clickable(actionRunCallback<ControlNextCallback>()),
                 )
             }
         }
@@ -174,6 +182,58 @@ class VynceControlWidget : GlanceAppWidget() {
         val minutes = totalSeconds / 60
         val seconds = totalSeconds % 60
         return "%d:%02d".format(minutes, seconds)
+    }
+}
+
+class ControlPlayPauseCallback : ActionCallback {
+    override suspend fun onAction(context: Context, glanceId: GlanceId, parameters: ActionParameters) {
+        val sessionToken = SessionToken(context, ComponentName(context, MusicService::class.java))
+        val controllerFuture = MediaController.Builder(context, sessionToken).buildAsync()
+        controllerFuture.addListener({
+            try {
+                val controller = controllerFuture.get()
+                if (controller.isPlaying) {
+                    controller.pause()
+                } else {
+                    controller.play()
+                }
+                controller.release()
+            } catch (e: Exception) {
+                android.util.Log.e("ControlPlayPauseCallback", "Failed to toggle play/pause", e)
+            }
+        }, MoreExecutors.directExecutor())
+    }
+}
+
+class ControlNextCallback : ActionCallback {
+    override suspend fun onAction(context: Context, glanceId: GlanceId, parameters: ActionParameters) {
+        val sessionToken = SessionToken(context, ComponentName(context, MusicService::class.java))
+        val controllerFuture = MediaController.Builder(context, sessionToken).buildAsync()
+        controllerFuture.addListener({
+            try {
+                val controller = controllerFuture.get()
+                controller.seekToNext()
+                controller.release()
+            } catch (e: Exception) {
+                android.util.Log.e("ControlNextCallback", "Failed to skip next", e)
+            }
+        }, MoreExecutors.directExecutor())
+    }
+}
+
+class ControlPreviousCallback : ActionCallback {
+    override suspend fun onAction(context: Context, glanceId: GlanceId, parameters: ActionParameters) {
+        val sessionToken = SessionToken(context, ComponentName(context, MusicService::class.java))
+        val controllerFuture = MediaController.Builder(context, sessionToken).buildAsync()
+        controllerFuture.addListener({
+            try {
+                val controller = controllerFuture.get()
+                controller.seekToPreviousMediaItem()
+                controller.release()
+            } catch (e: Exception) {
+                android.util.Log.e("ControlPreviousCallback", "Failed to skip previous", e)
+            }
+        }, MoreExecutors.directExecutor())
     }
 }
 

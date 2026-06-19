@@ -8,6 +8,9 @@
 
 package com.vynce.app.ui.screens
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
 import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.BackHandler
@@ -138,6 +141,14 @@ fun SetupWizard(
     val haptic = LocalHapticFeedback.current
 
     var oobeStatus by rememberPreference(OobeStatusKey, defaultValue = 0)
+
+    val notificationLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+        onResult = { isGranted ->
+            oobeStatus = OOBE_VERSION
+            navController.navigateUp()
+        }
+    )
 
     // local media prefs
     val (localLibEnable, onLocalLibEnableChange) = rememberPreference(LocalLibraryEnableKey, defaultValue = true)
@@ -455,8 +466,13 @@ fun SetupWizard(
 
                                 Button(
                                     onClick = { 
-                                        oobeStatus = OOBE_VERSION
-                                        navController.navigateUp()
+                                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                                            context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                                            notificationLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                                        } else {
+                                            oobeStatus = OOBE_VERSION
+                                            navController.navigateUp()
+                                        }
                                     },
                                     modifier = Modifier.fillMaxWidth().height(56.dp),
                                     shape = RoundedCornerShape(16.dp)

@@ -65,7 +65,11 @@ class DownloadDirectoryManagerOt(private var context: Context, private var dir: 
 
     fun deleteFile(mediaId: String): Boolean {
         val file = isExists(mediaId)
-        return file?.delete() == true
+        val success = file?.delete() == true
+        if (success) {
+            availableFiles = availableFiles - file
+        }
+        return success
     }
 
     fun saveFile(mediaId: String, data: ByteArray, displayName: String? = null): Uri? {
@@ -87,6 +91,7 @@ class DownloadDirectoryManagerOt(private var context: Context, private var dir: 
             resolver.openOutputStream(uri)?.use { out ->
                 input.copyTo(out)
             }
+            availableFiles = availableFiles + newFile
             return uri
         }
 

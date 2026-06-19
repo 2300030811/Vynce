@@ -1,131 +1,77 @@
 package com.vynce.app.viewmodels
 
-import com.vynce.app.constants.StatPeriod
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.vynce.app.data.stats.PlaybackStatsRepository
+import com.vynce.app.data.stats.StatsTimeRange
 import com.vynce.app.db.MusicDatabase
 import com.vynce.app.db.entities.Song
+import com.vynce.app.constants.SongSortType
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.flow.map
-import java.time.LocalDate
-import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
-import java.util.Locale
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-// redoing this whole feature later, plz ignore the slop code
-@OptIn(ExperimentalCoroutinesApi::class)
+data class StatsV2State(
+    val isLoading: Boolean = true,
+    val featuredSong: PlaybackStatsRepository.SongPlaybackSummary? = null,
+    val topArtists: List<PlaybackStatsRepository.ArtistPlaybackSummary> = emptyList(),
+    val topSongs: List<PlaybackStatsRepository.SongPlaybackSummary> = emptyList(),
+    val totalListeningMs: Long = 0L,
+    val totalPlayCount: Int = 0,
+    val personaChip: String = "🎵 Listening Style",
+    val personaDescription: String = "Loading your music DNA...",
+    val listeningHabits: PlaybackStatsRepository.DayListeningDistribution? = null,
+    val totalUniqueSongs: Int = 0
+)
+
 @HiltViewModel
 class StatsViewModel @Inject constructor(
-    database: MusicDatabase,
-) : DatabaseViewModel(database) {
-    val statPeriod = MutableStateFlow(StatPeriod.`1_WEEK`)
+    private val database: MusicDatabase,
+    private val playbackStatsRepository: PlaybackStatsRepository
+) : ViewModel() {
 
-    val mostPlayedSongs = statPeriod.flatMapLatest { period ->
-        database.mostPlayedSongs(period.toTimeMillis())
-    }.asStateFlow(emptyList())
-
-    val mostPlayedArtists = statPeriod.flatMapLatest { period ->
-        val time = period.toLocalDateTime()
-        database.mostPlayedArtists(time.year, time.month.value).map { artists ->
-            artists
-        }
-    }.asStateFlow(emptyList())
-
-
-    val mostPlayedAlbums = statPeriod.flatMapLatest { period ->
-        database.mostPlayedAlbums(period.toTimeMillis())
-    }.asStateFlow(emptyList())
-
-    val lostMemories = flowOf(LocalDateTime.now()).map { now ->
-        val dateMonth = String.format(Locale.ROOT, "%02d-%02d", now.monthValue, now.dayOfMonth)
-        val currentYear = now.year.toString()
-        database.lostMemories(dateMonth, currentYear)
-    }.flatMapLatest { it }
-        .asStateFlow(emptyList())
-
-    // Enhanced history: most frequent songs (by session count, not just play time)
-    val mostFrequentSongs = statPeriod.flatMapLatest { period ->
-        database.mostFrequentSongs(period.toTimeMillis(), 10)
-    }.asStateFlow(emptyList())
-
-    // Enhanced history: monthly top songs
-    private val _monthlyTopSongs = MutableStateFlow<List<Song>>(emptyList())
-    val monthlyTopSongs: StateFlow<List<Song>> = _monthlyTopSongs
+    private val _state = MutableStateFlow(StatsV2State())
+    val state: StateFlow<StatsV2State> = _state.asStateFlow()
 
     init {
-        launchIO {
-            val monthStr = LocalDate.now().format(DateTimeFormatter.ofPattern("MM"))
-            database.monthlyTopSongs(monthStr, 20).collect { songs ->
-                _monthlyTopSongs.value = songs
-            }
-        }
+        loadStats()
     }
 
-    // Listening streak: consecutive days with at least one play
-    private val _listeningStreak = MutableStateFlow(0)
-    val listeningStreak: StateFlow<Int> = _listeningStreak
+    private fun loadStats() {
+        viewModelScope.launch {
+            _state.update { it.copy(isLoading = true) }
+            val songs = database.songs(SongSortType.CREATE_DATE, true).first()
+            val summary = playbackStatsRepository.loadSummary(
+                range = StatsTimeRange.ALL,
+                songs = songs
+            )
+            val sortedSongs = summary.songs.sortedWith(compareByDescending<PlaybackStatsRepository.SongPlaybackSummary> { it.playCount }.thenByDescending { it.totalDurationMs })
+            val sortedArtists = summary.topArtists.sortedWith(compareByDescending<PlaybackStatsRepository.ArtistPlaybackSummary> { it.playCount }.thenByDescending { it.totalDurationMs })
 
-    init {
-        launchIO {
-            database.events().collect { events ->
-                val streak = calculateStreak(events.map { it.event.timestamp.toLocalDate() })
-                _listeningStreak.value = streak
+            val topArtist = sortedArtists.firstOrNull()
+
+            // Calculate Personality dynamically
+            val (personaChip, personaDesc) = playbackStatsRepository.calculatePersonality(summary)
+
+            _state.update {
+                it.copy(
+                    isLoading = false,
+                    featuredSong = sortedSongs.firstOrNull(),
+                    topArtists = sortedArtists.take(5), // Keep top 5 artists
+                    topSongs = sortedSongs.drop(1).take(5), // Top 5 songs, excluding the #1 hero
+                    totalListeningMs = summary.totalDurationMs,
+                    totalPlayCount = summary.totalPlayCount,
+                    totalUniqueSongs = summary.uniqueSongs,
+                    personaChip = personaChip,
+                    personaDescription = personaDesc,
+                    listeningHabits = summary.dayListeningDistribution
+                )
             }
         }
-    }
-
-    // Total unique songs played
-    private val _uniqueSongsCount = MutableStateFlow(0)
-    val uniqueSongsCount: StateFlow<Int> = _uniqueSongsCount
-
-    init {
-        launchIO {
-            database.events().collect { events ->
-                val uniqueCount = events.map { it.event.songId }.distinct().size
-                _uniqueSongsCount.value = uniqueCount
-            }
-        }
-    }
-
-    // Total listening time in hours
-    private val _totalListeningHours = MutableStateFlow(0f)
-    val totalListeningHours: StateFlow<Float> = _totalListeningHours
-
-    init {
-        launchIO {
-            database.events().collect { events ->
-                val totalMs = events.sumOf { it.event.playTime }
-                val hours = totalMs / 3600000f
-                _totalListeningHours.value = hours
-            }
-        }
-    }
-
-    private fun calculateStreak(dates: List<LocalDate>): Int {
-        if (dates.isEmpty()) return 0
-
-        val uniqueDates = dates.toSortedSet().toList()
-        val today = LocalDate.now()
-        var streak = 0
-        var checkDate = today
-
-        // Check if today has any plays, otherwise start from yesterday
-        if (!uniqueDates.contains(today)) {
-            checkDate = today.minusDays(1)
-            if (!uniqueDates.contains(checkDate)) return 0
-        }
-
-        while (uniqueDates.contains(checkDate)) {
-            streak++
-            checkDate = checkDate.minusDays(1)
-        }
-
-        return streak
     }
 }
-

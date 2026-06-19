@@ -11,6 +11,7 @@ package com.vynce.app.data.ai
 
 import android.util.Log
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.Serializable
@@ -22,13 +23,10 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import java.util.concurrent.TimeUnit
 
 /**
- * Groq AI client for playlist generation and other AI features.
+ * Experimental Feature
  *
- * Groq offers a generous free tier with fast inference:
- * - llama-3.3-70b-versatile: Good for playlist curation
- * - llama-3.1-8b-instant: Faster, lighter option
- *
- * @param apiKey Groq API key from https://console.groq.com
+ * AI Playlist is disabled by default and may be removed
+ * in a future release depending on adoption and API costs.
  */
 class GroqOrchestrator(
     private val apiKey: String,
@@ -102,63 +100,94 @@ class GroqOrchestrator(
             ))
         }
 
-        try {
-            val requestBody = json.encodeToString(
-                ChatRequest.serializer(),
-                ChatRequest(
-                    model = model,
-                    messages = listOf(
-                        Message("system", systemPrompt),
-                        Message("user", userPrompt),
-                    ),
-                    temperature = temperature,
+        var lastException: Exception? = null
+        var lastUserMessage = "AI request failed"
+        val maxAttempts = 3
+
+        for (attempt in 1..maxAttempts) {
+            try {
+                val requestBody = json.encodeToString(
+                    ChatRequest.serializer(),
+                    ChatRequest(
+                        model = model,
+                        messages = listOf(
+                            Message("system", systemPrompt),
+                            Message("user", userPrompt),
+                        ),
+                        temperature = temperature,
+                    )
                 )
-            )
 
-            val request = Request.Builder()
-                .url(BASE_URL)
-                .header("Authorization", "Bearer $apiKey")
-                .header("Content-Type", "application/json")
-                .post(requestBody.toRequestBody("application/json".toMediaType()))
-                .build()
+                val request = Request.Builder()
+                    .url(BASE_URL)
+                    .header("Authorization", "Bearer $apiKey")
+                    .header("Content-Type", "application/json")
+                    .post(requestBody.toRequestBody("application/json".toMediaType()))
+                    .build()
 
-            val response = withTimeout(REQUEST_TIMEOUT_MS) {
-                client.newCall(request).execute()
-            }
-
-            val body = response.body?.string() ?: ""
-
-            if (!response.isSuccessful) {
-                val errorMsg = try {
-                    json.decodeFromString<ChatResponse>(body).error?.message ?: body
-                } catch (_: Exception) { body }
-
-                val userMessage = when (response.code) {
-                    401 -> "Invalid API key. Check your Groq API key in Settings → AI."
-                    429 -> "Rate limit exceeded. Groq's free tier has usage limits. Wait a moment and try again."
-                    503, 502 -> "Groq servers are temporarily overloaded. Try again in a moment."
-                    else -> "Groq API error (${response.code}): $errorMsg"
+                val response = withTimeout(REQUEST_TIMEOUT_MS) {
+                    client.newCall(request).execute()
                 }
-                Log.e(TAG, "Groq API error ${response.code}: $errorMsg")
-                return@withContext Result.failure(Exception(userMessage))
+
+                val body = response.body.string()
+
+                if (!response.isSuccessful) {
+                    val errorMsg = try {
+                        json.decodeFromString<ChatResponse>(body).error?.message ?: body
+                    } catch (_: Exception) { body }
+
+                    val userMessage = when (response.code) {
+                        401 -> "Invalid API key. Check your Groq API key in Settings → AI."
+                        429 -> "Rate limit exceeded. Groq's free tier has usage limits. Wait a moment and try again."
+                        503, 502 -> "Groq servers are temporarily overloaded. Try again in a moment."
+                        else -> "Groq API error (${response.code}): $errorMsg"
+                    }
+                    
+                    Log.e(TAG, "Groq API error ${response.code}: $errorMsg (Attempt $attempt/$maxAttempts)")
+
+                    // Retry for rate limit (429) or server errors (502, 503)
+                    if ((response.code == 429 || response.code == 502 || response.code == 503) && attempt < maxAttempts) {
+                        val backoffMs = attempt * 1000L
+                        Log.d(TAG, "Retrying Groq API request in ${backoffMs}ms...")
+                        delay(backoffMs)
+                        continue
+                    }
+
+                    return@withContext Result.failure(Exception(userMessage))
+                }
+
+                val chatResponse = json.decodeFromString<ChatResponse>(body)
+                val content = chatResponse.choices.firstOrNull()?.message?.content
+
+                if (content.isNullOrBlank()) {
+                    return@withContext Result.failure(Exception("AI returned an empty response. Try rephrasing your prompt."))
+                }
+
+                Log.d(TAG, "Groq response received (${content.length} chars)")
+                return@withContext Result.success(content)
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                if (e is kotlinx.coroutines.TimeoutCancellationException) {
+                    Log.e(TAG, "Timeout on attempt $attempt", e)
+                    lastException = e
+                    lastUserMessage = "Request timed out. Groq may be overloaded — try again."
+                } else {
+                    throw e
+                }
+            } catch (e: java.net.UnknownHostException) {
+                Log.e(TAG, "Network down", e)
+                return@withContext Result.failure(Exception("No internet connection. Check your network and try again."))
+            } catch (e: Exception) {
+                Log.e(TAG, "Exception on attempt $attempt", e)
+                lastException = e
+                lastUserMessage = "AI request failed: ${e.message}"
             }
 
-            val chatResponse = json.decodeFromString<ChatResponse>(body)
-            val content = chatResponse.choices.firstOrNull()?.message?.content
-
-            if (content.isNullOrBlank()) {
-                return@withContext Result.failure(Exception("AI returned an empty response. Try rephrasing your prompt."))
+            if (attempt < maxAttempts) {
+                val backoffMs = attempt * 1000L
+                delay(backoffMs)
             }
-
-            Log.d(TAG, "Groq response received (${content.length} chars)")
-            Result.success(content)
-        } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
-            Result.failure(Exception("Request timed out. Groq may be overloaded — try again."))
-        } catch (e: java.net.UnknownHostException) {
-            Result.failure(Exception("No internet connection. Check your network and try again."))
-        } catch (e: Exception) {
-            Log.e(TAG, "Groq request failed", e)
-            Result.failure(Exception("AI request failed: ${e.message}"))
         }
+
+        Result.failure(lastException ?: Exception(lastUserMessage))
     }
 }

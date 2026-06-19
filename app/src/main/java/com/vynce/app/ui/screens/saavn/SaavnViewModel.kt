@@ -4,13 +4,16 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.zionhuang.jiosaavn.JioSaavn
 import com.zionhuang.jiosaavn.SaavnSong
+import com.vynce.app.data.search.SearchRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
-class SaavnViewModel @Inject constructor() : ViewModel() {
+class SaavnViewModel @Inject constructor(
+    private val searchRepository: SearchRepository
+) : ViewModel() {
 
     private val _searchResults = MutableStateFlow<List<SaavnSong>>(emptyList())
     val searchResults = _searchResults.asStateFlow()
@@ -29,7 +32,7 @@ class SaavnViewModel @Inject constructor() : ViewModel() {
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                val results = JioSaavn.searchSongs(query)
+                val results = searchRepository.searchSongs(query)
                 android.util.Log.d("SaavnVM", "Search results: ${results.size} for '$query'")
                 if (results.isEmpty()) {
                     android.util.Log.w("SaavnVM", "No results — API may be down")

@@ -18,12 +18,19 @@ import com.vynce.app.utils.get
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+/**
+ * Experimental Feature
+ *
+ * AI Playlist is disabled by default and may be removed
+ * in a future release depending on adoption and API costs.
+ */
 @HiltViewModel
 class AiPlaylistViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
@@ -49,12 +56,21 @@ class AiPlaylistViewModel @Inject constructor(
         "🌧️ Rainy day mood",
     )
 
+    private var generationJob: Job? = null
+
     fun generatePlaylist(prompt: String) {
         if (prompt.isBlank()) return
 
+        val cleanPrompt = if (promptSuggestions.contains(prompt)) {
+            prompt.substringAfter(" ")
+        } else {
+            prompt.trim()
+        }
+
+        generationJob?.cancel()
         _uiState.value = AiUiState.Loading
 
-        viewModelScope.launch {
+        generationJob = viewModelScope.launch {
             var apiKey = context.dataStore.get(AiApiKeyKey, "")
             if (apiKey.isBlank()) {
                 apiKey = com.vynce.app.BuildConfig.GROQ_API_KEY
@@ -80,7 +96,7 @@ class AiPlaylistViewModel @Inject constructor(
             }
 
             val result = generator.generate(
-                prompt = prompt,
+                prompt = cleanPrompt,
                 allSongs = allSongs,
             )
 
@@ -97,6 +113,7 @@ class AiPlaylistViewModel @Inject constructor(
     }
 
     fun clearPlaylist() {
+        generationJob?.cancel()
         _generatedPlaylist.value = emptyList()
         _uiState.value = AiUiState.Idle
     }

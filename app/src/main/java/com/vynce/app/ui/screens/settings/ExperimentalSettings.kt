@@ -64,6 +64,7 @@ import coil3.imageLoader
 import com.vynce.app.LocalDatabase
 import com.vynce.app.LocalPlayerConnection
 import com.vynce.app.R
+import com.vynce.app.constants.AiEnabledKey
 import com.vynce.app.constants.AudioGaplessOffloadKey
 import com.vynce.app.constants.AudioOffloadKey
 import com.vynce.app.constants.DevSettingsKey
@@ -71,6 +72,7 @@ import com.vynce.app.constants.MaxQueuesKey
 import com.vynce.app.constants.OobeStatusKey
 import com.vynce.app.constants.TabletUiKey
 import com.vynce.app.constants.TopBarInsets
+import androidx.compose.material.icons.rounded.AutoAwesome
 import com.vynce.app.ui.component.ColumnWithContentPadding
 import com.vynce.app.ui.component.PreferenceEntry
 import com.vynce.app.ui.component.PreferenceGroupTitle
@@ -101,6 +103,10 @@ fun ExperimentalSettings(
     val uriHandler = LocalUriHandler.current
 
     // state variables and such
+    val (aiEnabled, onAiEnabledChange) = rememberPreference(
+        key = AiEnabledKey,
+        defaultValue = false
+    )
     val (audioGaplessOffload, onAudioGaplessOffloadChange) = rememberPreference(
         key = AudioGaplessOffloadKey,
         defaultValue = false
@@ -138,6 +144,13 @@ fun ExperimentalSettings(
             icon = { Icon(Icons.Rounded.Devices, null) },
             checked = tabletUi,
             onCheckedChange = onTabletUiChange
+        )
+        SwitchPreference(
+            title = { Text("AI Playlist (Beta)") },
+            description = "Enable experimental AI-generated playlists via Groq (requires API key).",
+            icon = { Icon(Icons.Rounded.AutoAwesome, null) },
+            checked = aiEnabled,
+            onCheckedChange = onAiEnabledChange
         )
         PreferenceEntry(
             title = { Text(stringResource(R.string.max_queues_title)) },

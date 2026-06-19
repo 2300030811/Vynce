@@ -14,6 +14,9 @@ import com.zionhuang.jiosaavn.SaavnPlaylistInfo
 import com.zionhuang.jiosaavn.SaavnSong
 import com.vynce.app.constants.ContentLanguageKey
 import com.vynce.app.constants.SYSTEM_DEFAULT
+import com.vynce.app.constants.SongSortType
+import com.vynce.app.data.stats.PlaybackStatsRepository
+import com.vynce.app.data.stats.StatsTimeRange
 import com.vynce.app.db.DatabaseDao
 import com.vynce.app.db.entities.Song
 import com.vynce.app.utils.dataStore
@@ -24,6 +27,7 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -47,7 +51,20 @@ data class HomeState(
     val featuredArtists: List<SaavnArtist> = emptyList(),
     val selectedLanguage: String = "Hindi",
     val isLoading: Boolean = true,
-    val error: String? = null
+    val error: String? = null,
+    val continueListening: List<PlaybackStatsRepository.PlaybackHistoryEntry> = emptyList(),
+    val rediscover: List<PlaybackStatsRepository.SongPlaybackSummary> = emptyList(),
+    val topStatsArtists: List<PlaybackStatsRepository.ArtistPlaybackSummary> = emptyList(),
+    val listeningStreakDays: Int = 0,
+    val activeDays: Int = 0,
+    val totalPlayCount: Int = 0,
+    val uniqueSongs: Int = 0,
+    val totalListeningMs: Long = 0L,
+    val topSongs: List<PlaybackStatsRepository.SongPlaybackSummary> = emptyList(),
+    val topGenres: List<PlaybackStatsRepository.GenrePlaybackSummary> = emptyList(),
+    val personaChip: String = "🎵 Melody Hunter",
+    val personaDescription: String = "",
+    val additionalInsight: String = ""
 )
 
 // ── ViewModel ───────────────────────────────────────────────────────
@@ -55,7 +72,8 @@ data class HomeState(
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val database: com.vynce.app.db.MusicDatabase
+    private val database: com.vynce.app.db.MusicDatabase,
+    private val playbackStatsRepository: PlaybackStatsRepository
 ) : ViewModel() {
 
     private val TAG = "HomeViewModel"
@@ -65,6 +83,59 @@ class HomeViewModel @Inject constructor(
     private var saavnSections: List<HomeSection> = emptyList()
 
     init {
+        // Load and update Playback Stats automatically
+        viewModelScope.launch {
+            playbackStatsRepository.refreshFlow.collect {
+                try {
+                    val songs = database.songs(SongSortType.CREATE_DATE, true).first()
+                    val summary = playbackStatsRepository.loadSummary(
+                        range = StatsTimeRange.ALL,
+                        songs = songs
+                    )
+                    val recentHistory = playbackStatsRepository.loadPlaybackHistory(20)
+                    val recentSongIds = recentHistory.map { it.songId }.toSet()
+                    val rediscoverSongs = playbackStatsRepository.getRediscoverSongs(
+                        limit = 15,
+                        excludeSongIds = recentSongIds
+                    )
+                    Log.d(TAG, "Rediscover candidates found: ${rediscoverSongs.size} (using thresholds: minPlays=2, minDays=14)")
+
+                    val insight = summary.dayListeningDistribution?.let { dist ->
+                        val peakHour = dist.buckets.maxByOrNull { it.totalDurationMs }?.startMinute?.div(60) ?: -1
+                        when (peakHour) {
+                            in 5..11 -> "Most active time: Morning"
+                            in 12..16 -> "Most active time: Afternoon"
+                            in 17..21 -> "Most active time: Evening"
+                            in 22..24, in 0..4 -> "Most active time: Late Night"
+                            else -> null
+                        }
+                    } ?: summary.peakDayLabel?.let { "Most active day: $it" } ?: "Music is a huge part of your routine."
+                    val (personaChip, personaDesc) = playbackStatsRepository.calculatePersonality(summary)
+
+                    _state.update { state ->
+                        state.copy(
+                            listeningStreakDays = summary.longestStreakDays,
+                            activeDays = summary.activeDays,
+                            totalPlayCount = summary.totalPlayCount,
+                            uniqueSongs = summary.uniqueSongs,
+                            totalListeningMs = summary.totalDurationMs,
+                            topStatsArtists = summary.topArtists,
+                            continueListening = recentHistory,
+                            rediscover = rediscoverSongs,
+                            topSongs = summary.topSongs,
+                            topGenres = summary.topGenres,
+                            personaChip = personaChip,
+                            personaDescription = personaDesc,
+                            additionalInsight = insight
+                        )
+                    }
+                    loadArtists()
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to load stats for HomeState", e)
+                }
+            }
+        }
+
         viewModelScope.launch {
             database.quickPicks().collect { localSongs ->
                 val quickPicksSection = if (localSongs.isNotEmpty()) {
@@ -91,10 +162,9 @@ class HomeViewModel @Inject constructor(
                 }
         }
         
-        viewModelScope.launch { 
-            loadArtists() 
-        }
+        // loadArtists() is now called after stats are loaded
     }
+
 
     /**
      * Resolves the stored language preference to the actual language string
@@ -160,10 +230,15 @@ class HomeViewModel @Inject constructor(
 
     private suspend fun loadArtists() {
         try {
-            val queries = listOf(
-                "Arijit Singh", "Anirudh Ravichander", "Diljit Dosanjh",
-                "AP Dhillon", "Shreya Ghoshal", "Sid Sriram", "AR Rahman"
-            )
+            val statsArtists = _state.value.topStatsArtists
+            val queries = if (statsArtists.isNotEmpty()) {
+                statsArtists.map { it.artist }.take(7)
+            } else {
+                listOf(
+                    "Arijit Singh", "Anirudh Ravichander", "Diljit Dosanjh",
+                    "AP Dhillon", "Shreya Ghoshal", "Sid Sriram", "AR Rahman"
+                )
+            }
             val artists = queries.map { query ->
                 viewModelScope.async {
                     try {

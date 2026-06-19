@@ -822,6 +822,7 @@ class QueueBoard(
     fun setCurrQueuePosIndex(index: Int) {
         getCurrentQueue()?.let {
             it.setCurrentQueuePos(index)
+            it.lastSongPos = C.TIME_UNSET
             saveQueue(it)
         }
     }
@@ -833,103 +834,99 @@ class QueueBoard(
      * ========================
      */
 
-    class PriorityJob(val priority: Int, val job: Job) : Comparable<PriorityJob> {
-        override fun compareTo(other: PriorityJob): Int = this.priority - other.priority
+    private val pendingQueueSaves = java.util.concurrent.ConcurrentHashMap<Long, Job>()
+    private val pendingSongSaves = java.util.concurrent.ConcurrentHashMap<Long, Job>()
+    private val pendingAllSaves = java.util.concurrent.atomic.AtomicReference<Job?>(null)
+    private var debounceJob: Job? = null
+    private val jobActive = Mutex()
+
+    private fun triggerDatabaseSave() {
+        debounceJob?.cancel()
+        debounceJob = queueCoroutineScope.launch {
+            delay(5000L)
+            flushPendingJobs()
+        }
     }
 
-    var queueEntity = PriorityQueue<PriorityJob>()
-    var queueSongMap = PriorityQueue<PriorityJob>()
-    var jobActive = Mutex()
-    private var dispatcherLaunched = false
-
-    /**
-     * Execute the most recent save request, with a 5 second delay from function call
-     */
-    private suspend fun databaseDispatcher() {
-        Log.d(TAG, "Starting database save task")
+    suspend fun flushPendingJobs() {
+        debounceJob?.cancel()
+        debounceJob = null
         if (jobActive.isLocked) {
-            Log.d(TAG, "Database save task is already active, aborting")
-            return
+            Log.d(TAG, "Database flush is already active, waiting for lock")
         }
-
         jobActive.withLock {
-            while (queueEntity.isNotEmpty() || queueSongMap.isNotEmpty()) {
-                delay(5000L)
-                Log.d(TAG, "Running database save task")
+            Log.d(TAG, "Flushing pending database saves")
 
-                // saving songs nukes the queue entity in the process, about it shouldn't matter since are same queue object
-                if (!queueSongMap.isEmpty()) {
-                    queueSongMap.last().job.start()
-                    queueSongMap.clear()
-                    continue
-                }
+            // Execute all pending song mapping saves
+            val songJobs = pendingSongSaves.values.toList()
+            pendingSongSaves.clear()
+            songJobs.forEach {
+                it.start()
+                it.join()
+            }
 
-                if (!queueEntity.isEmpty()) {
-                    queueEntity.last().job.start()
-                    queueEntity.clear()
-                    continue
-                }
+            // Execute all pending queue metadata saves
+            val queueJobs = pendingQueueSaves.values.toList()
+            pendingQueueSaves.clear()
+            queueJobs.forEach {
+                it.start()
+                it.join()
+            }
+
+            // Execute pending save all queues
+            val allJob = pendingAllSaves.getAndSet(null)
+            allJob?.let {
+                it.start()
+                it.join()
             }
         }
-        Log.d(TAG, "Exiting database save task")
-    }
-
-    /**
-     * Trigger the database dispatcher, ensuring only one instance runs at a time
-     */
-    fun triggerDatabaseSave() {
-        if (!dispatcherLaunched) {
-            dispatcherLaunched = true
-            queueCoroutineScope.launch {
-                databaseDispatcher()
-                dispatcherLaunched = false
-            }
-        }
+        Log.d(TAG, "Completed flushing database saves")
     }
 
     fun shutdown() {
-        queueSongMap.clear()
-        queueEntity.clear()
+        debounceJob?.cancel()
+        debounceJob = null
+        pendingSongSaves.values.forEach { it.cancel() }
+        pendingSongSaves.clear()
+        pendingQueueSaves.values.forEach { it.cancel() }
+        pendingQueueSaves.clear()
+        pendingAllSaves.getAndSet(null)?.cancel()
     }
 
     private fun saveQueueSongs(mq: MultiQueueObject) {
         if (player.dataStore.get(PersistentQueueKey, true)) {
-            queueSongMap.add(
-                PriorityJob(
-                    0,
-                    queueCoroutineScope.launch(start = CoroutineStart.DEFAULT) {
-                        player.database.saveQueue(mq)
-                    }
-                )
-            )
+            pendingSongSaves[mq.id]?.cancel()
+            pendingSongSaves[mq.id] = queueCoroutineScope.launch(start = CoroutineStart.LAZY) {
+                player.database.saveQueue(mq)
+            }
             triggerDatabaseSave()
+        }
+    }
+
+    fun saveQueuePosition(pos: Long) {
+        getCurrentQueue()?.let {
+            it.lastSongPos = pos
+            saveQueue(it)
         }
     }
 
     private fun saveQueue(mq: MultiQueueObject) {
         if (player.dataStore.get(PersistentQueueKey, true)) {
-            queueEntity.add(
-                PriorityJob(
-                    0,
-                    queueCoroutineScope.launch(start = CoroutineStart.DEFAULT) {
-                        player.database.updateQueue(mq)
-                    }
-                )
-            )
+            pendingQueueSaves[mq.id]?.cancel()
+            pendingQueueSaves[mq.id] = queueCoroutineScope.launch(start = CoroutineStart.LAZY) {
+                player.database.updateQueue(mq)
+            }
             triggerDatabaseSave()
         }
     }
 
     private fun saveAllQueues(mq: MutableList<MultiQueueObject>) {
         if (player.dataStore.get(PersistentQueueKey, true)) {
-            queueEntity.add(
-                // we select most recent task, therefore "lowest" numeric priority at the end of the list == "highest" priority
-                PriorityJob(
-                    -1,
-                    queueCoroutineScope.launch(start = CoroutineStart.DEFAULT) {
-                        player.database.updateAllQueues(mq)
-                    }
-                )
+            pendingAllSaves.getAndSet(null)?.cancel()
+            pendingAllSaves.set(
+                queueCoroutineScope.launch(start = CoroutineStart.LAZY) {
+                    player.database.updateAllQueues(mq)
+                }
             )
             triggerDatabaseSave()
         }

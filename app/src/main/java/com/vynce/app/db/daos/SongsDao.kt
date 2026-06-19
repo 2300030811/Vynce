@@ -148,12 +148,7 @@ interface SongsDao {
     @Query("""
         SELECT * FROM song 
         WHERE inLibrary IS NOT NULL 
-        ORDER BY (
-            SELECT LOWER(GROUP_CONCAT(name, ''))
-            FROM artist
-            WHERE id IN (SELECT artistId FROM song_artist_map WHERE songId = song.id)
-            ORDER BY name
-        ) COLLATE NOCASE
+        ORDER BY artistsString COLLATE NOCASE ASC
     """)
     fun songsByArtistAsc(): Flow<List<Song>>
 
@@ -360,12 +355,7 @@ interface SongsDao {
     @Query("""
         SELECT * FROM song
         WHERE (isLocal = 0 AND dateDownload IS NOT NULL) OR (isLocal = 1 AND inLibrary IS NOT NULL)
-        ORDER BY (
-            SELECT LOWER(GROUP_CONCAT(name, ''))
-            FROM artist
-            WHERE id IN (SELECT artistId FROM song_artist_map WHERE songId = song.id)
-            ORDER BY name
-        ) COLLATE NOCASE
+        ORDER BY artistsString COLLATE NOCASE ASC
     """)
     fun downloadSongsByArtistAsc(): Flow<List<Song>>
 
