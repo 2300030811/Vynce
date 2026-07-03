@@ -23,6 +23,8 @@ import android.provider.DocumentsContract;
 import android.util.Log;
 import androidx.annotation.RequiresApi;
 
+import com.vynce.app.utils.DownloadIdNormalizer;
+
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 import java.util.ArrayList;
@@ -48,7 +50,9 @@ public class TreeDocumentFileOt extends DocumentFile {
         int startIndex = name.lastIndexOf("[");
         int endIndex = name.lastIndexOf("]");
         if (startIndex < endIndex) {
-            mId = name.substring(startIndex + 1, endIndex);
+            String rawId = name.substring(startIndex + 1, endIndex);
+            // Normalize sanitized IDs (e.g., "saavn_ID" -> "saavn:ID")
+            mId = DownloadIdNormalizer.INSTANCE.normalize(rawId);
         }
     }
     @Override

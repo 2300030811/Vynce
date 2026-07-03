@@ -4,8 +4,8 @@ import android.content.Context
 import android.net.Uri
 import android.util.Log
 import androidx.documentfile.provider.DocumentFile
-import androidx.documentfile.provider.TreeDocumentFileOt
 import com.vynce.app.db.entities.Song
+import com.vynce.app.utils.mediaId
 import com.vynce.app.utils.scanners.LocalMediaScanner.Companion.scanDfRecursive
 import com.vynce.app.utils.scanners.documentFileFromUri
 import java.io.IOException
@@ -99,7 +99,7 @@ class DownloadDirectoryManagerOt(private var context: Context, private var dir: 
     }
 
     fun isExists(mediaId: String): DocumentFile? {
-        return availableFiles.find { (it as TreeDocumentFileOt).id == mediaId }
+        return availableFiles.find { it.mediaId == mediaId }
     }
 
     fun getFilePathIfExists(mediaId: String): Uri? {
@@ -116,7 +116,7 @@ class DownloadDirectoryManagerOt(private var context: Context, private var dir: 
     fun getAvailableFiles() = getAvailableFiles(true)
 
     fun getAvailableFiles(useCache: Boolean = true): Map<String, Uri> {
-        val availableFiles = HashMap<String, Uri>()
+        val fileMap = HashMap<String, Uri>()
         val result = ArrayList<DocumentFile>()
         if (useCache) {
             result.addAll(this.availableFiles.toList())
@@ -127,13 +127,13 @@ class DownloadDirectoryManagerOt(private var context: Context, private var dir: 
         }
 
         for (file in result) {
-            val path = file.name ?: continue
-            availableFiles.put(path.substringAfterLast('[').substringBeforeLast(']'), file.uri)
+            val id = file.mediaId ?: continue
+            fileMap[id] = file.uri
         }
         if (!useCache) {
             this.availableFiles = result.toSet()
         }
-        return availableFiles
+        return fileMap
     }
 
     fun getMainDlStorageUsage(): Long {
@@ -145,10 +145,7 @@ class DownloadDirectoryManagerOt(private var context: Context, private var dir: 
     }
 
     fun getTotalDlStorageUsage(): Long {
-        if (allDirs.isEmpty()) return 0
-        val result = ArrayList<DocumentFile>()
-        availableFiles.sumOf { it.length() }
-
+        if (allDirs.isEmpty()) return 0L
         return availableFiles.sumOf { it.length() }
     }
 

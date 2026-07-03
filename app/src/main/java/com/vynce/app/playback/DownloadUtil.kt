@@ -46,6 +46,7 @@ import com.vynce.app.utils.get
 import com.vynce.app.utils.reportException
 import com.vynce.app.utils.scanners.InvalidAudioFileException
 import com.vynce.app.utils.scanners.fileFromUri
+import androidx.documentfile.provider.DocumentFile
 import com.vynce.app.utils.scanners.uriListFromString
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
@@ -136,14 +137,23 @@ class DownloadUtil @Inject constructor(
     fun getDownload(songId: String): Flow<LocalDateTime?> = downloads.map { it[songId] }
 
     fun download(songs: List<MediaMetadata>) {
+        database.transaction {
+            songs.forEach { insert(it) }
+        }
         songs.forEach { song -> downloadSong(song.id, song.title) }
     }
 
     fun download(song: MediaMetadata) {
+        database.transaction {
+            insert(song)
+        }
         downloadSong(song.id, song.title)
     }
 
     fun download(song: SongEntity) {
+        database.transaction {
+            insert(song)
+        }
         downloadSong(song.id, song.title)
     }
 
@@ -228,8 +238,18 @@ class DownloadUtil @Inject constructor(
             val mediaId = s.song.id
             if (s.song.localPath != null) return@forEach
             val bytes = getFromCache(downloadCache, mediaId) ?: return@forEach
-            localMgr.saveFile(mediaId, bytes)
-            database.updateDownloadStatus(mediaId, s.song.dateDownload)
+            val savedUri = localMgr.saveFile(mediaId, bytes)
+            if (savedUri != null) {
+                database.registerDownloadSong(
+                    mediaId,
+                    s.song.dateDownload ?: LocalDateTime.now(),
+                    savedUri.toString()
+                )
+            } else {
+                // File save failed, but still mark as downloaded so it stays in the
+                // internal cache (it will play from there).
+                database.updateDownloadStatus(mediaId, s.song.dateDownload)
+            }
         }
         isProcessingDownloads.value = false
         Log.i(TAG, "-migrateDownloads()")
@@ -255,7 +275,13 @@ class DownloadUtil @Inject constructor(
         // Only check for missing files among songs that were explicitly saved to the custom
         // download directory (i.e., have a non-null localPath). Streaming songs (saavn: prefixed
         // IDs with no localPath) are NOT stored on disk and must never be removed here.
-        val customDownloadCandidates = dbDownloads.filter { it.song.dateDownload != null && it.song.localPath != null }
+        // Also guard against uninitialized or inaccessible custom download folders: if localMgr.mainDir is null,
+        // we skip checking custom downloads for missing files to avoid wiping DB records on temporary authorization/storage delays.
+        val customDownloadCandidates = if (localMgr.mainDir != null) {
+            dbDownloads.filter { it.song.dateDownload != null && it.song.localPath != null }
+        } else {
+            emptyList()
+        }
         val missingFiles = localMgr.getMissingFiles(customDownloadCandidates).toMutableList()
         Log.d(TAG, "Found ${missingFiles.size}/${customDownloadCandidates.size} custom-download files missing from disk")
 
@@ -308,27 +334,43 @@ class DownloadUtil @Inject constructor(
         isProcessingDownloads.value = true
 
 //            val scanner = LocalMediaScanner.getScanner(context, ScannerImpl.TAGLIB, SCANNER_OWNER_DL)
-        database.removeAllDownloadedSongs()
         val timeNow = LocalDateTime.now()
 
         // add custom downloads
         val availableFiles = localMgr.getAvailableFiles(false)
-        val validExtensions = setOf("mp3", "flac", "ogg", "m4a", "aac", "wav", "opus", "wma", "alac")
+        val validExtensions = setOf("mp3", "flac", "ogg", "m4a", "aac", "wav", "opus", "wma", "alac", "mka")
         var validCount = 0
         var invalidCount = 0
         database.transaction {
             availableFiles.forEach { f ->
                 try {
-                    val file = fileFromUri(context, f.value)
-                    if (file == null) throw InvalidAudioFileException("Null file from URI ${f.value}")
-                    if (!file.exists()) throw InvalidAudioFileException("File does not exist: ${file.absolutePath}")
-                    if (file.length() == 0L) throw InvalidAudioFileException("File is empty: ${file.absolutePath}")
-                    val ext = file.extension.lowercase()
-                    if (ext !in validExtensions) throw InvalidAudioFileException("Unsupported format .$ext: ${file.absolutePath}")
-                    database.registerDownloadSong(f.key, timeNow, file.absolutePath)
+                    // Use DocumentFile API which works with SAF content:// URIs on all
+                    // Android versions, unlike fileFromUri() which fails on Android 11+.
+                    val docFile = DocumentFile.fromSingleUri(context, f.value)
+                    if (docFile == null || !docFile.exists()) {
+                        throw InvalidAudioFileException("File does not exist: ${f.value}")
+                    }
+                    if (docFile.length() == 0L) {
+                        throw InvalidAudioFileException("File is empty: ${f.value}")
+                    }
+                    val name = docFile.name ?: ""
+                    val ext = name.substringAfterLast('.', "").lowercase()
+                    if (ext !in validExtensions) {
+                        throw InvalidAudioFileException("Unsupported format .$ext: ${f.value}")
+                    }
+
+                    // Try to get a raw file path for backward compat; fall back to
+                    // the content:// URI string so playback still works via SAF.
+                    val localPath = fileFromUri(context, f.value)?.absolutePath
+                        ?: f.value.toString()
+                    database.registerDownloadSong(f.key, timeNow, localPath)
                     validCount++
                 } catch (e: InvalidAudioFileException) {
                     Log.w(TAG, "Skipping invalid download file: ${e.message}")
+                    invalidCount++
+                } catch (e: SecurityException) {
+                    // SAF permission may have been revoked — skip gracefully
+                    Log.w(TAG, "Permission denied for download file: ${f.value}")
                     invalidCount++
                 }
             }
@@ -368,7 +410,13 @@ class DownloadUtil @Inject constructor(
             downloadMgr.events.collect { event ->
                 when (event) {
                     is DownloadEvent.Success -> {
-                        database.updateDownloadStatus(event.mediaId, LocalDateTime.now())
+                        // Save both the download timestamp AND the file URI so the
+                        // song survives app restarts and rescan cycles.
+                        database.registerDownloadSong(
+                            event.mediaId,
+                            LocalDateTime.now(),
+                            event.file.toString()
+                        )
                         rescanDownloads()
                         clearDtCache()
                     }
@@ -388,7 +436,7 @@ class DownloadUtil @Inject constructor(
                         map.toMutableMap().apply {
                             val state = stateToLocalDateTime(download)
                             if (state == STATE_INVALID) {
-                                Log.w(TAG, "Invalid download state for ${download.request.id}. Removing download")
+                                Log.w(TAG, "Invalid download state (ExoState: ${download.state}) for ${download.request.id}. Removing download")
                                 remove(download.request.id)
                             } else {
                                 set(download.request.id, state)
@@ -405,12 +453,14 @@ class DownloadUtil @Inject constructor(
                                 rescanDownloads()
                                 clearDtCache()
                             }
-                            Download.STATE_QUEUED, Download.STATE_DOWNLOADING -> {
+                            Download.STATE_QUEUED, Download.STATE_DOWNLOADING, Download.STATE_STOPPED, Download.STATE_RESTARTING -> {
                                 database.updateDownloadStatus(download.request.id, STATE_DOWNLOADING)
                                 rescanDownloads()
                             }
                             Download.STATE_FAILED -> {
+                                Log.e(TAG, "Download failed for ${download.request.id}", finalException)
                                 database.updateDownloadStatus(download.request.id, STATE_INVALID)
+                                DownloadService.sendRemoveDownload(context, ExoDownloadService::class.java, download.request.id, false)
                                 rescanDownloads()
                             }
                             else -> {
@@ -431,7 +481,7 @@ fun stateToLocalDateTime(download: Download): LocalDateTime {
             Instant.ofEpochMilli(download.updateTimeMs).atZone(ZoneOffset.UTC).toLocalDateTime()
         }
 
-        Download.STATE_DOWNLOADING, Download.STATE_QUEUED -> DownloadUtil.STATE_DOWNLOADING
+        Download.STATE_DOWNLOADING, Download.STATE_QUEUED, Download.STATE_STOPPED, Download.STATE_RESTARTING -> DownloadUtil.STATE_DOWNLOADING
         else -> DownloadUtil.STATE_INVALID
     }
 }

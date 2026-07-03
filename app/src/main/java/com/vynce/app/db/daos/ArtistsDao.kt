@@ -181,8 +181,7 @@ interface ArtistsDao {
         """)
 
         return _getArtists(query).map { artists ->
-            artists
-                .filter { !it.artist.isLocal || it.artist.isLocal } // effectively all, keeping for now
+             artists
                 .reversed(descending)
         }
     }

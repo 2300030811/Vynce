@@ -49,6 +49,7 @@ import androidx.media3.datasource.cache.SimpleCache
 import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.offline.Download
 import androidx.media3.exoplayer.analytics.AnalyticsListener
 import androidx.media3.exoplayer.analytics.PlaybackStats
 import androidx.media3.exoplayer.analytics.PlaybackStatsListener
@@ -757,9 +758,32 @@ class MusicService : MediaLibraryService(),
         return ResolvingDataSource.Factory(createCacheDataSource()) { dataSpec ->
             try {
                 val uri = dataSpec.uri.toString()
+                val mediaId = dataSpec.key ?: uri
 
                 // JioSaavn songs: resolve saavn:ID to actual stream URL
                 if (uri.startsWith("saavn:")) {
+                    // If the song is already fully cached in the download cache,
+                    // skip the network resolver entirely for instant offline playback.
+                    val cachedSpans = downloadCache.getCachedSpans(mediaId)
+                    val isCompleted = try {
+                        val download = downloadUtil.downloadManager.downloadIndex.getDownload(mediaId)
+                        download != null && download.state == Download.STATE_COMPLETED
+                    } catch (e: Exception) {
+                        false
+                    }
+                    if (cachedSpans.isNotEmpty() && isCompleted) {
+                        Log.d(TAG, "Playing from download cache (offline): $mediaId")
+                        return@Factory dataSpec
+                    }
+
+                    // Check the custom SAF download directory — if the file was saved
+                    // there, play it directly without hitting the network.
+                    val localUri = downloadUtil.localMgr.getFilePathIfExists(mediaId)
+                    if (localUri != null) {
+                        Log.d(TAG, "Playing from custom download dir (offline): $mediaId")
+                        return@Factory dataSpec.withUri(localUri)
+                    }
+
                     val saavnId = uri.removePrefix("saavn:")
                     val streamUrl = saavnStreamResolver.resolve(saavnId)
                         ?: throw java.io.IOException("Failed to resolve Saavn stream URL for $saavnId")

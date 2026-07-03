@@ -30,9 +30,19 @@ fun SaavnSong.toMediaItem() = MediaItem.Builder()
     )
     .build()
 
+/**
+ * Converts a localPath to a proper URI string.
+ * If the path already has a URI scheme (content://, file://, android.resource://),
+ * use it directly. Otherwise, prepend file:// to treat it as a raw filesystem path.
+ */
+private fun localPathToUri(path: String): String {
+    return if (path.contains("://")) path
+    else "file://$path"
+}
+
 fun Song.toMediaItem() = MediaItem.Builder()
     .setMediaId(song.id)
-    .setUri(song.localPath?.let { "file://$it" } ?: song.id)
+    .setUri(song.localPath?.let { localPathToUri(it) } ?: song.id)
     .setCustomCacheKey(song.id)
     .setTag(toMediaMetadata())
     .setMediaMetadata(
@@ -50,7 +60,7 @@ fun Song.toMediaItem() = MediaItem.Builder()
 
 fun MediaMetadata.toMediaItem() = MediaItem.Builder()
     .setMediaId(id)
-    .setUri(localPath?.let { "file://$it" } ?: id)
+    .setUri(localPath?.let { localPathToUri(it) } ?: id)
     .setCustomCacheKey(id)
     .setTag(this)
     .setMediaMetadata(

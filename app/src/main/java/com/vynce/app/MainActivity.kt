@@ -175,6 +175,8 @@ import com.vynce.app.ui.utils.appBarScrollBehavior
 import com.vynce.app.utils.ActivityLauncherHelper
 import com.vynce.app.utils.NetworkConnectivityObserver
 import com.vynce.app.ui.dialog.ActionPromptDialog
+import com.vynce.app.ui.dialog.UpdateDialog
+import com.vynce.app.utils.AppUpdateChecker
 import com.vynce.app.ui.screens.saavn.AlbumScreen
 import com.vynce.app.ui.screens.saavn.ArtistScreen
 import com.vynce.app.ui.screens.saavn.PlaylistScreen
@@ -258,6 +260,7 @@ class MainActivity : ComponentActivity() {
             nm.cancel(MusicService.NOTIFICATION_ID)
         }
         lifecycle.removeObserver(controllerViewModel)
+        playerConnection?.dispose()
         playerConnection = null
 
         super.onDestroy()
@@ -323,6 +326,12 @@ class MainActivity : ComponentActivity() {
 
 
 
+            // In-app update check
+            var updateInfo by remember {
+                mutableStateOf<AppUpdateChecker.UpdateInfo?>(null)
+            }
+            var showUpdateDialog by remember { mutableStateOf(false) }
+
             LaunchedEffect(Unit) {
                 // local media & download folders auto scan
                 // Use SupervisorJob so scanner crashes don't kill the Compose scope
@@ -332,6 +341,27 @@ class MainActivity : ComponentActivity() {
                         snackbarHostState
                     )
                 }
+
+                // Check for app updates from GitHub
+                coroutineScope.launch {
+                    try {
+                        val info = AppUpdateChecker.checkForUpdate()
+                        if (info.isUpdateAvailable) {
+                            updateInfo = info
+                            showUpdateDialog = true
+                        }
+                    } catch (e: Exception) {
+                        Log.w("MainActivity", "Update check failed", e)
+                    }
+                }
+            }
+
+            // Show update dialog
+            if (showUpdateDialog && updateInfo != null) {
+                UpdateDialog(
+                    updateInfo = updateInfo!!,
+                    onDismiss = { showUpdateDialog = false }
+                )
             }
 
 

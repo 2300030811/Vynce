@@ -1,6 +1,6 @@
 package com.vynce.app.models
 
-import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.Stable
 import com.vynce.app.extensions.decodeHtml
 import com.vynce.app.db.entities.Song
 import com.vynce.app.db.entities.SongEntity
@@ -9,7 +9,7 @@ import java.io.Serializable
 import java.time.LocalDateTime
 import java.time.ZoneOffset
 
-@Immutable
+@Stable
 data class MediaMetadata(
     val id: String,
     val title: String,

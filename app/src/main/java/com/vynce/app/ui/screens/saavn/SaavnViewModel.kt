@@ -1,5 +1,6 @@
 package com.vynce.app.ui.screens.saavn
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.zionhuang.jiosaavn.JioSaavn
@@ -33,13 +34,13 @@ class SaavnViewModel @Inject constructor(
             _isLoading.value = true
             try {
                 val results = searchRepository.searchSongs(query)
-                android.util.Log.d("SaavnVM", "Search results: ${results.size} for '$query'")
+                Log.d(TAG, "Search results: ${results.size} for '$query'")
                 if (results.isEmpty()) {
-                    android.util.Log.w("SaavnVM", "No results — API may be down")
+                    Log.w(TAG, "No results — API may be down")
                 }
                 _searchResults.value = results
             } catch (e: Exception) {
-                android.util.Log.e("SaavnVM", "Search failed: ${e.message}")
+                Log.e(TAG, "Search failed: ${e.message}")
             }
             _isLoading.value = false
         }
@@ -50,8 +51,12 @@ class SaavnViewModel @Inject constructor(
             try {
                 _charts.value = JioSaavn.getCharts()
             } catch (e: Exception) {
-                android.util.Log.w("SaavnVM", "Failed to load charts: ${e.message}")
+                Log.w(TAG, "Failed to load charts: ${e.message}")
             }
         }
     }
-}
+
+    companion object {
+        private val TAG = SaavnViewModel::class.simpleName.toString()
+    }
+}

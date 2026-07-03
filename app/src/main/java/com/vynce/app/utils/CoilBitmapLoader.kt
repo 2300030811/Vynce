@@ -99,6 +99,8 @@ class CoilBitmapLoader @Inject constructor(
                     BitmapFactory.decodeByteArray(art, 0, art!!.size)
                 } catch (e: Exception) {
                     drawPlaceholder(context)
+                } finally {
+                    mData.release()
                 } ?: drawPlaceholder(context)
 
                 if (data.x + data.y > 0) {

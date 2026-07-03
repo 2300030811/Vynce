@@ -218,7 +218,7 @@ interface DatabaseDao : SongsDao, AlbumsDao, ArtistsDao, PlaylistsDao, QueueDao 
 
         mediaMetadata.album?.let {
             val album = albumsByName(it.title)
-            val albumId = album?.id ?: GenreEntity.generateGenreId()
+            val albumId = album?.id ?: AlbumEntity.generateAlbumId()
             upsert(
                 AlbumEntity(
                     id = albumId,

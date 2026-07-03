@@ -162,11 +162,16 @@ class MediaControllerViewModel(application: Application) : AndroidViewModel(appl
 
     fun getService(): MusicService? {
         val mediaBrowser = get() ?: return null
-        mediaBrowser.sendCustomCommand(
-            SessionCommand(MusicService.COMMAND_GET_BINDER, Bundle.EMPTY),
-            Bundle.EMPTY
-        ).get().extras.run {
-            return (getBinder("music_binder") as MusicService.MusicBinder).service
+        return try {
+            mediaBrowser.sendCustomCommand(
+                SessionCommand(MusicService.COMMAND_GET_BINDER, Bundle.EMPTY),
+                Bundle.EMPTY
+            ).get().extras.run {
+                (getBinder("music_binder") as? MusicService.MusicBinder)?.service
+            }
+        } catch (e: Exception) {
+            Log.w("MediaControllerViewModel", "Failed to get MusicService binder", e)
+            null
         }
     }
 
