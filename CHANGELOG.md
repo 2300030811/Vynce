@@ -1,5 +1,9 @@
 # Vynce Changelog
 
+## v2.1.0
+- Added in-app auto-update system powered by GitHub Releases
+- Added "Update Available" popup dialog showing release notes and download progress bar
+- Cleaned up Gradle build artifacts and prepared for release
 
 ## v1.1.1
 - Fixed compilation errors in `MainActivity` and `LocalMediaSettings`
