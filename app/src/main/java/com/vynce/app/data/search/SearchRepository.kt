@@ -101,12 +101,7 @@ class SearchRepository @Inject constructor(
         }.sortedByDescending { it.second }
         val rankedPlaylists = rankedPlaylistsWithScores.map { it.first }
 
-        rankedArtistsWithScores.take(10).forEachIndexed { index, (artist, score) ->
-            android.util.Log.d(
-                "SearchRank",
-                "Artist[$index] name=${artist.name} score=$score image=${artist.image}"
-            )
-        }
+
 
         val songCandidates = rankedSongsWithScores.take(5)
         val artistCandidates = rankedArtistsWithScores.take(5)
@@ -164,14 +159,7 @@ class SearchRepository @Inject constructor(
             else -> null
         }
 
-        android.util.Log.d(
-            "TOP_RESULT_DEBUG",
-            "winner=${winner?.name} type=${winner?.topResult}"
-        )
-        android.util.Log.d(
-            "TOP_RESULT_DEBUG",
-            "topResult=$topResult"
-        )
+
 
         UnifiedSearchResult(
             query = q,
@@ -183,18 +171,9 @@ class SearchRepository @Inject constructor(
         )
     }
 
-    private fun normalizeSearchText(value: String): String {
-        return value
-            .lowercase()
-            .replace(".", "")
-            .replace("-", " ")
-            .replace(Regex("\\s+"), " ")
-            .trim()
-    }
-
     private fun computeMatchLevel(rawName: String, rawQuery: String): MatchLevel {
-        val normalizedName = normalizeSearchText(rawName)
-        val normalizedQuery = normalizeSearchText(rawQuery)
+        val normalizedName = SearchRanker.normalizeText(rawName)
+        val normalizedQuery = SearchRanker.normalizeText(rawQuery)
         val words = normalizedName.split(Regex("\\s+"))
         return when {
             normalizedName == normalizedQuery -> MatchLevel.EXACT_MATCH

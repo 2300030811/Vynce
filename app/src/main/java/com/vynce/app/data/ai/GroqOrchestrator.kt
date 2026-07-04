@@ -35,15 +35,14 @@ class GroqOrchestrator(
     companion object {
         private const val TAG = "GroqOrchestrator"
         private const val BASE_URL = "https://api.groq.com/openai/v1/chat/completions"
-        const val DEFAULT_MODEL = "llama-3.3-70b-versatile"
-        const val FAST_MODEL = "llama-3.1-8b-instant"
+        const val DEFAULT_MODEL = "openai/gpt-oss-120b"
+        const val FAST_MODEL = "openai/gpt-oss-20b"
         private const val REQUEST_TIMEOUT_MS = 60_000L
 
         val AVAILABLE_MODELS = listOf(
-            "llama-3.3-70b-versatile" to "Llama 3.3 70B (Best quality)",
-            "llama-3.1-8b-instant" to "Llama 3.1 8B (Fastest)",
-            "mixtral-8x7b-32768" to "Mixtral 8x7B (Good balance)",
-            "gemma2-9b-it" to "Gemma 2 9B (Compact)",
+            "openai/gpt-oss-120b" to "GPT-OSS 120B (Best quality)",
+            "qwen/qwen3.6-27b" to "Qwen 3.6 27B (Good balance)",
+            "openai/gpt-oss-20b" to "GPT-OSS 20B (Fastest)",
         )
     }
 

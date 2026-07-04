@@ -80,7 +80,7 @@ object SearchRanker {
         return score
     }
 
-    private fun normalizeArtistName(value: String): String {
+    internal fun normalizeText(value: String): String {
         return value
             .lowercase()
             .replace(".", "")
@@ -90,8 +90,8 @@ object SearchRanker {
     }
 
     fun computeArtistScore(artist: SaavnArtist, query: String, originalIndex: Int): Int {
-        val normalizedName = normalizeArtistName(artist.name)
-        val normalizedQuery = normalizeArtistName(query)
+        val normalizedName = normalizeText(artist.name)
+        val normalizedQuery = normalizeText(query)
         var score = computeBaseMatchScore(normalizedName, normalizedQuery)
 
         // Popularity boost based on followers (usually 0 from search API)

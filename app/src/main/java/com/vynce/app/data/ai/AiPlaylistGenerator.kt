@@ -12,6 +12,8 @@ package com.vynce.app.data.ai
 import android.util.Log
 import com.vynce.app.db.MusicDatabase
 import com.vynce.app.db.entities.Song
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
 
 /**
@@ -118,6 +120,15 @@ Do NOT include any text, explanation, or markdown — ONLY the JSON array.
         return combined.take(MAX_CANDIDATES)
     }
 
+    @Serializable
+    private data class CompactSong(
+        val id: String,
+        val t: String,
+        val a: String,
+        val al: String? = null,
+        val g: String? = null,
+    )
+
     /**
      * Generate a playlist from the user's prompt.
      *
@@ -141,21 +152,20 @@ Do NOT include any text, explanation, or markdown — ONLY the JSON array.
         val candidates = filterRelevantSongs(prompt, allSongs)
 
         // Build compact JSON — only essential fields to minimize tokens
-        val songsJson = buildString {
-            append("[")
-            candidates.forEachIndexed { index, song ->
-                val title = song.song.title.replace("\"", "'").take(50)
-                val artist = song.artists.firstOrNull()?.name?.replace("\"", "'")?.take(30) ?: "Unknown"
-                val album = song.album?.title?.replace("\"", "'")?.take(30) ?: ""
-                val genre = song.genre?.firstOrNull()?.title?.replace("\"", "'")?.take(20) ?: ""
-                if (index > 0) append(",")
-                append("""{"id":"${song.song.id}","t":"$title","a":"$artist"""")
-                if (album.isNotBlank()) append(""","al":"$album"""")
-                if (genre.isNotBlank()) append(""","g":"$genre"""")
-                append("}")
-            }
-            append("]")
+        val compactSongs = candidates.map { song ->
+            val title = song.song.title.take(50)
+            val artist = song.artists.firstOrNull()?.name?.take(30) ?: "Unknown"
+            val album = song.album?.title?.take(30)?.ifBlank { null }
+            val genre = song.genre?.firstOrNull()?.title?.take(20)?.ifBlank { null }
+            CompactSong(
+                id = song.song.id,
+                t = title,
+                a = artist,
+                al = album,
+                g = genre,
+            )
         }
+        val songsJson = json.encodeToString(ListSerializer(CompactSong.serializer()), compactSongs)
 
         val userPrompt = """
 <request>

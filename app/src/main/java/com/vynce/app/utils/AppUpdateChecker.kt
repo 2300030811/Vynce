@@ -154,6 +154,13 @@ object AppUpdateChecker {
                 }
             }
 
+            // Verify the download completed fully
+            if (contentLength > 0 && apkFile.length() != contentLength) {
+                Log.e(TAG, "Download incomplete: expected $contentLength bytes, got ${apkFile.length()}")
+                apkFile.delete()
+                return@withContext null
+            }
+
             Log.i(TAG, "APK downloaded: ${apkFile.absolutePath} (${apkFile.length()} bytes)")
             apkFile
         } catch (e: Exception) {

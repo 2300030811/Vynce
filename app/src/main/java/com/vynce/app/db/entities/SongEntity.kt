@@ -26,7 +26,7 @@ import java.time.ZoneOffset
 data class SongEntity(
     @PrimaryKey val id: String,
     val title: String,
-    val duration: Int = -1, // in seconds TODO: in milliseconds
+    val duration: Int = -1, // duration in seconds (-1 = unknown)
     val thumbnailUrl: String? = null,
     val inLibrary: LocalDateTime? = null, // doubles as "date added"
     @ColumnInfo(name = "isLocal", defaultValue = false.toString())
