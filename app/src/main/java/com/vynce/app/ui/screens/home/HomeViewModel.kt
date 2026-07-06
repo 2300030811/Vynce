@@ -30,6 +30,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import java.util.Locale
 import javax.inject.Inject
@@ -81,6 +82,7 @@ class HomeViewModel @Inject constructor(
     val state = _state.asStateFlow()
 
     private var saavnSections: List<HomeSection> = emptyList()
+    private var loadJob: Job? = null
 
     init {
         // Load and update Playback Stats automatically
@@ -201,8 +203,8 @@ class HomeViewModel @Inject constructor(
         val lang = _state.value.selectedLanguage
         
         _state.update { it.copy(isLoading = true, error = null) }
-        
-        viewModelScope.launch {
+        loadJob?.cancel()
+        loadJob = viewModelScope.launch {
             try {
                 val saavnModules = JioSaavn.getHome(lang.lowercase())
                 saavnSections = saavnModules.mapNotNull { module ->

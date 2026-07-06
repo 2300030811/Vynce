@@ -49,7 +49,7 @@ class SaavnViewModel @Inject constructor(
     private fun loadCharts() {
         viewModelScope.launch {
             try {
-                _charts.value = JioSaavn.getCharts()
+                _charts.value = JioSaavn.getFeaturedSongs()
             } catch (e: Exception) {
                 Log.w(TAG, "Failed to load charts: ${e.message}")
             }

@@ -72,7 +72,7 @@ class AiPlaylistViewModel @Inject constructor(
 
         generationJob = viewModelScope.launch {
             var apiKey = context.dataStore.get(AiApiKeyKey, "")
-            if (apiKey.isBlank()) {
+            if (apiKey.isBlank() && com.vynce.app.BuildConfig.DEBUG) {
                 apiKey = com.vynce.app.BuildConfig.GROQ_API_KEY
             }
             val model = context.dataStore.get(AiModelKey, GroqOrchestrator.DEFAULT_MODEL)

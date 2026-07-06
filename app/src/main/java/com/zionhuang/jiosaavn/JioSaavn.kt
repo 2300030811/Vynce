@@ -85,8 +85,7 @@ data class SaavnHomeAlbumModule(override val title: String, override val subtitl
 object JioSaavn {
 
     private val json = Json { ignoreUnknownKeys = true; isLenient = true }
-    
-    // ... existing BASES and getJson ...
+
 
     private fun String.decodeHtml(): String {
         return if (Build.VERSION.SDK_INT >= 24) {
@@ -95,6 +94,26 @@ object JioSaavn {
             @Suppress("DEPRECATION")
             Html.fromHtml(this).toString()
         }
+    }
+
+    /**
+     * Extracts the highest-quality image URL from a JioSaavn JSON image field.
+     * Handles both array-of-objects format (from wrapper APIs) and plain string format
+     * (from direct JioSaavn API), always enforcing HTTPS.
+     */
+    private fun JsonElement?.extractImageUrl(): String {
+        if (this == null) return ""
+        // Wrapper API format: [{"quality":"...","url":"..."}]
+        val fromArray = try {
+            this.jsonArray.lastOrNull()?.jsonObject
+                ?.let { it["url"] ?: it["link"] }
+                ?.jsonPrimitive?.content
+        } catch (_: Exception) { null }
+        // Direct API format: plain string
+        val fromPrimitive = if (fromArray == null) {
+            try { this.jsonPrimitive.content } catch (_: Exception) { null }
+        } else null
+        return (fromArray ?: fromPrimitive ?: "").replace("http://", "https://")
     }
 
     suspend fun getHome(languages: String = "hindi,english"): List<SaavnHomeModule> {
@@ -169,8 +188,7 @@ object JioSaavn {
                         name = (a["name"]?.jsonPrimitive?.content ?: "").decodeHtml(),
                         artists = (a["artists"]?.jsonObject?.get("primary")?.jsonArray
                             ?.joinToString(", ") { it.jsonObject["name"]?.jsonPrimitive?.content ?: "" } ?: "").decodeHtml(),
-                        image = a["image"]?.jsonArray?.lastOrNull()?.jsonObject?.get("url")?.jsonPrimitive?.content
-                            ?.replace("http://","https://") ?: "",
+                        image = a["image"].extractImageUrl(),
                         songCount = a["songCount"]?.jsonPrimitive?.content ?: "0",
                         year = a["year"]?.jsonPrimitive?.content ?: ""
                     )
@@ -189,8 +207,7 @@ object JioSaavn {
                     SaavnArtist(
                         id = a["id"]?.jsonPrimitive?.content ?: "",
                         name = (a["name"]?.jsonPrimitive?.content ?: "").decodeHtml(),
-                        image = a["image"]?.jsonArray?.lastOrNull()?.jsonObject?.get("url")?.jsonPrimitive?.content
-                            ?.replace("http://","https://") ?: "",
+                        image = a["image"].extractImageUrl(),
                         followerCount = a["followerCount"]?.jsonPrimitive?.content ?: "0"
                     )
                 } catch (e: Exception) { null }
@@ -208,8 +225,7 @@ object JioSaavn {
                     SaavnPlaylist(
                         id = p["id"]?.jsonPrimitive?.content ?: "",
                         name = (p["name"]?.jsonPrimitive?.content ?: "").decodeHtml(),
-                        image = p["image"]?.jsonArray?.lastOrNull()?.jsonObject?.get("url")?.jsonPrimitive?.content
-                            ?.replace("http://","https://") ?: "",
+                        image = p["image"].extractImageUrl(),
                         songCount = p["songCount"]?.jsonPrimitive?.content ?: "0",
                         followerCount = p["followerCount"]?.jsonPrimitive?.content ?: "0"
                     )
@@ -235,7 +251,7 @@ object JioSaavn {
     }
 
     private val client = HttpClient(OkHttp) {
-        install(HttpTimeout) { requestTimeoutMillis = 15_000 }
+        install(HttpTimeout) { requestTimeoutMillis = 6_000 }
     }
 
     private val BASES = listOf(
@@ -243,12 +259,17 @@ object JioSaavn {
         "https://jiosaavn-api-pink.vercel.app"
     )
 
+    /** Remembers the last base URL that responded successfully, so subsequent calls try it first. */
+    private var lastGoodBase: String = BASES.first()
+
     private suspend fun getJson(path: String, params: Map<String, String> = emptyMap()): JsonObject? {
-        for (base in BASES) {
+        val ordered = (listOf(lastGoodBase) + BASES).distinct()
+        for (base in ordered) {
             try {
                 val response: HttpResponse = client.get("$base$path") {
                     params.forEach { (k, v) -> parameter(k, v) }
                 }
+                lastGoodBase = base
                 val text = response.bodyAsText()
                 return json.parseToJsonElement(text).jsonObject
             } catch (e: Exception) {
@@ -260,9 +281,6 @@ object JioSaavn {
     }
 
     private fun parseSong(song: JsonObject): SaavnSong {
-        val finalDownloadUrl = song["downloadUrl"]?.jsonArray?.lastOrNull()?.jsonObject?.get("url")?.jsonPrimitive?.content
-            ?: song["downloadUrl"]?.jsonArray?.lastOrNull()?.jsonObject?.get("link")?.jsonPrimitive?.content
-            ?: ""
         return SaavnSong(
             id = song["id"]?.jsonPrimitive?.content ?: "",
             name = (song["name"]?.jsonPrimitive?.content ?: "").decodeHtml(),
@@ -272,10 +290,8 @@ object JioSaavn {
                 ?: "").decodeHtml(),
             album = (song["album"]?.jsonObject?.get("name")?.jsonPrimitive?.content
                 ?: song["album"]?.jsonPrimitive?.content ?: "").decodeHtml(),
-            image = (song["image"]?.jsonArray?.lastOrNull()?.jsonObject?.get("url")?.jsonPrimitive?.content
-                ?: song["image"]?.jsonArray?.lastOrNull()?.jsonObject?.get("link")?.jsonPrimitive?.content
-                ?: song["image"]?.jsonPrimitive?.content ?: "").replace("http://", "https://"),
-            downloadUrl = finalDownloadUrl,
+            image = song["image"].extractImageUrl(),
+            downloadUrl = song["downloadUrl"].extractImageUrl(), // same JSON shape as image URLs
             duration = song["duration"]?.jsonPrimitive?.content ?: "0",
             year = song["year"]?.jsonPrimitive?.content ?: "",
             language = song["language"]?.jsonPrimitive?.content ?: ""
@@ -316,9 +332,13 @@ object JioSaavn {
         }
     }
 
-    suspend fun getCharts(): List<SaavnSong> {
-        // Use search with trending queries since /api/charts isn't supported on some endpoints
-        return searchSongs("arijit singh hits 2024")
+    /**
+     * Returns a curated set of popular songs. This is NOT a real-time charts endpoint —
+     * it uses a hardcoded search query as a proxy because the wrapper APIs don't expose
+     * JioSaavn's actual trending/charts data.
+     */
+    suspend fun getFeaturedSongs(): List<SaavnSong> {
+        return searchSongs("trending hits 2025")
     }
 
     fun SaavnSong.streamUrl(): String? = downloadUrl.takeIf { it.startsWith("https://") }
@@ -334,8 +354,7 @@ object JioSaavn {
             val info = SaavnPlaylistInfo(
                 id = data["id"]?.jsonPrimitive?.content ?: "",
                 name = (data["name"]?.jsonPrimitive?.content ?: "").decodeHtml(),
-                image = data["image"]?.jsonArray?.lastOrNull()?.jsonObject?.get("url")
-                    ?.jsonPrimitive?.content?.replace("http://","https://") ?: "",
+                image = data["image"].extractImageUrl(),
                 songCount = data["songCount"]?.jsonPrimitive?.content ?: "0",
                 followerCount = data["followerCount"]?.jsonPrimitive?.content ?: "0"
             )
@@ -356,8 +375,7 @@ object JioSaavn {
             val info = SaavnAlbumInfo(
                 id = data["id"]?.jsonPrimitive?.content ?: "",
                 name = (data["name"]?.jsonPrimitive?.content ?: "").decodeHtml(),
-                image = data["image"]?.jsonArray?.lastOrNull()?.jsonObject?.get("url")
-                    ?.jsonPrimitive?.content?.replace("http://","https://") ?: "",
+                image = data["image"].extractImageUrl(),
                 songCount = data["songCount"]?.jsonPrimitive?.content ?: "0",
                 year = data["year"]?.jsonPrimitive?.content ?: "",
                 artists = (data["artists"]?.jsonObject?.get("primary")?.jsonArray
@@ -381,8 +399,7 @@ object JioSaavn {
             SaavnArtistInfo(
                 id = id,
                 name = data?.get("name")?.jsonPrimitive?.content ?: "",
-                image = data?.get("image")?.jsonArray?.lastOrNull()?.jsonObject?.get("url")
-                    ?.jsonPrimitive?.content?.replace("http://","https://") ?: "",
+                image = data?.get("image").extractImageUrl(),
                 bio = data?.get("bio")?.jsonArray?.firstOrNull()?.jsonObject?.get("text")
                     ?.jsonPrimitive?.content ?: "",
                 followerCount = data?.get("followerCount")?.jsonPrimitive?.content ?: "0"
@@ -400,8 +417,7 @@ object JioSaavn {
                 SaavnAlbumInfo(
                     id = a["id"]?.jsonPrimitive?.content ?: "",
                     name = a["name"]?.jsonPrimitive?.content ?: "",
-                    image = a["image"]?.jsonArray?.lastOrNull()?.jsonObject?.get("url")
-                        ?.jsonPrimitive?.content?.replace("http://","https://") ?: "",
+                    image = a["image"].extractImageUrl(),
                     year = a["year"]?.jsonPrimitive?.content ?: "",
                     songCount = a["songCount"]?.jsonPrimitive?.content ?: "0"
                 )
