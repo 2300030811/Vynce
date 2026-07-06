@@ -1,5 +1,8 @@
 # Vynce Changelog
 
+## v2.1.1
+- Release for testing the app auto-update feature
+
 ## v2.1.0
 - Added in-app auto-update system powered by GitHub Releases
 - Added "Update Available" popup dialog showing release notes and download progress bar
