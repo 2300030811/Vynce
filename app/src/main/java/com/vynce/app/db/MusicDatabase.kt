@@ -80,7 +80,7 @@ class MusicDatabase(
     fun close() = delegate.close()
 
     companion object {
-        const val MUSIC_DATABASE_VERSION = 22
+        const val MUSIC_DATABASE_VERSION = 23
     }
 }
 
@@ -148,6 +148,8 @@ abstract class InternalDatabase : RoomDatabase() {
                     .addMigrations(MIGRATION_14_15)
                     .addMigrations(MIGRATION_15_16)
                     .addMigrations(MIGRATION_16_17)
+                    .addMigrations(MIGRATION_22_23)
+                    .fallbackToDestructiveMigrationOnDowngrade()
                     .build()
             )
 
@@ -159,8 +161,17 @@ abstract class InternalDatabase : RoomDatabase() {
                     .addMigrations(MIGRATION_14_15)
                     .addMigrations(MIGRATION_15_16)
                     .addMigrations(MIGRATION_16_17)
+                    .addMigrations(MIGRATION_22_23)
+                    .fallbackToDestructiveMigrationOnDowngrade()
                     .build()
             )
+    }
+}
+
+val MIGRATION_22_23 = object : Migration(22, 23) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_song_inLibrary` ON `song` (`inLibrary`)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_song_dateDownload` ON `song` (`dateDownload`)")
     }
 }
 
