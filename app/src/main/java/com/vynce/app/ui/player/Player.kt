@@ -89,6 +89,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -283,7 +284,7 @@ fun PortraitPlayer(
             val canSkipPrevious by playerConnection.canSkipPrevious.collectAsState()
             val canSkipNext by playerConnection.canSkipNext.collectAsState()
 
-            val swipeToSkip by rememberPreference(SwipeToSkipKey, defaultValue = false)
+            val swipeToSkip by rememberPreference(SwipeToSkipKey, defaultValue = true)
             val previousMediaMetadata = if (swipeToSkip && playerConnection.player.hasPreviousMediaItem()) {
                 val previousIndex = playerConnection.player.previousMediaItemIndex
                 playerConnection.player.getMediaItemAt(previousIndex).vynceMetadata
@@ -319,12 +320,14 @@ fun PortraitPlayer(
                     pageCount = { mediaItems.size }
                 )
 
-                LaunchedEffect(pagerState.currentPage, pagerState.isScrollInProgress) {
-                    if (!pagerState.isScrollInProgress && pagerState.currentPage != currentMediaIndex) {
-                        if (pagerState.currentPage > currentMediaIndex) {
-                            playerConnection.player.seekToNext()
-                        } else if (pagerState.currentPage < currentMediaIndex) {
-                            playerConnection.player.seekToPreviousMediaItem()
+                LaunchedEffect(pagerState) {
+                    snapshotFlow { pagerState.settledPage }.collect { page ->
+                        if (page != currentMediaIndex && page in mediaItems.indices) {
+                            if (page > currentMediaIndex && canSkipNext) {
+                                playerConnection.player.seekToNext()
+                            } else if (page < currentMediaIndex && canSkipPrevious) {
+                                playerConnection.player.seekToPrevious()
+                            }
                         }
                     }
                 }

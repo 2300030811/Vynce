@@ -332,29 +332,29 @@ interface SongsDao {
 
     // region Downloaded Songs Sort
     @Transaction
-    @Query("SELECT * FROM song WHERE (isLocal = 0 AND dateDownload IS NOT NULL) OR (isLocal = 1 AND inLibrary IS NOT NULL) ORDER BY COALESCE(dateDownload, inLibrary)")
+    @Query("SELECT * FROM song WHERE dateDownload IS NOT NULL ORDER BY dateDownload DESC")
     fun downloadNoLocalSongs(): Flow<List<Song>>
 
     @Transaction
-    @Query("SELECT * FROM song WHERE (isLocal = 0 AND dateDownload IS NOT NULL) OR (isLocal = 1 AND inLibrary IS NOT NULL) ORDER BY inLibrary")
+    @Query("SELECT * FROM song WHERE dateDownload IS NOT NULL ORDER BY dateDownload DESC")
     fun downloadSongsByCreateDateAsc(): Flow<List<Song>>
 
     @Transaction
-    @Query("SELECT * FROM song WHERE (isLocal = 0 AND dateDownload IS NOT NULL) OR (isLocal = 1 AND inLibrary IS NOT NULL) ORDER BY date")
+    @Query("SELECT * FROM song WHERE dateDownload IS NOT NULL ORDER BY date DESC")
     fun downloadSongsByReleaseDateAsc(): Flow<List<Song>>
 
     @Transaction
-    @Query("SELECT * FROM song WHERE (isLocal = 0 AND dateDownload IS NOT NULL) OR (isLocal = 1 AND inLibrary IS NOT NULL) ORDER BY dateModified")
+    @Query("SELECT * FROM song WHERE dateDownload IS NOT NULL ORDER BY dateModified DESC")
     fun downloadSongsByDateModifiedAsc(): Flow<List<Song>>
 
     @Transaction
-    @Query("SELECT * FROM song WHERE ((isLocal = 0 AND dateDownload IS NOT NULL) OR (isLocal = 1 AND inLibrary IS NOT NULL)) ORDER BY title COLLATE NOCASE ASC")
+    @Query("SELECT * FROM song WHERE dateDownload IS NOT NULL ORDER BY title COLLATE NOCASE ASC")
     fun downloadSongsByNameAsc(): Flow<List<Song>>
 
     @Transaction
     @Query("""
         SELECT * FROM song
-        WHERE (isLocal = 0 AND dateDownload IS NOT NULL) OR (isLocal = 1 AND inLibrary IS NOT NULL)
+        WHERE dateDownload IS NOT NULL
         ORDER BY artistsString COLLATE NOCASE ASC
     """)
     fun downloadSongsByArtistAsc(): Flow<List<Song>>
@@ -366,7 +366,7 @@ interface SongsDao {
             FROM playCount 
             WHERE playCount.song = song.id) AS pc 
         FROM song 
-        WHERE (isLocal = 0 AND dateDownload IS NOT NULL) OR (isLocal = 1 AND inLibrary IS NOT NULL)
+        WHERE dateDownload IS NOT NULL
         ORDER BY pc ASC
     """)
     fun downloadSongsByPlayCountAsc(): Flow<List<Song>>
@@ -471,5 +471,56 @@ interface SongsDao {
     @Transaction
     @Query("DELETE FROM song WHERE isLocal = 1")
     fun nukeLocalSongs()
+    // endregion
+
+    // region Smart Queue Queries
+    /**
+     * Finds tracks played co-concurrently with the specified track in listening history sessions.
+     */
+    @Transaction
+    @Query("""
+        SELECT song.*
+        FROM event e1
+        JOIN event e2 ON ABS(strftime('%s', e1.timestamp) - strftime('%s', e2.timestamp)) <= 1800
+                     AND e1.songId = :songId
+                     AND e2.songId != :songId
+        JOIN song ON song.id = e2.songId
+        GROUP BY song.id
+        ORDER BY COUNT(e2.songId) DESC
+        LIMIT :limit
+    """)
+    fun coOccurrenceSongs(songId: String, limit: Int = 30): Flow<List<Song>>
+
+    /**
+     * Finds tracks played on the current month and day in previous calendar years.
+     */
+    @Transaction
+    @Query("""
+        SELECT song.*
+        FROM event
+        JOIN song ON song.id = event.songId
+        WHERE strftime('%m-%d', timestamp) = strftime('%m-%d', 'now')
+          AND strftime('%Y', timestamp) < strftime('%Y', 'now')
+        GROUP BY song.id
+        ORDER BY COUNT(event.songId) DESC
+        LIMIT :limit
+    """)
+    fun lostMemoriesSongs(limit: Int = 30): Flow<List<Song>>
+
+    /**
+     * Finds songs from albums released within +/- 2 years of the target release year.
+     */
+    @Transaction
+    @Query("""
+        SELECT song.*
+        FROM song
+        JOIN song_album_map ON song.id = song_album_map.songId
+        JOIN album ON album.id = song_album_map.albumId
+        WHERE album.year BETWEEN :year - 2 AND :year + 2
+          AND song.id != :songId
+        GROUP BY song.id
+        LIMIT :limit
+    """)
+    fun eraSongs(year: Int, songId: String, limit: Int = 30): Flow<List<Song>>
     // endregion
 }

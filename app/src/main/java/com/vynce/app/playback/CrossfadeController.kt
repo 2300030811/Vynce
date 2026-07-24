@@ -132,6 +132,42 @@ class CrossfadeController(
         originalVolume = volume
     }
 
+    /**
+     * Smoothly fade out volume and perform action (e.g. pause).
+     * ponytail: Lightweight volume ramp without extra audio nodes.
+     */
+    fun fadePause(durationMs: Long = 250L, onComplete: () -> Unit) {
+        val p = player ?: run { onComplete(); return }
+        scope.launch(Dispatchers.Main) {
+            val steps = 10
+            val stepDelay = durationMs / steps
+            val startVol = p.volume
+            for (i in steps downTo 0) {
+                p.volume = startVol * (i.toFloat() / steps)
+                delay(stepDelay)
+            }
+            onComplete()
+            p.volume = originalVolume
+        }
+    }
+
+    /**
+     * Smoothly fade in volume when starting playback.
+     */
+    fun fadePlay(durationMs: Long = 250L, onStart: () -> Unit) {
+        val p = player ?: run { onStart(); return }
+        scope.launch(Dispatchers.Main) {
+            p.volume = 0f
+            onStart()
+            val steps = 10
+            val stepDelay = durationMs / steps
+            for (i in 0..steps) {
+                p.volume = originalVolume * (i.toFloat() / steps)
+                delay(stepDelay)
+            }
+        }
+    }
+
     private fun startMonitoring() {
         if (monitorJob?.isActive == true) return
         if (!isEnabled) return

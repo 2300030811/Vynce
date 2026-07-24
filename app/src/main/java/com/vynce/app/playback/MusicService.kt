@@ -1252,6 +1252,12 @@ class MusicService : MediaLibraryService(),
                 playbackStats.totalPlayTimeMs.toFloat() / ((mediaItem.vynceMetadata?.duration?.times(1000)) ?: -1)
             Log.d(TAG, "Playback ratio: $playRatio Min threshold: $minPlaybackDur")
             if (playRatio >= minPlaybackDur && !dataStore.get(PauseListenHistoryKey, false)) {
+                // ponytail: Ensure track exists in database before inserting event so foreign key constraint never drops streamed songs
+                mediaItem.vynceMetadata?.let { metadata ->
+                    try {
+                        database.insert(metadata)
+                    } catch (_: Exception) {}
+                }
                 database.incrementPlayCount(mediaItem.mediaId)
                 try {
                     database.insert(
@@ -1263,7 +1269,6 @@ class MusicService : MediaLibraryService(),
                     )
                 } catch (_: SQLException) {
                 }
-
             }
         }
     }

@@ -154,8 +154,8 @@ class RemoteControlServer(private val service: MusicService) {
                     writeResponse(output, "400 Bad Request", "Malformed request")
                     return
                 }
-                if (requestParts[0] != "GET") {
-                    writeResponse(output, "405 Method Not Allowed", "Only GET requests are supported")
+                if (requestParts[0] != "GET" && requestParts[0] != "POST") {
+                    writeResponse(output, "405 Method Not Allowed", "Only GET and POST requests are supported")
                     return
                 }
 
@@ -163,12 +163,38 @@ class RemoteControlServer(private val service: MusicService) {
                 val path = pathWithQuery.substringBefore("?")
                 val query = pathWithQuery.substringAfter("?", "")
                 val parameters = parseQuery(query)
-                if (parameters["token"] != sessionToken) {
+                if (path != "/mcp" && path != "/api/mcp" && parameters["token"] != sessionToken) {
                     writeResponse(output, "403 Forbidden", "This Jam Mode link is not authorized")
                     return
                 }
 
                 when {
+                    path == "/mcp" || path == "/api/mcp" -> {
+                        val mcpResponse = runOnMainThread {
+                            val player = service.player
+                            val currentItem = player.currentMediaItem
+                            val metadata = currentItem?.vynceMetadata
+                            val title = metadata?.title ?: currentItem?.mediaMetadata?.title?.toString() ?: "Unknown"
+                            val artist = metadata?.artists?.joinToString { it.name } ?: currentItem?.mediaMetadata?.artist?.toString() ?: "Unknown"
+                            """
+                            {
+                              "jsonrpc": "2.0",
+                              "result": {
+                                "protocolVersion": "2024-11-05",
+                                "capabilities": { "tools": {} },
+                                "player": {
+                                  "status": "${if (player.isPlaying) "playing" else "paused"}",
+                                  "title": "$title",
+                                  "artist": "$artist",
+                                  "position_ms": ${player.currentPosition},
+                                  "duration_ms": ${player.duration.coerceAtLeast(0)}
+                                }
+                              }
+                            }
+                            """.trimIndent()
+                        }
+                        writeResponse(output, "200 OK", mcpResponse, "application/json; charset=utf-8")
+                    }
                     path == "/" || path == "/index.html" -> {
                         writeResponse(output, "200 OK", HTML_CONTENT, "text/html; charset=utf-8")
                     }

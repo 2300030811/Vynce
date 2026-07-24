@@ -26,6 +26,9 @@ import com.vynce.app.playback.PlayerConnection
 import com.vynce.app.ui.utils.appBarScrollBehavior
 import com.vynce.app.ui.utils.backToMain
 import com.vynce.app.ui.component.button.IconButton
+import androidx.compose.material.icons.automirrored.rounded.PlaylistAdd
+import androidx.compose.material.icons.rounded.Download
+import com.vynce.app.utils.toSaavnMediaMetadata
 import com.vynce.jiosaavn.JioSaavn
 import com.vynce.jiosaavn.SaavnAlbumInfo
 import com.vynce.jiosaavn.SaavnSong
@@ -134,6 +137,52 @@ fun AlbumScreen(
                             Spacer(Modifier.width(4.dp))
                             Text("Shuffle")
                         }
+                    }
+
+                    Spacer(Modifier.height(8.dp))
+
+                    // Download All + Save to Playlist buttons
+                    val context = androidx.compose.ui.platform.LocalContext.current
+                    val downloadUtil = com.vynce.app.LocalDownloadUtil.current
+                    var showAddToPlaylistDialog by remember { mutableStateOf(false) }
+
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        OutlinedButton(
+                            onClick = {
+                                if (songs.isNotEmpty()) {
+                                    val mediaItems = songs.map { it.toSaavnMediaMetadata() }
+                                    downloadUtil.download(mediaItems)
+                                    android.widget.Toast.makeText(context, "Downloading ${songs.size} songs...", android.widget.Toast.LENGTH_SHORT).show()
+                                }
+                            },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(androidx.compose.material.icons.Icons.Rounded.Download, contentDescription = null)
+                            Spacer(Modifier.width(4.dp))
+                            Text("Download")
+                        }
+
+                        OutlinedButton(
+                            onClick = {
+                                if (songs.isNotEmpty()) {
+                                    showAddToPlaylistDialog = true
+                                }
+                            },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(androidx.compose.material.icons.Icons.AutoMirrored.Rounded.PlaylistAdd, contentDescription = null)
+                            Spacer(Modifier.width(4.dp))
+                            Text("Playlist")
+                        }
+                    }
+
+                    if (showAddToPlaylistDialog) {
+                        val songIds = songs.map { "saavn:${it.id}" }
+                        com.vynce.app.ui.dialog.AddToPlaylistDialog(
+                            navController = navController,
+                            songIds = songIds,
+                            onDismiss = { showAddToPlaylistDialog = false }
+                        )
                     }
                 }
             }

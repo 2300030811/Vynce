@@ -51,11 +51,14 @@ import com.vynce.app.viewmodels.AiPlaylistViewModel
 import com.vynce.app.utils.rememberPreference
 import com.vynce.app.constants.AiEnabledKey
 
+import com.vynce.app.ui.component.ScrollToTopManager
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     navController: NavController,
     playerConnection: PlayerConnection?,
+    scrollBehavior: TopAppBarScrollBehavior? = null,
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
@@ -65,6 +68,22 @@ fun HomeScreen(
     val context = LocalContext.current
     var showAiDialog by remember { mutableStateOf(false) }
     var showPersonalitySheet by remember { mutableStateOf(false) }
+
+    ScrollToTopManager(navController, lazyListState)
+
+    // ponytail: Expand top app bar / search bar whenever user is at top of home screen to avoid blank space gap
+    val isAtTop by remember {
+        derivedStateOf {
+            lazyListState.firstVisibleItemIndex == 0 && lazyListState.firstVisibleItemScrollOffset == 0
+        }
+    }
+
+    LaunchedEffect(isAtTop) {
+        if (isAtTop) {
+            scrollBehavior?.state?.heightOffset = 0f
+            scrollBehavior?.state?.contentOffset = 0f
+        }
+    }
 
     if (!aiEnabled) {
         showAiDialog = false
@@ -148,7 +167,13 @@ fun HomeScreen(
             val fabScope = rememberCoroutineScope()
             AnimatedVisibility(visible = showFab, enter = fadeIn() + scaleIn(), exit = fadeOut() + scaleOut()) {
                 FloatingActionButton(
-                    onClick = { fabScope.launch { lazyListState.animateScrollToItem(0) } },
+                    onClick = {
+                        fabScope.launch {
+                            lazyListState.animateScrollToItem(0)
+                            scrollBehavior?.state?.heightOffset = 0f
+                            scrollBehavior?.state?.contentOffset = 0f
+                        }
+                    },
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
                     contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
                     modifier = Modifier.padding(

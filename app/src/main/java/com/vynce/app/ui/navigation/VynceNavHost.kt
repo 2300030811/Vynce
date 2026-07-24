@@ -123,7 +123,7 @@ fun VynceNavHost(
     )
     {
         composable(Screens.Home.route) {
-            HomeScreen(navController, playerConnection)
+            HomeScreen(navController, playerConnection, scrollBehavior)
         }
         composable(Screens.Songs.route) {
             LibrarySongsScreen(navController)

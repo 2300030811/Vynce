@@ -503,3 +503,23 @@ fun stateToLocalDateTime(download: Download): LocalDateTime {
         else -> DownloadUtil.STATE_INVALID
     }
 }
+
+/**
+ * Format download file path using yt-dlp style string template tokens:
+ * %(artist)s, %(album)s, %(title)s, %(ext)s
+ * ponytail: O(1) single-pass token substitution with inline filename sanitization.
+ */
+fun formatDownloadFileName(
+    template: String = "%(artist)s/%(album)s/%(title)s.%(ext)s",
+    title: String,
+    artist: String?,
+    album: String?,
+    ext: String = "m4a"
+): String {
+    val sanitize = { s: String? -> (s ?: "Unknown").replace(Regex("""[\\/:*?"<>|]"""), "_") }
+    return template
+        .replace("%(title)s", sanitize(title))
+        .replace("%(artist)s", sanitize(artist))
+        .replace("%(album)s", sanitize(album))
+        .replace("%(ext)s", ext)
+}

@@ -897,6 +897,17 @@ class LocalMediaScanner(scannerImpl: ScannerImpl) {
                     artistList.add(ArtistEntity(ArtistEntity.generateArtistId(), artistVal, isLocal = true))
                 }
 
+                // ponytail: Extract featured artists embedded in title (e.g. "(feat. Artist)")
+                val featRegex = Regex("""(?i)(?:\(|\[|\b)(?:feat\.|ft\.|featuring)\s+([^\)\]\n]+)""")
+                featRegex.find(title)?.groupValues?.getOrNull(1)?.let { featString ->
+                    featString.split(ARTIST_SEPARATORS).forEach { featVal ->
+                        val trimmed = featVal.trim()
+                        if (trimmed.isNotBlank() && artistList.none { it.name.equals(trimmed, ignoreCase = true) }) {
+                            artistList.add(ArtistEntity(ArtistEntity.generateArtistId(), trimmed, isLocal = true))
+                        }
+                    }
+                }
+
                 genre?.split(ARTIST_SEPARATORS)?.forEach { genreVal ->
                     genresList.add(GenreEntity(GenreEntity.generateGenreId(), genreVal, isLocal = true))
                 }
@@ -907,6 +918,7 @@ class LocalMediaScanner(scannerImpl: ScannerImpl) {
                     thumbnailUrl = path,
                     songCount = 1,
                     duration = duration,
+                    year = year,
                     isLocal = true
                 ) else null
 

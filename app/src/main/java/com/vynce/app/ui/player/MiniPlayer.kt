@@ -81,9 +81,20 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlin.math.roundToInt
 
+import androidx.compose.animation.core.animate
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.Spring
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.rememberDraggableState
+import androidx.compose.foundation.layout.offset
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.IntOffset
+import kotlinx.coroutines.launch
 
 @Composable
 fun MiniPlayer(
@@ -98,6 +109,7 @@ fun MiniPlayer(
     val error by playerConnection.error.collectAsState()
     val mediaMetadata by playerConnection.mediaMetadata.collectAsState()
     val canSkipNext by playerConnection.canSkipNext.collectAsState()
+    val canSkipPrevious by playerConnection.canSkipPrevious.collectAsState()
 
 
     var position by rememberSaveable(playbackState) {
@@ -119,6 +131,9 @@ fun MiniPlayer(
         }
     }
 
+    var offsetX by remember { mutableFloatStateOf(0f) }
+    val dragScope = rememberCoroutineScope()
+
     Card(
         colors = CardDefaults.cardColors(containerColor = VynceSurfaceCard.copy(alpha = 0.92f)),
         elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
@@ -127,6 +142,25 @@ fun MiniPlayer(
             .fillMaxWidth()
             .height(MiniPlayerHeight)
             .windowInsetsPadding(LocalPlayerAwareWindowInsets.current.only(WindowInsetsSides.Horizontal))
+            .offset { IntOffset(offsetX.roundToInt(), 0) }
+            .draggable(
+                orientation = Orientation.Horizontal,
+                state = rememberDraggableState { delta ->
+                    offsetX += delta * 0.4f
+                },
+                onDragStopped = { velocity ->
+                    if (offsetX < -100f || velocity < -400f) {
+                        if (canSkipNext) playerConnection.player.seekToNext()
+                    } else if (offsetX > 100f || velocity > 400f) {
+                        if (canSkipPrevious) playerConnection.player.seekToPrevious()
+                    }
+                    dragScope.launch {
+                        animate(offsetX, 0f, animationSpec = spring(stiffness = Spring.StiffnessMediumLow)) { value, _ ->
+                            offsetX = value
+                        }
+                    }
+                }
+            )
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
             Row(
