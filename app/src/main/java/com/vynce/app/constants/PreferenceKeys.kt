@@ -63,6 +63,7 @@ val AudioNormalizationKey = booleanPreferencesKey("audioNormalization")
 val AutoLoadMoreKey = booleanPreferencesKey("autoLoadMore")
 val KeepAliveKey = booleanPreferencesKey("keepAlive")
 val StopMusicOnTaskClearKey = booleanPreferencesKey("stopMusicOnTaskClear")
+val EnableRemoteControlKey = booleanPreferencesKey("enableRemoteControl")
 
 val PlayerVolumeKey = floatPreferencesKey("playerVolume")
 val RepeatModeKey = intPreferencesKey("repeatMode")
@@ -120,7 +121,6 @@ val ScannerImplKey = stringPreferencesKey("scannerImpl")
 val ScannerStrictFilePathsKey = booleanPreferencesKey("scannerStrictFilePaths")
 val ScannerStrictExtKey = booleanPreferencesKey("scannerStrictExt")
 val AutoAlbumArtistKey = booleanPreferencesKey("autoAlbumArtist")
-//val LookupYtmArtistsKey = booleanPreferencesKey("lookupYtmArtists") // removed key
 
 val ScanPathsKey = stringPreferencesKey("inclScanPaths") // previously "scanPaths"
 val ExcludedScanPathsKey = stringPreferencesKey("exclScanPaths") // previously "excludedScanPaths"

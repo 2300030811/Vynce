@@ -45,9 +45,7 @@ Thank you for the libre tier!
 ### Important
 
 - Translators should submit strings through Weblate, however if there are changes that cannot be accomplished via
-  Weblate, you may submit a pull request manually
-- Make sure new strings are in the right place, which is `strings-vynce.xml` for Vynce strings
-- If they are ported from upstream InnerTune (ex. when syncing upstream), they go into `strings.xml`
+  Weblate, you may submit a pull request manually. Shared/core strings go into `strings.xml`, while Vynce-specific strings go into `strings-vynce.xml`
 
 ## Submitting a pull request
 
@@ -109,9 +107,8 @@ To make everyone's life easier, there are a set of guidelines that are to be fol
 
 | Tag (Features) | Description                 |
 |----------------|-----------------------------|
-| sync           | YouTube Music sync features |
+| sync           | Account sync features       |
 | downloads      | Offline song downloads      |
-| innertube      | Innertube module            |
 
 | Tag (Local Media) | Description                      |
 |-------------------|----------------------------------|

@@ -43,10 +43,10 @@ import com.vynce.app.utils.playJioSaavnSong
 import com.vynce.app.utils.toSaavnMediaMetadata
 import com.vynce.app.viewmodels.UnifiedSearchUiState
 import com.vynce.app.viewmodels.UnifiedSearchViewModel
-import com.zionhuang.jiosaavn.SaavnAlbum
-import com.zionhuang.jiosaavn.SaavnArtist
-import com.zionhuang.jiosaavn.SaavnPlaylist
-import com.zionhuang.jiosaavn.SaavnSong
+import com.vynce.jiosaavn.SaavnAlbum
+import com.vynce.jiosaavn.SaavnArtist
+import com.vynce.jiosaavn.SaavnPlaylist
+import com.vynce.jiosaavn.SaavnSong
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -71,7 +71,7 @@ fun UnifiedSearchScreen(
             IconButton(onClick = { navController.navigateUp() }) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
-                    contentDescription = "Back"
+                    contentDescription = androidx.compose.ui.res.stringResource(R.string.back)
                 )
             }
             Text(

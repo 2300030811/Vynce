@@ -9,6 +9,7 @@
 
 package com.vynce.app.ui.screens.settings
 
+import androidx.compose.runtime.remember
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -21,6 +22,7 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.QueueMusic
 import androidx.compose.material.icons.rounded.AudioFile
 import androidx.compose.material.icons.rounded.NoCell
+import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -39,7 +41,9 @@ import com.vynce.app.constants.ENABLE_FFMETADATAEX
 import com.vynce.app.constants.KeepAliveKey
 import com.vynce.app.constants.PersistentQueueKey
 import com.vynce.app.constants.StopMusicOnTaskClearKey
+import com.vynce.app.constants.EnableRemoteControlKey
 import com.vynce.app.constants.TopBarInsets
+import com.vynce.app.playback.RemoteControlServer
 import com.vynce.app.ui.component.ColumnWithContentPadding
 import com.vynce.app.ui.component.ListPreference
 import com.vynce.app.ui.component.PreferenceGroupTitle
@@ -70,6 +74,17 @@ fun PlayerSettings(
         key = StopMusicOnTaskClearKey,
         defaultValue = true
     )
+    val (enableRemoteControl, onEnableRemoteControlChange) = rememberPreference(
+        key = EnableRemoteControlKey,
+        defaultValue = false
+    )
+
+    val remoteControlUrl = remember { RemoteControlServer.getShareUrl() }
+    val remoteControlDescription = if (enableRemoteControl) {
+        stringResource(R.string.enable_remote_control_active, remoteControlUrl)
+    } else {
+        stringResource(R.string.enable_remote_control_desc)
+    }
 
     ColumnWithContentPadding(
         modifier = Modifier.fillMaxHeight(),
@@ -164,6 +179,13 @@ fun PlayerSettings(
                         }
                         onKeepAliveChange(it)
                     }
+                )
+                SwitchPreference(
+                    title = { Text(stringResource(R.string.enable_remote_control_title)) },
+                    description = remoteControlDescription,
+                    icon = { Icon(Icons.Rounded.Settings, null) },
+                    checked = enableRemoteControl,
+                    onCheckedChange = onEnableRemoteControlChange
                 )
             }
         }

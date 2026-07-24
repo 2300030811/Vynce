@@ -2,17 +2,19 @@ package com.vynce.app.data.search
 
 import com.vynce.app.models.UnifiedSearchResult
 import com.vynce.app.models.TopResult
-import com.zionhuang.jiosaavn.JioSaavn
+import com.vynce.jiosaavn.JioSaavn
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.async
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.supervisorScope
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import com.zionhuang.jiosaavn.SaavnSong
+import kotlinx.coroutines.withTimeout
+import com.vynce.jiosaavn.SaavnSong
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -64,15 +66,21 @@ class SearchRepository @Inject constructor(
     }
 
     private suspend fun executeNetworkSearch(q: String): UnifiedSearchResult = supervisorScope {
-        val songsDeferred = async { JioSaavn.searchSongs(q) }
-        val artistsDeferred = async { JioSaavn.searchArtists(q) }
-        val albumsDeferred = async { JioSaavn.searchAlbums(q) }
-        val playlistsDeferred = async { JioSaavn.searchPlaylists(q) }
+        val songsDeferred = async { networkSearch { JioSaavn.searchSongs(q) } }
+        val soundCloudSongsDeferred = async { networkSearch { com.vynce.app.data.soundcloud.SoundCloud.searchTracks(q) } }
+        val bandcampSongsDeferred = async { networkSearch { com.vynce.app.data.bandcamp.Bandcamp.searchTracks(q) } }
+        val artistsDeferred = async { networkSearch { JioSaavn.searchArtists(q) } }
+        val albumsDeferred = async { networkSearch { JioSaavn.searchAlbums(q) } }
+        val playlistsDeferred = async { networkSearch { JioSaavn.searchPlaylists(q) } }
 
-        val songs = try { songsDeferred.await() } catch (e: Exception) { emptyList() }
-        val artists = try { artistsDeferred.await() } catch (e: Exception) { emptyList() }
-        val albums = try { albumsDeferred.await() } catch (e: Exception) { emptyList() }
-        val playlists = try { playlistsDeferred.await() } catch (e: Exception) { emptyList() }
+        val saavnSongs = songsDeferred.await()
+        val soundCloudSongs = soundCloudSongsDeferred.await()
+        val bandcampSongs = bandcampSongsDeferred.await()
+        val artists = artistsDeferred.await()
+        val albums = albumsDeferred.await()
+        val playlists = playlistsDeferred.await()
+
+        val songs = saavnSongs + soundCloudSongs + bandcampSongs
 
         // Deduplication
         val dedupedSongs = songs.distinctBy { it.id }
@@ -171,6 +179,16 @@ class SearchRepository @Inject constructor(
         )
     }
 
+    private suspend fun <T> networkSearch(request: suspend () -> List<T>): List<T> = try {
+        withTimeout(NETWORK_SEARCH_TIMEOUT_MS) { request() }
+    } catch (_: TimeoutCancellationException) {
+        emptyList()
+    } catch (exception: CancellationException) {
+        throw exception
+    } catch (_: Exception) {
+        emptyList()
+    }
+
     private fun computeMatchLevel(rawName: String, rawQuery: String): MatchLevel {
         val normalizedName = SearchRanker.normalizeText(rawName)
         val normalizedQuery = SearchRanker.normalizeText(rawQuery)
@@ -183,6 +201,10 @@ class SearchRepository @Inject constructor(
             normalizedName.contains(normalizedQuery) -> MatchLevel.CONTAINS_MATCH
             else -> MatchLevel.NONE
         }
+    }
+
+    private companion object {
+        const val NETWORK_SEARCH_TIMEOUT_MS = 8_000L
     }
 }
 

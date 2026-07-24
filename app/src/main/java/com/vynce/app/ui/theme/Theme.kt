@@ -129,7 +129,7 @@ fun Bitmap.extractThemeColor(): Color {
         .swatches
         .associate { it.rgb to it.population }
     val rankedColors = Score.score(colorsToPopulation)
-    return Color(rankedColors.first())
+    return if (rankedColors.isNotEmpty()) Color(rankedColors.first()) else DefaultThemeColor
 }
 
 fun Bitmap.extractGradientColors(): List<Color> {

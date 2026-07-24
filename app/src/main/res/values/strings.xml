@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 
-<!-- These strings are the upstream InnerTune strings. Do not add strings from Vynce features here. InnerTune wording is replaced with Vynce.
-We recycle translations from upstream, they are pulled periodically. -->
+<!-- Core string resources. Vynce-specific strings go in strings-vynce.xml. -->
 
 <resources xmlns:tools="http://schemas.android.com/tools">
     <!-- Bottom navigation -->
@@ -341,6 +340,9 @@ We recycle translations from upstream, they are pulled periodically. -->
     <string name="options">Options</string>
     <string name="preview">Preview</string>
     <string name="enable_discord_rpc">Enable Rich Presence</string>
+    <string name="enable_remote_control_title">Enable Jam Mode (Remote Control)</string>
+    <string name="enable_remote_control_desc">Allows other devices on the same Wi-Fi network to control Vynce queue and playback.</string>
+    <string name="enable_remote_control_active">Jam Mode is active. Open %1$s in a browser on your Wi-Fi network to control playback.</string>
 
     <string name="about">About</string>
     <string name="app_version">App version</string>

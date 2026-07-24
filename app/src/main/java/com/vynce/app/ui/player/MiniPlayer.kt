@@ -64,6 +64,7 @@ import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.Player.STATE_READY
 import coil3.request.ImageRequest
+import coil3.request.crossfade
 import coil3.compose.AsyncImage
 import com.vynce.app.LocalPlayerAwareWindowInsets
 import com.vynce.app.LocalPlayerConnection
@@ -80,10 +81,15 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlin.math.roundToInt
 
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.stringResource
+
 @Composable
 fun MiniPlayer(
     modifier: Modifier = Modifier,
 ) {
+    val haptic = LocalHapticFeedback.current
     val playerConnection = LocalPlayerConnection.current ?: return
     val queueBoard by playerConnection.queueBoard.collectAsState()
 
@@ -132,6 +138,7 @@ fun MiniPlayer(
                 AsyncImage(
                     model = ImageRequest.Builder(LocalContext.current)
                         .data((mediaMetadata?.getThumbnailModel(48, 48) as? String)?.replace("http://", "https://"))
+                        .crossfade(true)
                         .build(),
                     contentDescription = null,
                     modifier = Modifier
@@ -163,6 +170,7 @@ fun MiniPlayer(
 
                 IconButton(
                     onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                         if (playerConnection.player.currentMediaItem == null) {
                             queueBoard.setCurrQueue()
                             playerConnection.player.togglePlayPause()
@@ -177,19 +185,20 @@ fun MiniPlayer(
                     Icon(
                         imageVector = if (playbackState == Player.STATE_ENDED) Icons.Rounded.Replay else if (isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
                         tint = MaterialTheme.colorScheme.primary,
-                        contentDescription = null
+                        contentDescription = stringResource(if (isPlaying) R.string.pause else R.string.play)
                     )
                 }
 
                 IconButton(
                     onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                         playerConnection.softKillPlayer()
                     },
                 ) {
                     Icon(
                         imageVector = Icons.Rounded.Close,
                         tint = MaterialTheme.colorScheme.onSurface,
-                        contentDescription = null
+                        contentDescription = stringResource(R.string.close)
                     )
                 }
             }

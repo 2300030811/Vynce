@@ -1,9 +1,9 @@
 package com.vynce.app.models
 
-import com.zionhuang.jiosaavn.SaavnSong
-import com.zionhuang.jiosaavn.SaavnArtist
-import com.zionhuang.jiosaavn.SaavnAlbum
-import com.zionhuang.jiosaavn.SaavnPlaylist
+import com.vynce.jiosaavn.SaavnSong
+import com.vynce.jiosaavn.SaavnArtist
+import com.vynce.jiosaavn.SaavnAlbum
+import com.vynce.jiosaavn.SaavnPlaylist
 
 data class UnifiedSearchResult(
     val query: String,

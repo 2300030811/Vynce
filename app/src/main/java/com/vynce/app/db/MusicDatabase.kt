@@ -124,7 +124,7 @@ class MusicDatabase(
         AutoMigration(from = 9, to = 10, spec = Migration9To10::class),
         AutoMigration(from = 10, to = 11, spec = Migration10To11::class),
         AutoMigration(from = 11, to = 12, spec = Migration11To12::class),
-        AutoMigration(from = 12, to = 13, spec = Migration12To13::class), // Migration from InnerTune
+        AutoMigration(from = 12, to = 13, spec = Migration12To13::class), // Migration from InnerTune schema (historical)
         AutoMigration(from = 13, to = 14), // Initial queue as database
         AutoMigration(from = 17, to = 18, spec = Migration17To18::class), // Fix Room nonsense
         AutoMigration(from = 18, to = 19), // Recent activity
@@ -577,7 +577,7 @@ class Migration11To12 : AutoMigrationSpec {
 }
 
 /**
- * Migration from InnerTune
+ * Migration from InnerTune schema (historical — do not remove)
  */
 @DeleteColumn.Entries(
     // these fields were removed back in migration 5_6, but never deleted

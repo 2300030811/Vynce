@@ -126,6 +126,7 @@ import coil3.compose.LocalPlatformContext
 import coil3.imageLoader
 import coil3.request.ImageRequest
 import coil3.request.allowHardware
+import coil3.request.crossfade
 import coil3.toBitmap
 import com.vynce.app.LocalMenuState
 import com.vynce.app.LocalPlayerConnection
@@ -1048,6 +1049,7 @@ fun PlayerBackground(
         AsyncImage(
             model = ImageRequest.Builder(LocalContext.current)
                 .data((mediaMetadata?.getThumbnailModel(100, 100) as? String)?.replace("http://", "https://"))
+                .crossfade(true)
                 .build(),
             contentDescription = null,
             contentScale = ContentScale.Crop,

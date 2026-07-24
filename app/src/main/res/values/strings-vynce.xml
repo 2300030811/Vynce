@@ -1,9 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 
-<!-- This file hosts strings specific to Vynce. This separation allows us to easily recycle translations from upstream InnerTune,
-while also allowing users to translate our app as well. New, specific strings to Vynce go here. -->
+<!-- Vynce-specific string resources. Core/shared strings are in strings.xml. -->
 
 <resources>
+<!-- Accessibility & Controls -->
+    <string name="pause">Pause</string>
+    <string name="close">Close</string>
+    <string name="back">Back</string>
+    <string name="next">Next</string>
+    <string name="previous">Previous</string>
+    <string name="fast_forward">Fast forward</string>
+    <string name="rewind">Rewind</string>
+
 <!-- General -->
     <string name="android_auto">Android Auto</string>
 

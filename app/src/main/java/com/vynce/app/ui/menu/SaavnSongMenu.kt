@@ -55,8 +55,8 @@ import com.vynce.app.ui.dialog.ArtistDialog
 import com.vynce.app.utils.joinByBullet
 import com.vynce.app.utils.makeTimeString
 import com.vynce.app.utils.toSaavnMediaMetadata
-import com.zionhuang.jiosaavn.JioSaavn
-import com.zionhuang.jiosaavn.SaavnSong
+import com.vynce.jiosaavn.JioSaavn
+import com.vynce.jiosaavn.SaavnSong
 import kotlinx.coroutines.launch
 
 @Composable
@@ -269,9 +269,7 @@ fun SaavnSongMenu(
                 database.transaction {
                     insert(mediaMetadata)
                 }
-                
-                // YouTube sync doesn't apply to Saavn songs
-                
+
                 listOf(mediaMetadata.id)
             },
             onDismiss = { showChoosePlaylistDialog = false }

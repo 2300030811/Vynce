@@ -31,6 +31,8 @@ import com.vynce.app.R
 import com.vynce.app.ui.component.button.ResizableIconButton
 import com.vynce.app.utils.reportException
 
+import androidx.compose.ui.semantics.Role
+
 @Composable
 fun ContributorCard(
     contributor: ContributorInfo,
@@ -44,7 +46,7 @@ fun ContributorCard(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .fillMaxWidth(1f)
-            .clickable {
+            .clickable(role = Role.Button) {
                 contributor.url?.let {
                     try {
                         uriHandler.openUri(it)

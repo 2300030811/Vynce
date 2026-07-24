@@ -24,7 +24,7 @@
 ## v1.0.0
 - Initial release
 - Material 3 dark theme with purple accent
-- YouTube Music streaming via Innertube
+- JioSaavn music streaming
 - Local music playback (MP3, FLAC, OGG, AAC)
 - Audio visualizer
 - Dynamic color extraction from album art

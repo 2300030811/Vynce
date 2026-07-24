@@ -113,10 +113,11 @@ import com.vynce.app.models.HybridCacheDataSinkFactory
 import com.vynce.app.models.MediaMetadata
 import com.vynce.app.models.MultiQueueObject
 import com.vynce.app.models.toMediaMetadata
+import com.vynce.app.utils.toSaavnMediaMetadata
 import com.vynce.app.playback.queues.ListQueue
 import com.vynce.app.playback.queues.Queue
-import com.zionhuang.jiosaavn.JioSaavn
-import com.zionhuang.jiosaavn.SaavnSong
+import com.vynce.jiosaavn.JioSaavn
+import com.vynce.jiosaavn.SaavnSong
 import dagger.hilt.android.AndroidEntryPoint
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.booleanPreferencesKey
@@ -131,6 +132,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
@@ -357,7 +359,7 @@ class MusicService : MediaLibraryService(),
         mediaLibrarySessionCallback.apply {
             service = this@MusicService
             toggleLike = ::toggleLike
-            toggleStartRadio = { /* Radio disabled — was YouTube-based */ }
+            toggleStartRadio = { /* Radio disabled */ }
             toggleLibrary = ::toggleLibrary
         }
 
@@ -568,15 +570,41 @@ class MusicService : MediaLibraryService(),
                     } else {
                         items.addAll(initialStatus.items)
                     }
+
+                    val isSingleSongPlay = items.size == 1 && !isRadio && (queue.playlistId == null || (
+                        !queue.playlistId.orEmpty().contains("album") &&
+                        !queue.playlistId.orEmpty().contains("playlist")
+                    ))
+
                     val q = queueBoard.value.addQueue(
                         queueTitle ?: getString(R.string.queue),
                         items,
                         shuffled = queue.startShuffled,
                         startIndex = if (initialStatus.mediaItemIndex > 0) initialStatus.mediaItemIndex else 0,
                         replace = replace || preloadItem != null,
-                        continuationEndpoint = if (isRadio) items.takeLast(4).shuffled().first().id else null // yq?.getContinuationEndpoint()
+                        continuationEndpoint = if (isRadio) items.takeLast(4).shuffled().first().id else queue.playlistId
                     )
                     queueBoard.value.setCurrQueue(q, shouldResume)
+
+                    if (isSingleSongPlay && q != null) {
+                        val singleSong = items.first()
+                        scope.launch(Dispatchers.IO) {
+                            val similarSongs = fetchSimilarSongs(singleSong)
+                            if (similarSongs.isNotEmpty()) {
+                                withContext(Dispatchers.Main) {
+                                    val currentQ = queueBoard.value.getCurrentQueue()
+                                    if (currentQ?.id == q.id) {
+                                        queueBoard.value.addSongsToQueue(
+                                            q = q,
+                                            pos = q.getSize(),
+                                            mediaList = similarSongs,
+                                            saveToDb = true
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
 
                 player.prepare()
@@ -589,6 +617,50 @@ class MusicService : MediaLibraryService(),
 
             Log.d(TAG, "playQueue: Queue additional data resolution complete")
         }
+    }
+
+    // ponytail: Single-song auto-similar queue generation using provider recommendations & artist search fallback.
+    private suspend fun fetchSimilarSongs(song: MediaMetadata): List<MediaMetadata> {
+        val results = mutableListOf<MediaMetadata>()
+        val rawId = song.id
+        Log.d(TAG, "fetchSimilarSongs for song: ${song.title} ($rawId)")
+        try {
+            when {
+                rawId.startsWith("soundcloud:") -> {
+                    val trackId = rawId.removePrefix("soundcloud:")
+                    val scSongs = com.vynce.app.data.soundcloud.SoundCloud.getRelatedTracks(trackId, limit = 20)
+                    results.addAll(scSongs.map { it.toSaavnMediaMetadata() })
+                }
+                rawId.startsWith("saavn:") || (!song.isLocal && !rawId.contains(":")) -> {
+                    val saavnId = rawId.removePrefix("saavn:")
+                    val saavnRecs = JioSaavn.getSongRecommendations(saavnId)
+                    results.addAll(saavnRecs.map { it.toSaavnMediaMetadata() })
+                }
+                song.isLocal || rawId.startsWith("local:") -> {
+                    val dbSongs = database.similarSongs(rawId).firstOrNull() ?: emptyList()
+                    results.addAll(dbSongs.map { it.toMediaMetadata() })
+                }
+            }
+
+            if (results.size < 5) {
+                val primaryArtist = song.artists.firstOrNull()?.name
+                if (!primaryArtist.isNullOrBlank()) {
+                    val artistSongs = JioSaavn.searchSongs(primaryArtist)
+                        .filter { it.id != rawId.removePrefix("saavn:") }
+                        .map { it.toSaavnMediaMetadata() }
+                    for (item in artistSongs) {
+                        if (results.none { it.id == item.id } && item.id != song.id) {
+                            results.add(item)
+                        }
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to fetch similar songs for ${song.title}: ${e.message}", e)
+        }
+        val finalResults = results.filter { it.id != song.id }.distinctBy { it.id }
+        Log.d(TAG, "Fetched ${finalResults.size} similar songs for ${song.title}")
+        return finalResults
     }
 
     /**
@@ -1092,8 +1164,6 @@ class MusicService : MediaLibraryService(),
             player.play()
         }
 
-        // Auto load more songs disabled (was YouTube-based)
-
         queueBoard.value.setCurrQueuePosIndex(player.currentMediaItemIndex)
 
         val lastFmEnabled = dataStore.get(LastFmScrobblingEnabledKey, false)
@@ -1112,9 +1182,17 @@ class MusicService : MediaLibraryService(),
             )
         }
 
-        // reshuffle queue when shuffle AND repeat all are enabled
-        // no, when repeat mode is on, player does not "STATE_ENDED"
-        if (player.currentMediaItemIndex == player.mediaItemCount - 1 &&
+        val currentQueue = queueBoard.value.getCurrentQueue()
+        val activePlaylistId = currentQueue?.playlistId ?: queuePlaylistId
+        val activePlaylistLength = currentQueue?.playlistLength ?: 0
+
+        if (activePlaylistId != null && activePlaylistLength > 0 && player.repeatMode == REPEAT_MODE_ALL) {
+            // ponytail: playlist-scoped repeat-all redirects natural completion past playlist bounds back to track 0
+            val effectiveLength = activePlaylistLength.coerceAtMost(currentQueue?.getSize() ?: 0)
+            if (reason == MEDIA_ITEM_TRANSITION_REASON_AUTO && player.currentMediaItemIndex >= effectiveLength) {
+                player.seekTo(0, 0L)
+            }
+        } else if (player.currentMediaItemIndex == player.mediaItemCount - 1 &&
             (reason == MEDIA_ITEM_TRANSITION_REASON_AUTO || reason == MEDIA_ITEM_TRANSITION_REASON_SEEK) &&
             player.shuffleModeEnabled && player.repeatMode == REPEAT_MODE_ALL
         ) {
@@ -1186,7 +1264,6 @@ class MusicService : MediaLibraryService(),
                 } catch (_: SQLException) {
                 }
 
-                // Remote history registration removed (YouTube/JioSaavn)
             }
         }
     }

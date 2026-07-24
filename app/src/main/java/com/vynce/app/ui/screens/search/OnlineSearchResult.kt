@@ -52,7 +52,7 @@ fun OnlineSearchResult(
             IconButton(onClick = { navController.navigateUp() }) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
-                    contentDescription = "Back"
+                    contentDescription = androidx.compose.ui.res.stringResource(com.vynce.app.R.string.back)
                 )
             }
             Text(

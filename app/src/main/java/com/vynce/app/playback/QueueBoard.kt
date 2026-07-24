@@ -182,6 +182,7 @@ class QueueBoard(
                 }
 
                 match.playlistId = continuationEndpoint
+                match.playlistLength = if (continuationEndpoint != null) mediaList.size else 0
 
                 saveQueueSongs(match)
                 return match
@@ -205,6 +206,7 @@ class QueueBoard(
                 }
 
                 match.playlistId = continuationEndpoint
+                match.playlistLength = if (continuationEndpoint != null) mediaList.size else 0
 
                 saveQueue(match)
                 return match
@@ -230,6 +232,7 @@ class QueueBoard(
                 }
 
                 match.playlistId = continuationEndpoint
+                match.playlistLength = if (continuationEndpoint != null) mediaList.size else 0
 
                 saveQueueSongs(match)
                 return match
@@ -271,6 +274,7 @@ class QueueBoard(
 
                 match.title = "${match.title} +\u200B"
                 match.playlistId = continuationEndpoint
+                match.playlistLength = if (continuationEndpoint != null) mediaList.size else 0
 
                 // rewrite queue
                 saveQueueSongs(match)
@@ -296,7 +300,8 @@ class QueueBoard(
                 startIndex,
                 -1,
                 masterQueues.size,
-                continuationEndpoint
+                continuationEndpoint,
+                if (continuationEndpoint != null) q.size else 0
             )
             masterQueues.add(newQueue)
             if (shuffled) {
@@ -755,9 +760,12 @@ class QueueBoard(
         )
 
         if (item == null || item.queue.isEmpty()) {
+            player.queuePlaylistId = null
             player.player.setMediaItems(ArrayList())
             return null
         }
+
+        player.queuePlaylistId = item.playlistId
 
         // I have no idea why this value gets reset to 0 by the end... but ig this works
         val queuePos = item.getQueuePosShuffled()
@@ -900,6 +908,24 @@ class QueueBoard(
                 player.database.saveQueue(mq)
             }
             triggerDatabaseSave()
+        }
+    }
+
+    fun updateSongInQueue(index: Int, newMetadata: MediaMetadata) {
+        val q = getCurrentQueue() ?: return
+        val items = q.getCurrentQueueShuffled()
+        if (index >= 0 && index < items.size) {
+            val oldItem = items[index]
+            val rawIndex = q.queue.indexOf(oldItem)
+            if (rawIndex != -1) {
+                q.queue[rawIndex] = newMetadata
+            }
+            if (q.shuffled) {
+                newMetadata.shuffleIndex = index
+            }
+            // Seamlessly swap the item in ExoPlayer
+            player.player.replaceMediaItem(index, newMetadata.toMediaItem())
+            saveQueueSongs(q)
         }
     }
 

@@ -170,7 +170,7 @@ class MediaControllerViewModel(application: Application) : AndroidViewModel(appl
                 (getBinder("music_binder") as? MusicService.MusicBinder)?.service
             }
         } catch (e: Exception) {
-            Log.w("MediaControllerViewModel", "Failed to get MusicService binder", e)
+            Log.w("MediaCtrlViewModel", "Failed to get MusicService binder", e)
             null
         }
     }

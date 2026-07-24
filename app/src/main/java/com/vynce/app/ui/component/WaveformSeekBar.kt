@@ -50,7 +50,7 @@ fun WaveformSeekBar(
     onSeek: (Float) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var dragProgress by remember { mutableFloatStateOf(progress) }
+    var dragProgress by remember(progress) { mutableFloatStateOf(progress) }
 
     Canvas(
         modifier = modifier
@@ -59,16 +59,20 @@ fun WaveformSeekBar(
             .pointerInput(waveform) {
                 detectTapGestures { offset ->
                     val newProgress = (offset.x / size.width).coerceIn(0f, 1f)
+                    dragProgress = newProgress
                     onSeek(newProgress)
                 }
             }
             .pointerInput(waveform) {
-                detectHorizontalDragGestures { change, _ ->
-                    dragProgress = (change.position.x / size.width).coerceIn(0f, 1f)
-                }
-                detectTapGestures(onPress = {
-                    onSeek(dragProgress)
-                })
+                detectHorizontalDragGestures(
+                    onDragStart = { offset ->
+                        dragProgress = (offset.x / size.width).coerceIn(0f, 1f)
+                    },
+                    onDragEnd = { onSeek(dragProgress) },
+                    onHorizontalDrag = { change, _ ->
+                        dragProgress = (change.position.x / size.width).coerceIn(0f, 1f)
+                    }
+                )
             }
     ) {
         if (waveform.isEmpty()) return@Canvas
@@ -122,7 +126,7 @@ fun SmoothWaveformSeekBar(
     onSeek: (Float) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var dragProgress by remember { mutableFloatStateOf(progress) }
+    var dragProgress by remember(progress) { mutableFloatStateOf(progress) }
 
     Canvas(
         modifier = modifier
@@ -131,16 +135,20 @@ fun SmoothWaveformSeekBar(
             .pointerInput(waveform) {
                 detectTapGestures { offset ->
                     val newProgress = (offset.x / size.width).coerceIn(0f, 1f)
+                    dragProgress = newProgress
                     onSeek(newProgress)
                 }
             }
             .pointerInput(waveform) {
-                detectHorizontalDragGestures { change, _ ->
-                    dragProgress = (change.position.x / size.width).coerceIn(0f, 1f)
-                }
-                detectTapGestures(onPress = {
-                    onSeek(dragProgress)
-                })
+                detectHorizontalDragGestures(
+                    onDragStart = { offset ->
+                        dragProgress = (offset.x / size.width).coerceIn(0f, 1f)
+                    },
+                    onDragEnd = { onSeek(dragProgress) },
+                    onHorizontalDrag = { change, _ ->
+                        dragProgress = (change.position.x / size.width).coerceIn(0f, 1f)
+                    }
+                )
             }
     ) {
         if (waveform.size < 2) return@Canvas

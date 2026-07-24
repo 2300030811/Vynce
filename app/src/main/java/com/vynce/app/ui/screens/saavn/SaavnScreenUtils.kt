@@ -3,7 +3,7 @@ package com.vynce.app.ui.screens.saavn
 import com.vynce.app.playback.PlayerConnection
 import com.vynce.app.playback.queues.ListQueue
 import com.vynce.app.utils.toSaavnMediaMetadata
-import com.zionhuang.jiosaavn.SaavnSong
+import com.vynce.jiosaavn.SaavnSong
 
 fun formatDuration(seconds: Int): String {
     val m = seconds / 60
@@ -31,6 +31,7 @@ fun playAllSongs(
     playerConnection: PlayerConnection?,
     startIndex: Int = 0,
     shuffle: Boolean = false,
+    playlistId: String? = null,
 ) {
     playerConnection ?: return
     val queueSongs = if (shuffle) songs.shuffled() else songs
@@ -41,7 +42,8 @@ fun playAllSongs(
         ListQueue(
             title = title.ifBlank { "JioSaavn" },
             items = metadataList,
-            startIndex = queueStartIndex
+            startIndex = queueStartIndex,
+            playlistId = playlistId
         )
     )
 }

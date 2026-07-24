@@ -67,7 +67,7 @@ import com.vynce.app.ui.component.button.IconButton
 import com.vynce.app.utils.rememberPreference
 import com.vynce.app.viewmodels.OnlineSearchSuggestionViewModel
 
-import com.zionhuang.jiosaavn.SaavnSong
+import com.vynce.jiosaavn.SaavnSong
 import com.vynce.app.ui.component.items.SaavnSongListItem
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.collectLatest

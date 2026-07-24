@@ -35,11 +35,11 @@ import com.vynce.app.ui.menu.SaavnSongMenu
 import com.vynce.app.utils.joinByBullet
 import com.vynce.app.utils.makeTimeString
 import com.vynce.app.utils.toSaavnMediaMetadata
-import com.zionhuang.jiosaavn.JioSaavn
-import com.zionhuang.jiosaavn.SaavnSong
-import com.zionhuang.jiosaavn.SaavnArtist
-import com.zionhuang.jiosaavn.SaavnAlbum
-import com.zionhuang.jiosaavn.SaavnPlaylist
+import com.vynce.jiosaavn.JioSaavn
+import com.vynce.jiosaavn.SaavnSong
+import com.vynce.jiosaavn.SaavnArtist
+import com.vynce.jiosaavn.SaavnAlbum
+import com.vynce.jiosaavn.SaavnPlaylist
 
 import com.vynce.app.extensions.decodeHtml
 

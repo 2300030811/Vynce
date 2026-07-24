@@ -26,9 +26,9 @@ import com.vynce.app.playback.PlayerConnection
 import com.vynce.app.ui.utils.appBarScrollBehavior
 import com.vynce.app.ui.utils.backToMain
 import com.vynce.app.ui.component.button.IconButton
-import com.zionhuang.jiosaavn.JioSaavn
-import com.zionhuang.jiosaavn.SaavnAlbumInfo
-import com.zionhuang.jiosaavn.SaavnSong
+import com.vynce.jiosaavn.JioSaavn
+import com.vynce.jiosaavn.SaavnAlbumInfo
+import com.vynce.jiosaavn.SaavnSong
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -111,7 +111,7 @@ fun AlbumScreen(
                     // Play All + Shuffle buttons
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         Button(
-                            onClick = { playAllSongs(albumInfo.name, songs, playerConnection) },
+                            onClick = { playAllSongs(albumInfo.name, songs, playerConnection, playlistId = "saavn_album:${albumInfo.id}") },
                             modifier = Modifier.weight(1f)
                         ) {
                             Icon(Icons.Rounded.PlayArrow, null)
@@ -124,7 +124,8 @@ fun AlbumScreen(
                                     title = albumInfo.name,
                                     songs = songs,
                                     playerConnection = playerConnection,
-                                    shuffle = true
+                                    shuffle = true,
+                                    playlistId = "saavn_album:${albumInfo.id}"
                                 )
                             },
                             modifier = Modifier.weight(1f)
@@ -153,7 +154,8 @@ fun AlbumScreen(
                                     title = albumInfo.name,
                                     songs = songs,
                                     playerConnection = playerConnection,
-                                    startIndex = index
+                                    startIndex = index,
+                                    playlistId = "saavn_album:${albumInfo.id}"
                                 )
                             }
                             .padding(horizontal = 16.dp, vertical = 8.dp),

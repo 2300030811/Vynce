@@ -2,7 +2,7 @@ package com.vynce.app.data.search
 
 import android.util.Log
 import com.vynce.app.models.UnifiedSearchResult
-import com.zionhuang.jiosaavn.JioSaavn
+import com.vynce.jiosaavn.JioSaavn
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay

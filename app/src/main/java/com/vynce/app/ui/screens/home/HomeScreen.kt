@@ -166,7 +166,8 @@ fun HomeScreen(
                 state = lazyListState, 
                 modifier = Modifier.fillMaxSize(), 
                 contentPadding = PaddingValues(
-                    top = WindowInsets.systemBars.asPaddingValues().calculateTopPadding() + 64.dp,
+                    // ponytail: snug up home screen top spacing below the search bar
+                    top = WindowInsets.systemBars.asPaddingValues().calculateTopPadding() + 56.dp,
                     bottom = 120.dp
                 )
             ) {
@@ -176,7 +177,7 @@ fun HomeScreen(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(start = 20.dp, end = 20.dp, top = 16.dp, bottom = 4.dp)
+                            .padding(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 4.dp)
                     ) {
                         Column {
                             Text(greeting(), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
@@ -553,7 +554,7 @@ fun SectionHeader(title: String, showSeeAll: Boolean = false, onSeeAll: (() -> U
 }
 
 @Composable
-fun SongCard(song: com.zionhuang.jiosaavn.SaavnSong, onClick: () -> Unit) {
+fun SongCard(song: com.vynce.jiosaavn.SaavnSong, onClick: () -> Unit) {
     Column(modifier = Modifier.width(150.dp).clip(RoundedCornerShape(14.dp)).clickable(onClick = onClick)) {
         Card(
             shape = RoundedCornerShape(14.dp),
@@ -586,7 +587,7 @@ fun SongCard(song: com.zionhuang.jiosaavn.SaavnSong, onClick: () -> Unit) {
 }
 
 @Composable
-fun ArtistCircleCard(artist: com.zionhuang.jiosaavn.SaavnArtist, onClick: () -> Unit) {
+fun ArtistCircleCard(artist: com.vynce.jiosaavn.SaavnArtist, onClick: () -> Unit) {
     Column(modifier = Modifier.width(96.dp).clickable(onClick = onClick), horizontalAlignment = Alignment.CenterHorizontally) {
         Surface(shape = CircleShape, modifier = Modifier.size(96.dp), tonalElevation = 4.dp, shadowElevation = 4.dp) {
             val colors = listOf(Color(0xFFEF5350), Color(0xFFEC407A), Color(0xFFAB47BC), Color(0xFF7E57C2),
@@ -690,7 +691,7 @@ fun LocalSongCard(song: com.vynce.app.db.entities.Song, onClick: () -> Unit) {
 }
 
 @Composable
-fun AlbumCard(album: com.zionhuang.jiosaavn.SaavnAlbumInfo, onClick: () -> Unit) {
+fun AlbumCard(album: com.vynce.jiosaavn.SaavnAlbumInfo, onClick: () -> Unit) {
     Column(modifier = Modifier.width(150.dp).clip(RoundedCornerShape(14.dp)).clickable(onClick = onClick)) {
         Card(
             shape = RoundedCornerShape(14.dp),
@@ -715,7 +716,7 @@ fun AlbumCard(album: com.zionhuang.jiosaavn.SaavnAlbumInfo, onClick: () -> Unit)
 }
 
 @Composable
-fun PlaylistCard(playlist: com.zionhuang.jiosaavn.SaavnPlaylistInfo, onClick: () -> Unit) {
+fun PlaylistCard(playlist: com.vynce.jiosaavn.SaavnPlaylistInfo, onClick: () -> Unit) {
     Column(modifier = Modifier.width(150.dp).clip(RoundedCornerShape(14.dp)).clickable(onClick = onClick)) {
         Card(
             shape = RoundedCornerShape(14.dp),

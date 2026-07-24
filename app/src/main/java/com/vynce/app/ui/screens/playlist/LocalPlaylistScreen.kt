@@ -167,7 +167,6 @@ fun LocalPlaylistScreen(
     val (sortDescending, onSortDescendingChange) = rememberPreference(PlaylistSongSortDescendingKey, true)
     var locked by rememberPreference(PlaylistEditLockKey, defaultValue = false)
     val swipeEnabled by rememberPreference(SwipeToQueueKey, true)
-//    val syncMode by rememberEnumPreference(key = YtmSyncModeKey, defaultValue = SyncMode.RW)
 
     var inSelectMode by rememberSaveable { mutableStateOf(false) }
     val selection = rememberSaveable(
@@ -778,7 +777,8 @@ fun LocalPlaylistHeader(
                     playerConnection.playQueue(
                         ListQueue(
                             title = playlist.playlist.name,
-                            items = songs.map { it.song.toMediaMetadata() }.toList()
+                            items = songs.map { it.song.toMediaMetadata() }.toList(),
+                            playlistId = playlist.playlist.browseId
                         )
                     )
                 },
@@ -801,6 +801,7 @@ fun LocalPlaylistHeader(
                             title = playlist.playlist.name,
                             items = songs.map { it.song.toMediaMetadata() },
                             startShuffled = true,
+                            playlistId = playlist.playlist.browseId
                         )
                     )
                 },

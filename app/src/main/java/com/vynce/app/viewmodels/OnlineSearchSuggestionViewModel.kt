@@ -3,7 +3,7 @@ package com.vynce.app.viewmodels
 import com.vynce.app.data.search.SearchRepository
 import com.vynce.app.db.MusicDatabase
 import com.vynce.app.db.entities.SearchHistory
-import com.zionhuang.jiosaavn.SaavnSong
+import com.vynce.jiosaavn.SaavnSong
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview

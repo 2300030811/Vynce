@@ -53,8 +53,10 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.toMutableStateList
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
@@ -64,6 +66,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
@@ -355,25 +358,35 @@ fun FolderScreen(
                                         .focusRequester(focusRequester)
                                 )
                             } else {
-                                 // scanner icon
+                                 // scanner icon and title
                                  Row(
                                      verticalAlignment = Alignment.CenterVertically,
-                                     modifier = Modifier.padding(horizontal = 16.dp)
+                                     modifier = Modifier
+                                         .clip(RoundedCornerShape(8.dp))
+                                         .combinedClickable(
+                                             onClick = {
+                                                 coroutineScope.launch {
+                                                     triggerMediaScan(context, database, coroutineScope, playerConnection, snackbarHostState)
+                                                 }
+                                             },
+                                             onLongClick = {
+                                                 coroutineScope.launch {
+                                                     triggerMediaScan(context, database, coroutineScope, playerConnection, snackbarHostState, fullRescan = true)
+                                                 }
+                                             }
+                                         )
+                                         .padding(horizontal = 8.dp, vertical = 6.dp)
                                  ) {
-                                     IconButton(
-                                         onClick = {
-                                             coroutineScope.launch {
-                                                 triggerMediaScan(context, database, coroutineScope, playerConnection, snackbarHostState)
-                                             }
-                                         },
-                                         onLongClick = {
-                                             coroutineScope.launch {
-                                                 triggerMediaScan(context, database, coroutineScope, playerConnection, snackbarHostState, fullRescan = true)
-                                             }
-                                         }
-                                     ) {
-                                         Icon(Icons.Rounded.SdCard, contentDescription = null)
-                                     }
+                                     Icon(
+                                         imageVector = Icons.Rounded.SdCard,
+                                         contentDescription = stringResource(R.string.scanner_local_title)
+                                     )
+                                     Spacer(modifier = Modifier.width(6.dp))
+                                     Text(
+                                         text = stringResource(R.string.scanner_local_title),
+                                         style = MaterialTheme.typography.titleMedium,
+                                         fontWeight = FontWeight.SemiBold
+                                     )
                                  }
                             }
 

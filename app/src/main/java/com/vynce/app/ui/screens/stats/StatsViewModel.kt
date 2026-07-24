@@ -14,7 +14,7 @@ class StatsViewModel @Inject constructor(
     private val database: MusicDatabase
 ) : ViewModel() {
 
-    // Query the existing Event/History tables OuterTune already has
+    // Query the existing Event/History tables
     val topSongs: StateFlow<List<SongWithPlayCount>> = database.delegate.dao.mostPlayedSongs(limit = 10)
         .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 

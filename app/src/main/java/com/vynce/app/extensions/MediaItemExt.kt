@@ -8,7 +8,7 @@ import com.vynce.app.models.MediaMetadata
 import com.vynce.app.models.toMediaMetadata
 import com.vynce.app.utils.toSaavnMediaMetadata
 
-import com.zionhuang.jiosaavn.SaavnSong
+import com.vynce.jiosaavn.SaavnSong
 
 val MediaItem.vynceMetadata: MediaMetadata?
     get() = localConfiguration?.tag as? MediaMetadata

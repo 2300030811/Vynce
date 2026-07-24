@@ -31,8 +31,8 @@ import com.vynce.app.db.entities.SongEntity
 import com.vynce.app.di.AppModule.PlayerCache
 import com.vynce.app.di.DownloadCache
 import com.vynce.app.models.MediaMetadata
-import com.zionhuang.jiosaavn.JioSaavn
-import com.zionhuang.jiosaavn.SaavnSong
+import com.vynce.jiosaavn.JioSaavn
+import com.vynce.jiosaavn.SaavnSong
 import com.vynce.app.playback.DownloadUtil.Companion.STATE_DOWNLOADING
 import com.vynce.app.playback.downloadManager.DownloadDirectoryManagerOt
 import com.vynce.app.playback.downloadManager.DownloadManagerOt
@@ -80,6 +80,8 @@ class DownloadUtil @Inject constructor(
     @DownloadCache val downloadCache: SimpleCache,
     @PlayerCache val playerCache: SimpleCache,
     val saavnStreamResolver: SaavnStreamResolver,
+    val soundCloudStreamResolver: com.vynce.app.utils.SoundCloudStreamResolver,
+    val bandcampStreamResolver: com.vynce.app.utils.BandcampStreamResolver,
 ) {
     val TAG = DownloadUtil::class.simpleName.toString()
 
@@ -106,6 +108,22 @@ class DownloadUtil @Inject constructor(
             val streamUrl = saavnStreamResolver.resolve(saavnId)
                 ?: throw java.io.IOException("Failed to resolve Saavn stream URL for $saavnId")
             
+            return@Factory dataSpec.withUri(streamUrl.toUri())
+        }
+
+        if (mediaId.startsWith("soundcloud:")) {
+            val soundcloudId = mediaId.removePrefix("soundcloud:")
+            val streamUrl = soundCloudStreamResolver.resolve(soundcloudId)
+                ?: throw java.io.IOException("Failed to resolve SoundCloud stream URL for $soundcloudId")
+
+            return@Factory dataSpec.withUri(streamUrl.toUri())
+        }
+
+        if (mediaId.startsWith("bandcamp:")) {
+            val bandcampUrl = mediaId.removePrefix("bandcamp:")
+            val streamUrl = bandcampStreamResolver.resolve(bandcampUrl)
+                ?: throw java.io.IOException("Failed to resolve Bandcamp stream URL for $bandcampUrl")
+
             return@Factory dataSpec.withUri(streamUrl.toUri())
         }
 

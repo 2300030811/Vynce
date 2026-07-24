@@ -23,8 +23,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import coil3.request.ImageRequest
 import coil3.compose.AsyncImage
 import com.vynce.app.R
-import com.zionhuang.jiosaavn.JioSaavn
-import com.zionhuang.jiosaavn.SaavnSong
+import com.vynce.jiosaavn.JioSaavn
+import com.vynce.jiosaavn.SaavnSong
 import androidx.navigation.NavController
 import com.vynce.app.ui.component.items.SaavnSongRow
 

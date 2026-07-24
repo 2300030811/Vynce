@@ -24,6 +24,8 @@ data class MultiQueueObject(
      * Song id to start watch endpoint
      */
     var playlistId: String? = null,
+    // ponytail: track original playlist item count for playlist-scoped repeat-all without extra abstractions
+    var playlistLength: Int = 0,
 ) {
 
     /**

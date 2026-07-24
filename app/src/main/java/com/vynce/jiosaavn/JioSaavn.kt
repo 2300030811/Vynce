@@ -1,4 +1,4 @@
-package com.zionhuang.jiosaavn
+package com.vynce.jiosaavn
 
 import io.ktor.client.*
 import io.ktor.client.call.*
@@ -425,6 +425,18 @@ object JioSaavn {
         } catch (e: Exception) { emptyList() }
         
         return Triple(artistInfo, songs, albums)
+    }
+
+    suspend fun getSongRecommendations(id: String): List<SaavnSong> {
+        val obj = getJson("/api/songs/$id/suggestions") ?: return emptyList()
+        val data = obj["data"]?.jsonArray ?: return emptyList()
+        return data.mapNotNull { el ->
+            try {
+                parseSong(el.jsonObject)
+            } catch (e: Exception) {
+                null
+            }
+        }
     }
 
 }

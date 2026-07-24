@@ -52,5 +52,3 @@ Select only ONE. If you select none, or both, the first selection will used as y
   merger to modify my code to solve merge conflicts. I understand in the event of a merge conflict, I will be
   responsible to resolve merge conflicts in a way that adheres to
   the [contribution guidelines](https://github.com/Vynce/Vynce/blob/dev/CONTRIBUTING.md)
-
-<!-- This pull request template is based on Newpipe's:  https://github.com/TeamNewPipe/NewPipe/ -->

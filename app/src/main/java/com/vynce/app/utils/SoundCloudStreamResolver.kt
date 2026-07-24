@@ -3,7 +3,7 @@ package com.vynce.app.utils
 import android.util.Log
 import android.util.LruCache
 import androidx.media3.common.util.UnstableApi
-import com.vynce.jiosaavn.JioSaavn
+import com.vynce.app.data.soundcloud.SoundCloud
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import javax.inject.Inject
@@ -11,28 +11,28 @@ import javax.inject.Singleton
 
 @UnstableApi
 @Singleton
-class SaavnStreamResolver @Inject constructor() {
-    private val TAG = "SaavnStreamResolver"
-    
+class SoundCloudStreamResolver @Inject constructor() {
+    private val TAG = "SoundCloudStreamResolver"
+
     private data class CachedUrl(val url: String, val resolvedAt: Long)
     private val streamUrlCache = LruCache<String, CachedUrl>(50)
 
     /**
-     * Resolves a Saavn ID to a stream URL.
+     * Resolves a SoundCloud track ID to a playable stream URL (typically HLS/m3u8).
      * This method blocks the calling thread, so it MUST NOT be called from the Main thread.
      * It is designed to be used within ExoPlayer's ResolvingDataSource resolver.
      */
-    fun resolve(saavnId: String): String? {
+    fun resolve(trackId: String): String? {
         val cached = synchronized(streamUrlCache) {
-            streamUrlCache.get(saavnId)
+            streamUrlCache.get(trackId)
         }
         if (cached != null) {
             val age = android.os.SystemClock.elapsedRealtime() - cached.resolvedAt
-            if (age < 2 * 60 * 60 * 1000L) { // 2 hours
+            if (age < STREAM_CACHE_TTL_MS) {
                 return cached.url
             } else {
                 synchronized(streamUrlCache) {
-                    streamUrlCache.remove(saavnId)
+                    streamUrlCache.remove(trackId)
                 }
             }
         }
@@ -40,29 +40,32 @@ class SaavnStreamResolver @Inject constructor() {
         return try {
             // This is called from ExoPlayer's internal loading thread.
             // Using runBlocking is necessary to bridge the gap between ExoPlayer's 
-            // synchronous API and JioSaavn's asynchronous API.
-            val song = runBlocking(Dispatchers.IO) {
-                JioSaavn.getSong(saavnId)
+            // synchronous API and SoundCloud's asynchronous API.
+            val streamUrl = runBlocking(Dispatchers.IO) {
+                SoundCloud.resolveStreamUrl(trackId)
             }
-            val streamUrl = with(JioSaavn) { song?.streamUrl() }
             if (streamUrl != null) {
                 synchronized(streamUrlCache) {
-                    streamUrlCache.put(saavnId, CachedUrl(streamUrl, android.os.SystemClock.elapsedRealtime()))
+                    streamUrlCache.put(trackId, CachedUrl(streamUrl, android.os.SystemClock.elapsedRealtime()))
                 }
             }
             streamUrl
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to resolve Saavn stream URL for $saavnId", e)
+            Log.e(TAG, "Failed to resolve SoundCloud stream URL for $trackId", e)
             null
         }
     }
 
     /**
-     * Invalidates a cached stream URL for a given Saavn ID.
+     * Invalidates a cached stream URL for a given track ID.
      */
-    fun invalidate(saavnId: String) {
+    fun invalidate(trackId: String) {
         synchronized(streamUrlCache) {
-            streamUrlCache.remove(saavnId)
+            streamUrlCache.remove(trackId)
         }
+    }
+
+    private companion object {
+        const val STREAM_CACHE_TTL_MS = 45 * 60 * 1_000L
     }
 }

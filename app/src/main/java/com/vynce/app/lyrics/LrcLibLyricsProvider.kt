@@ -7,7 +7,7 @@ import com.vynce.app.utils.dataStore
 import com.vynce.app.utils.get
 
 /**
- * Source: https://github.com/Malopieds/InnerTune
+ * Originally ported from: https://github.com/Malopieds/InnerTune
  */
 object LrcLibLyricsProvider : LyricsProvider {
     override val name = "LrcLib"

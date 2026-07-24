@@ -73,8 +73,8 @@ import com.vynce.app.ui.menu.SaavnSongMenu
 import com.vynce.app.ui.menu.SongMenu
 import com.vynce.app.utils.joinByBullet
 import com.vynce.app.utils.makeTimeString
-import com.zionhuang.jiosaavn.JioSaavn
-import com.zionhuang.jiosaavn.SaavnSong
+import com.vynce.jiosaavn.JioSaavn
+import com.vynce.jiosaavn.SaavnSong
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first

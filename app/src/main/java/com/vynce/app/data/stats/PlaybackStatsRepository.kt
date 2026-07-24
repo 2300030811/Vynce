@@ -1233,11 +1233,11 @@ class PlaybackStatsRepository @Inject constructor(
         private const val SEGMENT_JOIN_TOLERANCE_MS = 0L
         /** Genre values that are placeholder/fallback and should not appear in top-genre stats. */
         val UNKNOWN_GENRE_KEYS: Set<String> = setOf(
-            "Unknown Genre", "unknown genre", "YouTube Music", "youtube music"
+            "Unknown Genre", "unknown genre"
         )
         /** Album values that are placeholder/fallback and should not appear in top-album stats. */
         val UNKNOWN_ALBUM_KEYS: Set<String> = setOf(
-            "Unknown Album", "unknown album", "YouTube Music", "youtube music"
+            "Unknown Album", "unknown album"
         )
     }
 }

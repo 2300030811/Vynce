@@ -22,6 +22,8 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 
+import androidx.compose.ui.semantics.Role
+
 @Composable
 fun NavigationTile(
     title: String,
@@ -40,11 +42,11 @@ fun NavigationTile(
                 .size(56.dp)
                 .clip(CircleShape)
                 .background(MaterialTheme.colorScheme.surfaceColorAtElevation(6.dp))
-                .clickable(onClick = onClick)
+                .clickable(role = Role.Button, onClickLabel = title, onClick = onClick)
         ) {
             Icon(
                 painter = painterResource(icon),
-                contentDescription = null
+                contentDescription = title
             )
         }
 

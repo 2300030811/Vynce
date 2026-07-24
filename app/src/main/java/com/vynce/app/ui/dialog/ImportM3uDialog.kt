@@ -306,7 +306,7 @@ fun ImportM3uDialog(
  *
  * @param uri Uri for m3u file
  * @param matchStrength How lax should the scanner be
- * @param searchOnline Whether to enable fallback for trying to find the song on YTM
+ * @param searchOnline Whether to enable fallback for trying to find the song online
  */
 suspend fun loadM3u(
     context: Context,
@@ -345,7 +345,7 @@ suspend fun loadM3u(
                         val matches = if (source == null) {
                             database.searchSongsInDb(title).first().toMutableList()
                         } else {
-                            // local songs have a source format of "<id>, <path>", YTM songs have "<url>
+                            // local songs have a source format of "<id>, <path>", online songs have "<url>
                             var id = source.substringBefore(',')
                             if (id.isEmpty()) {
                                 id = source.substringAfter("watch?").substringAfter("=").substringBefore('?')
@@ -358,7 +358,7 @@ suspend fun loadM3u(
                         val oldSize = songs.size
                         var foundOne = false // TODO: Eventually the user can pick from matches... eventually...
 
-                        // take first song when searching on YTM
+                        // take first song when searching online
                         if (matchStrength == ScannerM3uMatchCriteria.LEVEL_0 && matches.isNotEmpty()) {
                             songs.add(matches.first())
                         } else {

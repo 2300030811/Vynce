@@ -4,7 +4,7 @@ import android.content.Context
 import com.vynce.app.constants.EnableKugouKey
 import com.vynce.app.utils.dataStore
 import com.vynce.app.utils.get
-import com.zionhuang.kugou.KuGou
+import com.vynce.kugou.KuGou
 
 object KuGouLyricsProvider : LyricsProvider {
     override val name = "Kugou"

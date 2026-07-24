@@ -22,9 +22,9 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import coil3.compose.AsyncImage
 import com.vynce.app.playback.PlayerConnection
-import com.zionhuang.jiosaavn.JioSaavn
-import com.zionhuang.jiosaavn.SaavnPlaylistInfo
-import com.zionhuang.jiosaavn.SaavnSong
+import com.vynce.jiosaavn.JioSaavn
+import com.vynce.jiosaavn.SaavnPlaylistInfo
+import com.vynce.jiosaavn.SaavnSong
 
 @Composable
 fun PlaylistScreen(
@@ -121,7 +121,7 @@ fun PlaylistScreen(
                         Spacer(Modifier.height(12.dp))
                         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             Button(
-                                onClick = { playAllSongs(playlistInfo.name, songs, playerConnection) },
+                                onClick = { playAllSongs(playlistInfo.name, songs, playerConnection, playlistId = playlistId) },
                                 modifier = Modifier.weight(1f)
                             ) {
                                 Icon(Icons.Rounded.PlayArrow, null)
@@ -134,7 +134,8 @@ fun PlaylistScreen(
                                         title = playlistInfo.name,
                                         songs = songs,
                                         playerConnection = playerConnection,
-                                        shuffle = true
+                                        shuffle = true,
+                                        playlistId = playlistId
                                     )
                                 },
                                 modifier = Modifier.weight(1f)
@@ -157,7 +158,8 @@ fun PlaylistScreen(
                                         title = playlistInfo.name,
                                         songs = songs,
                                         playerConnection = playerConnection,
-                                        startIndex = index
+                                        startIndex = index,
+                                        playlistId = playlistId
                                     )
                                 }
                                 .padding(horizontal = 16.dp, vertical = 8.dp),
