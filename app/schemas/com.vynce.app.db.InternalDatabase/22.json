@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 22,
-    "identityHash": "ff485b39d278733a45d8fc3663dc7c64",
+    "identityHash": "86d981bedac4385581685783bdf13c44",
     "entities": [
       {
         "tableName": "song",
@@ -131,6 +131,15 @@
             "createSql": "CREATE INDEX IF NOT EXISTS `index_song_artistsString` ON `${TABLE_NAME}` (`artistsString`)"
           },
           {
+            "name": "index_song_inLibrary",
+            "unique": false,
+            "columnNames": [
+              "inLibrary"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_song_inLibrary` ON `${TABLE_NAME}` (`inLibrary`)"
+          },
+          {
             "name": "index_song_localPath",
             "unique": false,
             "columnNames": [
@@ -138,6 +147,15 @@
             ],
             "orders": [],
             "createSql": "CREATE INDEX IF NOT EXISTS `index_song_localPath` ON `${TABLE_NAME}` (`localPath`)"
+          },
+          {
+            "name": "index_song_dateDownload",
+            "unique": false,
+            "columnNames": [
+              "dateDownload"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_song_dateDownload` ON `${TABLE_NAME}` (`dateDownload`)"
           }
         ]
       },
@@ -1297,7 +1315,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'ff485b39d278733a45d8fc3663dc7c64')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '86d981bedac4385581685783bdf13c44')"
     ]
   }
 }

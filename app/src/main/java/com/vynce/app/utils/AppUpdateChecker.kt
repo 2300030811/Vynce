@@ -106,27 +106,45 @@ object AppUpdateChecker {
         }
     }
 
+    private var activeDownloadCall: okhttp3.Call? = null
+
+    /**
+     * Cancel an ongoing download.
+     */
+    fun cancelDownload() {
+        activeDownloadCall?.cancel()
+        activeDownloadCall = null
+    }
+
+    /**
+     * Check if a completed update APK already exists in cache.
+     */
+    fun getCachedApk(context: Context): File? {
+        val updateDir = File(context.cacheDir, "updates")
+        val apkFile = File(updateDir, "vynce-update.apk")
+        return if (apkFile.exists() && apkFile.length() > 1_000_000L) apkFile else null
+    }
+
     /**
      * Download the APK to the app's cache directory.
-     * @param onProgress callback with progress (0.0 to 1.0), -1 for indeterminate
+     * @param onProgress callback with progress (0.0 to 1.0), -1 for indeterminate, plus downloaded & total bytes
      * @return the downloaded File, or null on failure
      */
     suspend fun downloadApk(
         context: Context,
         url: String,
-        onProgress: (Float) -> Unit = {}
+        onProgress: (progress: Float, downloadedBytes: Long, totalBytes: Long) -> Unit = { _, _, _ -> }
     ): File? = withContext(Dispatchers.IO) {
         try {
             val updateDir = File(context.cacheDir, "updates")
             updateDir.mkdirs()
 
-            // Clean up old downloads
-            updateDir.listFiles()?.forEach { it.delete() }
-
             val apkFile = File(updateDir, "vynce-update.apk")
 
             val request = Request.Builder().url(url).build()
-            val response = client.newCall(request).execute()
+            val call = client.newCall(request)
+            activeDownloadCall = call
+            val response = call.execute()
 
             if (!response.isSuccessful) {
                 Log.e(TAG, "Download failed: ${response.code}")
@@ -146,13 +164,12 @@ object AppUpdateChecker {
                     output.write(buffer, 0, read)
                     bytesRead += read
 
-                    if (contentLength > 0) {
-                        onProgress(bytesRead.toFloat() / contentLength.toFloat())
-                    } else {
-                        onProgress(-1f)
-                    }
+                    val progress = if (contentLength > 0) bytesRead.toFloat() / contentLength.toFloat() else -1f
+                    onProgress(progress, bytesRead, contentLength)
                 }
             }
+
+            activeDownloadCall = null
 
             // Verify the download completed fully
             if (contentLength > 0 && apkFile.length() != contentLength) {
@@ -164,6 +181,7 @@ object AppUpdateChecker {
             Log.i(TAG, "APK downloaded: ${apkFile.absolutePath} (${apkFile.length()} bytes)")
             apkFile
         } catch (e: Exception) {
+            activeDownloadCall = null
             Log.e(TAG, "Failed to download APK", e)
             null
         }

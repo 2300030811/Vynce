@@ -28,11 +28,13 @@ data class SongEntity(
     val title: String,
     val duration: Int = -1, // duration in seconds (-1 = unknown)
     val thumbnailUrl: String? = null,
+    @ColumnInfo(index = true)
     val inLibrary: LocalDateTime? = null, // doubles as "date added"
     @ColumnInfo(name = "isLocal", defaultValue = false.toString())
     val isLocal: Boolean = false,
     @ColumnInfo(index = true)
     val localPath: String?,
+    @ColumnInfo(index = true)
     val dateDownload: LocalDateTime? = null, // doubles as "isDownloaded" for new downloader system
     val liked: Boolean = false,
     val likedDate: LocalDateTime? = null,

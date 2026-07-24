@@ -185,6 +185,8 @@ fun UpdateDialog(
             Spacer(Modifier.height(16.dp))
 
             // Download progress
+            var downloadedBytesText by remember { mutableStateOf("") }
+
             AnimatedVisibility(
                 visible = downloadState == UpdateDownloadState.DOWNLOADING,
                 enter = fadeIn(),
@@ -196,21 +198,33 @@ fun UpdateDialog(
                             progress = { downloadProgress },
                             modifier = Modifier
                                 .fillMaxWidth()
+                                .height(6.dp)
                                 .clip(RoundedCornerShape(8.dp)),
                             color = MaterialTheme.colorScheme.primary,
                             trackColor = MaterialTheme.colorScheme.surfaceVariant,
                         )
-                        Spacer(Modifier.height(4.dp))
-                        Text(
-                            text = "${(downloadProgress * 100).toInt()}%",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.align(Alignment.End)
-                        )
+                        Spacer(Modifier.height(6.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = downloadedBytesText,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Text(
+                                text = "${(downloadProgress * 100).toInt()}%",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
                     } else {
                         LinearProgressIndicator(
                             modifier = Modifier
                                 .fillMaxWidth()
+                                .height(6.dp)
                                 .clip(RoundedCornerShape(8.dp)),
                             color = MaterialTheme.colorScheme.primary,
                             trackColor = MaterialTheme.colorScheme.surfaceVariant,
@@ -257,24 +271,37 @@ fun UpdateDialog(
                 Spacer(Modifier.height(8.dp))
             }
 
+            val cachedApk = remember(downloadState) { AppUpdateChecker.getCachedApk(context) }
+
             // Buttons
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 // Later / Cancel button
                 TextButton(
-                    onClick = onDismiss,
-                    enabled = downloadState != UpdateDownloadState.DOWNLOADING
+                    onClick = {
+                        if (downloadState == UpdateDownloadState.DOWNLOADING) {
+                            AppUpdateChecker.cancelDownload()
+                            downloadState = UpdateDownloadState.IDLE
+                        } else {
+                            onDismiss()
+                        }
+                    }
                 ) {
-                    Text(stringResource(R.string.update_later))
+                    Text(if (downloadState == UpdateDownloadState.DOWNLOADING) "Cancel" else stringResource(R.string.update_later))
                 }
 
                 Spacer(Modifier.width(8.dp))
 
-                // Update / Retry button
+                // Update / Install / Retry button
                 FilledTonalButton(
                     onClick = {
+                        if (cachedApk != null) {
+                            AppUpdateChecker.installApk(context, cachedApk)
+                            return@FilledTonalButton
+                        }
                         val url = updateInfo.downloadUrl ?: return@FilledTonalButton
                         downloadState = UpdateDownloadState.DOWNLOADING
                         downloadProgress = 0f
@@ -283,8 +310,13 @@ fun UpdateDialog(
                             val apkFile = AppUpdateChecker.downloadApk(
                                 context = context,
                                 url = url,
-                                onProgress = { progress ->
+                                onProgress = { progress, downloaded, total ->
                                     downloadProgress = if (progress < 0f) 0f else progress
+                                    if (total > 0) {
+                                        val curMB = String.format(java.util.Locale.US, "%.1f", downloaded.toDouble() / (1024 * 1024))
+                                        val totMB = String.format(java.util.Locale.US, "%.1f", total.toDouble() / (1024 * 1024))
+                                        downloadedBytesText = "$curMB MB / $totMB MB"
+                                    }
                                 }
                             )
 
@@ -297,14 +329,14 @@ fun UpdateDialog(
                         }
                     },
                     enabled = downloadState != UpdateDownloadState.DOWNLOADING
-                        && updateInfo.downloadUrl != null,
+                        && (updateInfo.downloadUrl != null || cachedApk != null),
                     colors = ButtonDefaults.filledTonalButtonColors(
                         containerColor = MaterialTheme.colorScheme.primary,
                         contentColor = MaterialTheme.colorScheme.onPrimary
                     )
                 ) {
-                    when (downloadState) {
-                        UpdateDownloadState.DOWNLOADING -> {
+                    when {
+                        downloadState == UpdateDownloadState.DOWNLOADING -> {
                             CircularProgressIndicator(
                                 modifier = Modifier.size(18.dp),
                                 strokeWidth = 2.dp,
@@ -313,7 +345,12 @@ fun UpdateDialog(
                             Spacer(Modifier.width(8.dp))
                             Text(stringResource(R.string.update_downloading))
                         }
-                        UpdateDownloadState.FAILED -> {
+                        cachedApk != null -> {
+                            Icon(Icons.Rounded.CheckCircle, null, Modifier.size(18.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text("Install Now")
+                        }
+                        downloadState == UpdateDownloadState.FAILED -> {
                             Text(stringResource(R.string.update_retry))
                         }
                         else -> {
