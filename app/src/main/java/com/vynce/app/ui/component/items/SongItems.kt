@@ -65,6 +65,7 @@ import com.vynce.app.extensions.toMediaItem
 import com.vynce.app.extensions.togglePlayPause
 import com.vynce.app.models.DirectoryTree
 import com.vynce.app.ui.component.PlayingIndicatorBox
+import com.vynce.app.ui.component.SourceBadge
 import com.vynce.app.ui.component.SwipeToQueueBox
 import com.vynce.app.ui.component.button.IconButton
 import com.vynce.app.ui.menu.FolderMenu
@@ -120,6 +121,11 @@ fun SongListItem(
                 makeTimeString(song.song.duration * 1000L)
             ),
             badges = {
+                if (song.song.isLocal) {
+                    SourceBadge(text = "LOCAL")
+                } else if (song.id.startsWith("saavn")) {
+                    SourceBadge(text = "SAAVN")
+                }
                 if (showLikedIcon && song.song.liked) {
                     Icon.Favorite()
                 }

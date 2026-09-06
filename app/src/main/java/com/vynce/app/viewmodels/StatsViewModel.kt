@@ -18,6 +18,7 @@ import javax.inject.Inject
 
 data class StatsV2State(
     val isLoading: Boolean = true,
+    val selectedTimeRange: StatsTimeRange = StatsTimeRange.ALL,
     val featuredSong: PlaybackStatsRepository.SongPlaybackSummary? = null,
     val topArtists: List<PlaybackStatsRepository.ArtistPlaybackSummary> = emptyList(),
     val topSongs: List<PlaybackStatsRepository.SongPlaybackSummary> = emptyList(),
@@ -39,21 +40,33 @@ class StatsViewModel @Inject constructor(
     val state: StateFlow<StatsV2State> = _state.asStateFlow()
 
     init {
-        loadStats()
+        loadStats(StatsTimeRange.ALL)
+        viewModelScope.launch {
+            playbackStatsRepository.refreshFlow.collect {
+                loadStats(_state.value.selectedTimeRange)
+            }
+        }
     }
 
-    private fun loadStats() {
+    fun setTimeRange(range: StatsTimeRange) {
+        if (_state.value.selectedTimeRange == range && !_state.value.isLoading) return
+        loadStats(range)
+    }
+
+    fun reload() {
+        loadStats(_state.value.selectedTimeRange)
+    }
+
+    private fun loadStats(range: StatsTimeRange) {
         viewModelScope.launch {
-            _state.update { it.copy(isLoading = true) }
+            _state.update { it.copy(isLoading = true, selectedTimeRange = range) }
             val songs = database.songs(SongSortType.CREATE_DATE, true).first()
             val summary = playbackStatsRepository.loadSummary(
-                range = StatsTimeRange.ALL,
+                range = range,
                 songs = songs
             )
             val sortedSongs = summary.songs.sortedWith(compareByDescending<PlaybackStatsRepository.SongPlaybackSummary> { it.playCount }.thenByDescending { it.totalDurationMs })
             val sortedArtists = summary.topArtists.sortedWith(compareByDescending<PlaybackStatsRepository.ArtistPlaybackSummary> { it.playCount }.thenByDescending { it.totalDurationMs })
-
-            val topArtist = sortedArtists.firstOrNull()
 
             // Calculate Personality dynamically
             val (personaChip, personaDesc) = playbackStatsRepository.calculatePersonality(summary)
@@ -61,9 +74,10 @@ class StatsViewModel @Inject constructor(
             _state.update {
                 it.copy(
                     isLoading = false,
+                    selectedTimeRange = range,
                     featuredSong = sortedSongs.firstOrNull(),
-                    topArtists = sortedArtists.take(5), // Keep top 5 artists
-                    topSongs = sortedSongs.drop(1).take(5), // Top 5 songs, excluding the #1 hero
+                    topArtists = sortedArtists.take(10), // Show up to 10 top artists
+                    topSongs = sortedSongs.drop(1).take(10), // Top 10 songs, excluding the #1 hero
                     totalListeningMs = summary.totalDurationMs,
                     totalPlayCount = summary.totalPlayCount,
                     totalUniqueSongs = summary.uniqueSongs,

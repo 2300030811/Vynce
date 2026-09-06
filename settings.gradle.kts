@@ -18,6 +18,9 @@ include(":app")
 include(":kugou")
 include(":lrclib")
 include(":material-color-utilities")
+include(":spotify")
+include(":shazamkit")
+include(":betterlyrics")
 // include(":ffMetadataEx") // Missing submodule
 // include(":taglib") // Missing submodule
 

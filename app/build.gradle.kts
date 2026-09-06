@@ -43,8 +43,8 @@ android {
         applicationId = "com.vynce.app"
         minSdk = 24
         targetSdk = 36
-        versionCode = 80
-        versionName = "2.2.0"
+        versionCode = 90
+        versionName = "3.0.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         manifestPlaceholders["appAuthRedirectScheme"] = "com.vynce.app"
         
@@ -279,7 +279,9 @@ dependencies {
     implementation(project(":kugou"))
     implementation(project(":lrclib"))
     implementation(project(":material-color-utilities"))
-    // implementation(project(":taglib"))
+    implementation(project(":spotify"))
+    implementation(project(":shazamkit"))
+    implementation(project(":betterlyrics"))
 
     // misc
     implementation(libs.aboutlibraries.compose.m3)

@@ -41,8 +41,23 @@ class App : Application(), SingletonImageLoader.Factory {
 
         instance = this
 
-        // JioSaavn initialization (if any needed)
-        // No special locale/visitor data needed for basic JioSaavn usage
+        val defaultHandler = Thread.getDefaultUncaughtExceptionHandler()
+        Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
+            try {
+                val intent = android.content.Intent(this, com.vynce.app.ui.activities.DebugActivity::class.java).apply {
+                    putExtra(
+                        com.vynce.app.ui.activities.DebugActivity.EXTRA_STACK_TRACE,
+                        android.util.Log.getStackTraceString(throwable)
+                    )
+                    addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                }
+                startActivity(intent)
+                android.os.Process.killProcess(android.os.Process.myPid())
+                System.exit(10)
+            } catch (_: Exception) {
+                defaultHandler?.uncaughtException(thread, throwable)
+            }
+        }
     }
 
     override fun newImageLoader(context: PlatformContext): ImageLoader {

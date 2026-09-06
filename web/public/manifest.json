@@ -1,0 +1,17 @@
+{
+  "name": "Vynce Music",
+  "short_name": "Vynce",
+  "description": "High fidelity music streaming with 320kbps audio, synced lyrics, and studio DSP equalizer",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#08090d",
+  "theme_color": "#0a0b10",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

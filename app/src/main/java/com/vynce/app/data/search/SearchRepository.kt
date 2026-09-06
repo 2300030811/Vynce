@@ -116,35 +116,58 @@ class SearchRepository @Inject constructor(
         val albumCandidates = rankedAlbumsWithScores.take(5)
         val playlistCandidates = rankedPlaylistsWithScores.take(5)
 
+        // Match Spotify Curated Playlists
         val normalizedQuery = q.trim().lowercase()
-        
+        val matchedSpotifyPlaylists = com.vynce.app.data.spotify.SpotifyCurated.PLAYLISTS.filter { p ->
+            val pName = SearchRanker.normalizeText(p.name)
+            val pSub = SearchRanker.normalizeText(p.subtitle)
+            val pCat = SearchRanker.normalizeText(p.category)
+            pName.contains(normalizedQuery) || pSub.contains(normalizedQuery) || pCat.contains(normalizedQuery) ||
+            normalizedQuery.split(" ").any { w -> w.length > 2 && (pName.contains(w) || pSub.contains(w) || pCat.contains(w)) }
+        }
+
         val candidatesList = mutableListOf<ScoredCandidate>()
 
-        // 1. Songs
+        // 1. Songs (High priority for exact / strong name match)
         songCandidates.forEach { (song, score) ->
             val normalizedName = song.name.trim().lowercase()
             val matchLevel = computeMatchLevel(normalizedName, normalizedQuery)
-            val finalScore = score + 150
-            candidatesList.add(ScoredCandidate(song.name, matchLevel, finalScore, TopResult.Song(song)))
+            val bonus = if (matchLevel == MatchLevel.EXACT_MATCH) 400 else 200
+            candidatesList.add(ScoredCandidate(song.name, matchLevel, score + bonus, TopResult.Song(song)))
         }
 
-        // 2. Artists
+        // 2. Artists (Only consider artists with genuine real image and strong match)
         artistCandidates.forEach { (artist, score) ->
             val normalizedName = artist.name.trim().lowercase()
             val matchLevel = computeMatchLevel(normalizedName, normalizedQuery)
-            val finalScore = score + 200
-            candidatesList.add(ScoredCandidate(artist.name, matchLevel, finalScore, TopResult.Artist(artist)))
+            val hasRealImage = artist.image.isNotBlank() && 
+                               !artist.image.lowercase().contains("default") && 
+                               !artist.image.lowercase().contains("placeholder")
+            if (hasRealImage && matchLevel != MatchLevel.NONE) {
+                val bonus = if (matchLevel == MatchLevel.EXACT_MATCH) 350 else 150
+                candidatesList.add(ScoredCandidate(artist.name, matchLevel, score + bonus, TopResult.Artist(artist)))
+            }
         }
 
         // 3. Albums
         albumCandidates.forEach { (album, score) ->
             val normalizedName = album.name.trim().lowercase()
             val matchLevel = computeMatchLevel(normalizedName, normalizedQuery)
-            val finalScore = score + 100
-            candidatesList.add(ScoredCandidate(album.name, matchLevel, finalScore, TopResult.Album(album)))
+            val bonus = if (matchLevel == MatchLevel.EXACT_MATCH) 250 else 100
+            candidatesList.add(ScoredCandidate(album.name, matchLevel, score + bonus, TopResult.Album(album)))
         }
 
-        // 4. Playlists
+        // 4. Spotify Playlists
+        matchedSpotifyPlaylists.take(3).forEach { sp ->
+            val normalizedName = sp.name.trim().lowercase()
+            val matchLevel = computeMatchLevel(normalizedName, normalizedQuery)
+            if (matchLevel != MatchLevel.NONE) {
+                val bonus = if (matchLevel == MatchLevel.EXACT_MATCH) 300 else 120
+                candidatesList.add(ScoredCandidate(sp.name, matchLevel, 600 + bonus, TopResult.SpotifyPlaylistResult(sp)))
+            }
+        }
+
+        // 5. Saavn Playlists
         playlistCandidates.forEach { (playlist, score) ->
             val normalizedName = playlist.name.trim().lowercase()
             val matchLevel = computeMatchLevel(normalizedName, normalizedQuery)
@@ -167,15 +190,14 @@ class SearchRepository @Inject constructor(
             else -> null
         }
 
-
-
         UnifiedSearchResult(
             query = q,
             songs = rankedSongs,
             artists = rankedArtists,
             albums = rankedAlbums,
             playlists = rankedPlaylists,
-            topResult = topResult
+            topResult = topResult,
+            spotifyPlaylists = matchedSpotifyPlaylists
         )
     }
 

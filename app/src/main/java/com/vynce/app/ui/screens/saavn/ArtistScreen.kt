@@ -23,6 +23,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import coil3.compose.AsyncImage
 import com.vynce.app.playback.PlayerConnection
@@ -32,6 +33,7 @@ import com.vynce.jiosaavn.SaavnAlbumInfo
 import com.vynce.jiosaavn.SaavnSong
 import com.vynce.app.ui.screens.home.SectionHeader
 import com.vynce.app.ui.component.items.SaavnSongListItem
+import com.vynce.app.utils.toSaavnMediaMetadata
 import kotlinx.coroutines.CancellationException
 
 @Composable
@@ -122,146 +124,224 @@ fun ArtistScreen(
                 Text("Retry")
             }
         }
-        else -> LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 100.dp)) {
-        // Hero image
-        item {
-            Box(modifier = Modifier.fillMaxWidth().height(280.dp)) {
-                AsyncImage(
-                    model = artistWikiImage ?: artistInfo.image,
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize()
-                )
-                // Gradient scrim at bottom
-                Box(modifier = Modifier.fillMaxSize()
-                    .background(Brush.verticalGradient(
-                        listOf(Color.Transparent, Color.Black.copy(alpha = 0.8f))
-                    ))
-                )
-                Column(
-                    modifier = Modifier.align(Alignment.BottomStart).padding(16.dp)
-                ) {
-                    Text(artistInfo.name, style = MaterialTheme.typography.headlineLarge,
-                        color = Color.White, fontWeight = FontWeight.Bold)
-                    if (artistInfo.followerCount != "0") {
-                        Text("${formatFollowerCount(artistInfo.followerCount)} followers",
-                            style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(alpha = 0.8f))
-                    }
-                }
-            }
-        }
-
-        // Play button
-        item {
-            Row(modifier = Modifier.padding(16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Button(onClick = { playAllSongs(artistInfo.name, songs, playerConnection) }, modifier = Modifier.weight(1f)) {
-                    Icon(Icons.Rounded.PlayArrow, null); Spacer(Modifier.width(4.dp)); Text("Play")
-                }
-                OutlinedButton(
-                    onClick = {
-                        playAllSongs(
-                            title = artistInfo.name,
-                            songs = songs,
-                            playerConnection = playerConnection,
-                            shuffle = true
-                        )
-                    },
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Icon(Icons.Rounded.Shuffle, null); Spacer(Modifier.width(4.dp)); Text("Shuffle")
-                }
-            }
-        }
-
-        // Biography
-        artistBio?.takeIf { it.isNotEmpty() }?.let { bio ->
+        else -> LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(bottom = 100.dp)
+        ) {
+            // Hero image
             item {
-                var isExpanded by remember { mutableStateOf(false) }
-                Card(
+                val heroImage = (artistWikiImage ?: artistInfo.image).takeIf {
+                    it.isNotBlank() && !it.contains("default", ignoreCase = true) && !it.contains("placeholder", ignoreCase = true)
+                }
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp)
-                        .clickable { isExpanded = !isExpanded },
-                    shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                        .height(280.dp)
+                        .background(
+                            Brush.linearGradient(
+                                listOf(Color(0xFF2E0854), Color(0xFF130826), Color(0xFF0A0518))
+                            )
+                        )
                 ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(
-                            text = "Biography",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
+                    if (heroImage != null) {
+                        AsyncImage(
+                            model = heroImage,
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize()
                         )
-                        Spacer(Modifier.height(8.dp))
+                    } else {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = (artistInfo.name.trim().firstOrNull()?.uppercaseChar() ?: 'A').toString(),
+                                fontSize = 84.sp,
+                                fontWeight = FontWeight.Black,
+                                color = Color(0x338A2BE2)
+                            )
+                        }
+                    }
+                    // Gradient scrim at bottom
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(
+                                Brush.verticalGradient(
+                                    listOf(Color.Transparent, Color.Black.copy(alpha = 0.85f))
+                                )
+                            )
+                    )
+                    Column(
+                        modifier = Modifier.align(Alignment.BottomStart).padding(16.dp)
+                    ) {
                         Text(
-                            text = bio,
-                            style = MaterialTheme.typography.bodyMedium,
-                            maxLines = if (isExpanded) Int.MAX_VALUE else 3,
-                            overflow = TextOverflow.Ellipsis
+                            artistInfo.name,
+                            style = MaterialTheme.typography.headlineLarge,
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold
                         )
-                        Spacer(Modifier.height(4.dp))
-                        Text(
-                            text = if (isExpanded) "Show Less" else "Read More",
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.align(Alignment.End)
-                        )
+                        if (artistInfo.followerCount != "0") {
+                            Text(
+                                "${formatFollowerCount(artistInfo.followerCount)} followers",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = Color.White.copy(alpha = 0.8f)
+                            )
+                        }
                     }
                 }
             }
-        }
 
-        // Top songs
-        if (songs.isNotEmpty()) {
-            item { SectionHeader("Popular songs") }
-            items(songs.take(10)) { song ->
-                with(JioSaavn) {
-                    SaavnSongListItem(
-                        song = song,
-                        navController = navController,
-                        onPlay = {
+            // Play button row
+            item {
+                Row(
+                    modifier = Modifier.padding(16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Button(
+                        onClick = { playAllSongs(artistInfo.name, songs, playerConnection) },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(Icons.Rounded.PlayArrow, null)
+                        Spacer(Modifier.width(4.dp))
+                        Text("Play")
+                    }
+                    OutlinedButton(
+                        onClick = {
                             playAllSongs(
                                 title = artistInfo.name,
                                 songs = songs,
                                 playerConnection = playerConnection,
-                                startIndex = songs.indexOf(song).coerceAtLeast(0)
+                                shuffle = true
                             )
-                        }
-                    )
+                        },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(Icons.Rounded.Shuffle, null)
+                        Spacer(Modifier.width(4.dp))
+                        Text("Shuffle")
+                    }
                 }
             }
-        }
 
-        // Albums
-        if (albums.isNotEmpty()) {
-            item { SectionHeader("Albums") }
-            item {
-                LazyRow(
-                    contentPadding = PaddingValues(horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    items(albums) { album ->
-                        Column(
-                            modifier = Modifier.width(130.dp)
-                                .clickable { navController.navigate("album/${album.id}") }
-                        ) {
-                            AsyncImage(
-                                model = album.image,
-                                contentDescription = null,
-                                contentScale = ContentScale.Crop,
-                                modifier = Modifier.size(130.dp).clip(RoundedCornerShape(8.dp))
+            // Biography
+            artistBio?.takeIf { it.isNotEmpty() }?.let { bio ->
+                item {
+                    var isExpanded by remember { mutableStateOf(false) }
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp)
+                            .clickable { isExpanded = !isExpanded },
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text(
+                                text = "Biography",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
                             )
-                            Spacer(Modifier.height(6.dp))
-                            Text(album.name, style = MaterialTheme.typography.bodySmall,
-                                fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text(album.year, style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Spacer(Modifier.height(8.dp))
+                            Text(
+                                text = bio,
+                                style = MaterialTheme.typography.bodyMedium,
+                                maxLines = if (isExpanded) Int.MAX_VALUE else 3,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Spacer(Modifier.height(4.dp))
+                            Text(
+                                text = if (isExpanded) "Show Less" else "Read More",
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.align(Alignment.End)
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Top songs
+            if (songs.isNotEmpty()) {
+                item { SectionHeader("Popular songs") }
+                items(songs.take(10)) { song ->
+                    with(JioSaavn) {
+                        SaavnSongListItem(
+                            song = song,
+                            navController = navController,
+                            onPlay = {
+                                playAllSongs(
+                                    title = artistInfo.name,
+                                    songs = songs,
+                                    playerConnection = playerConnection,
+                                    startIndex = songs.indexOf(song).coerceAtLeast(0)
+                                )
+                            }
+                        )
+                    }
+                }
+            }
+
+            // Albums
+            if (albums.isNotEmpty()) {
+                item { SectionHeader("Albums") }
+                item {
+                    LazyRow(
+                        contentPadding = PaddingValues(horizontal = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        items(albums) { album ->
+                            Column(
+                                modifier = Modifier.width(130.dp)
+                                    .clickable { navController.navigate("album/${album.id}") }
+                            ) {
+                                AsyncImage(
+                                    model = album.image,
+                                    contentDescription = null,
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier.size(130.dp).clip(RoundedCornerShape(8.dp))
+                                )
+                                Spacer(Modifier.height(6.dp))
+                                Text(
+                                    album.name,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontWeight = FontWeight.Medium,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                Text(
+                                    album.year,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
                         }
                     }
                 }
             }
         }
     }
-    }
+}
+
+private fun playAllSongs(
+    title: String,
+    songs: List<SaavnSong>,
+    playerConnection: PlayerConnection?,
+    startIndex: Int = 0,
+    shuffle: Boolean = false
+) {
+    if (songs.isEmpty() || playerConnection == null) return
+    val metadataList = songs.map { it.toSaavnMediaMetadata() }
+    val indices = if (shuffle) metadataList.indices.shuffled() else metadataList.indices.toList()
+    val finalItems = indices.map { metadataList[it] }
+    playerConnection.playQueue(
+        com.vynce.app.playback.queues.ListQueue(
+            title = title,
+            items = finalItems,
+            startIndex = if (shuffle) 0 else startIndex
+        )
+    )
 }

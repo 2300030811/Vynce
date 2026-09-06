@@ -1,5 +1,6 @@
 package com.vynce.app.models
 
+import com.vynce.app.data.spotify.SpotifyCuratedPlaylist
 import com.vynce.jiosaavn.SaavnSong
 import com.vynce.jiosaavn.SaavnArtist
 import com.vynce.jiosaavn.SaavnAlbum
@@ -11,7 +12,8 @@ data class UnifiedSearchResult(
     val artists: List<SaavnArtist>,
     val albums: List<SaavnAlbum>,
     val playlists: List<SaavnPlaylist>,
-    val topResult: TopResult?
+    val topResult: TopResult?,
+    val spotifyPlaylists: List<SpotifyCuratedPlaylist> = emptyList()
 )
 
 sealed interface TopResult {
@@ -19,4 +21,5 @@ sealed interface TopResult {
     data class Song(val song: SaavnSong) : TopResult
     data class Album(val album: SaavnAlbum) : TopResult
     data class Playlist(val playlist: SaavnPlaylist) : TopResult
+    data class SpotifyPlaylistResult(val playlist: SpotifyCuratedPlaylist) : TopResult
 }

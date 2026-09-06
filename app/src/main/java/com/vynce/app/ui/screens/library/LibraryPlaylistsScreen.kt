@@ -129,12 +129,20 @@ fun LibraryPlaylistsScreen(
 
     var showImportM3uDialog by rememberSaveable { mutableStateOf(false) }
     var showCreatePlaylistDialog by rememberSaveable { mutableStateOf(false) }
+    var showSpotifyImportDialog by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(Unit) { viewModel.syncPlaylists() }
 
     if (showCreatePlaylistDialog) {
         CreatePlaylistDialog(
             onDismiss = { showCreatePlaylistDialog = false }
+        )
+    }
+
+    if (showSpotifyImportDialog) {
+        SpotifyImportDialog(
+            database = viewModel.database,
+            onDismiss = { showSpotifyImportDialog = false }
         )
     }
 
@@ -244,6 +252,11 @@ fun LibraryPlaylistsScreen(
                             title = stringResource(R.string.import_playlist),
                             leadingIcon = { Icon(Icons.AutoMirrored.Rounded.Input, null) },
                             action = { showImportM3uDialog = true }
+                        ),
+                        DropdownItem(
+                            title = "Import Playlist Link",
+                            leadingIcon = { Icon(Icons.Rounded.CloudDownload, null) },
+                            action = { showSpotifyImportDialog = true }
                         ),
                     ),
                 )

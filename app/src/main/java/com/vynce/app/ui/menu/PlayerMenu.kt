@@ -28,6 +28,7 @@ import androidx.compose.material.icons.automirrored.rounded.QueueMusic
 import androidx.compose.material.icons.automirrored.rounded.VolumeUp
 import androidx.compose.material.icons.rounded.AddCircleOutline
 import androidx.compose.material.icons.rounded.Equalizer
+import androidx.compose.material.icons.rounded.Groups
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.LibraryAdd
 import androidx.compose.material.icons.rounded.LibraryAddCheck
@@ -41,6 +42,8 @@ import androidx.compose.material.icons.rounded.Timer
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
+import com.vynce.app.ui.dialog.ListenTogetherDialog
+import com.vynce.app.utils.listentogether.ListenTogetherSync
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -139,6 +142,10 @@ fun PlayerMenu(
 
     val download by LocalDownloadUtil.current.getDownload(mediaMetadata.id).collectAsState(initial = null)
 
+    LaunchedEffect(playerConnection) {
+        ListenTogetherSync.start(context, playerConnection)
+    }
+
     val activityResultLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { }
 
     var showChooseQueueDialog by rememberSaveable {
@@ -159,6 +166,16 @@ fun PlayerMenu(
     if (showPitchTempoDialog) {
         PitchTempoDialog(
             onDismiss = { showPitchTempoDialog = false }
+        )
+    }
+
+    var showListenTogetherDialog by rememberSaveable {
+        mutableStateOf(false)
+    }
+
+    if (showListenTogetherDialog) {
+        ListenTogetherDialog(
+            onDismiss = { showListenTogetherDialog = false }
         )
     }
 
@@ -538,6 +555,12 @@ fun PlayerMenu(
                 activityResultLauncher.launch(intent)
             }
             onDismiss()
+        }
+        GridMenuItem(
+            icon = Icons.Rounded.Groups,
+            title = R.string.listen_together
+        ) {
+            showListenTogetherDialog = true
         }
         GridMenuItem(
             icon = Icons.Rounded.Tune,

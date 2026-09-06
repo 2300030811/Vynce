@@ -32,6 +32,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
+import coil3.request.crossfade
 import com.vynce.app.LocalPlayerAwareWindowInsets
 import com.vynce.app.R
 import com.vynce.app.playback.PlayerConnection
@@ -198,30 +199,17 @@ fun HomeScreen(
             ) {
 
                 // ── GREETING ────────────────────────────────────
-                item(key = "greeting") {
-                    Box(
+                item(key = "greeting", contentType = "greeting") {
+                    Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 4.dp)
+                            .padding(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 4.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Column {
+                        Column(modifier = Modifier.weight(1f)) {
                             Text(greeting(), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-                            Spacer(Modifier.height(8.dp))
-                            Surface(
-                                shape = CircleShape,
-                                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f),
-                                onClick = { showPersonalitySheet = true }
-                            ) {
-                                Text(
-                                    text = state.personaChip,
-                                    style = MaterialTheme.typography.labelSmall,
-                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-                                    color = MaterialTheme.colorScheme.onPrimaryContainer
-                                )
-                            }
                             Spacer(Modifier.height(4.dp))
-                            
-                            Spacer(Modifier.height(8.dp))
                             
                             val subtitle = if (state.continueListening.isNotEmpty()) {
                                 "▶ Resume ${state.continueListening.first().title}"
@@ -258,13 +246,28 @@ fun HomeScreen(
                                 )
                             }
                         }
+
+                        IconButton(
+                            onClick = { navController.navigate(Screens.Stats.route) }
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.BarChart,
+                                contentDescription = "Detailed Insights & Stats",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
                     }
-                }                // ── QUICK ACTIONS ───────────────────────────────
-                item(key = "quick_actions") {
+                }
+
+                // ── QUICK ACTIONS ───────────────────────────────
+                item(key = "quick_actions", contentType = "quick_actions") {
                     Row(
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
+                        QuickActionCard(Icons.Rounded.GraphicEq, "Recognize", com.vynce.app.ui.theme.VyncePurple, Modifier.weight(1f)) {
+                            navController.navigate("recognition")
+                        }
                         QuickActionCard(Icons.Rounded.History, "History", MaterialTheme.colorScheme.tertiary, Modifier.weight(1f)) {
                             if (navController.graph.findNode(Screens.History.route) != null) navController.navigate(Screens.History.route)
                             else Toast.makeText(context, "History not available", Toast.LENGTH_SHORT).show()
@@ -282,10 +285,10 @@ fun HomeScreen(
 
                 // ── CONTINUE LISTENING ───────────────────────────
                 if (state.continueListening.isNotEmpty()) {
-                    item(key = "continue_listening_header") { SectionHeader("Continue Listening") }
-                    item(key = "continue_listening_row") {
+                    item(key = "continue_listening_header", contentType = "header") { SectionHeader("Continue Listening") }
+                    item(key = "continue_listening_row", contentType = "horizontal_row") {
                         LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                            items(state.continueListening, key = { it.timestamp.toString() + it.songId }) { entry ->
+                            items(state.continueListening, key = { it.timestamp.toString() + it.songId }, contentType = { "history_card" }) { entry ->
                                 HistoryEntryCard(entry) {
                                     playStatsSong(entry.songId, entry.title, entry.artist, entry.thumbnail)
                                 }
@@ -296,7 +299,7 @@ fun HomeScreen(
 
                 // ── ON REPEAT ───────────────────────────────────
                 if (state.topSongs.isNotEmpty()) {
-                    item(key = "on_repeat_header") {
+                    item(key = "on_repeat_header", contentType = "header") {
                         SectionHeader("On Repeat")
                         Text(
                             text = "Your most played songs",
@@ -305,9 +308,9 @@ fun HomeScreen(
                             modifier = Modifier.padding(horizontal = 20.dp).offset(y = (-8).dp)
                         )
                     }
-                    item(key = "on_repeat_row") {
+                    item(key = "on_repeat_row", contentType = "horizontal_row") {
                         LazyRow(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                            items(state.topSongs, key = { it.songId }) { entry ->
+                            items(state.topSongs, key = { it.songId }, contentType = { "on_repeat_card" }) { entry ->
                                 OnRepeatSongCard(entry) {
                                     playStatsSong(entry.songId, entry.title, entry.artist, entry.albumArtUri)
                                 }
@@ -321,20 +324,20 @@ fun HomeScreen(
                 val artistsTitle = if (hasPersonalizedArtists) "Your Top Artists" else "Top Artists"
 
                 if (state.featuredArtists.isNotEmpty()) {
-                    item(key = "artists_header") { SectionHeader(artistsTitle) }
-                    item(key = "artists_row") {
+                    item(key = "artists_header", contentType = "header") { SectionHeader(artistsTitle) }
+                    item(key = "artists_row", contentType = "horizontal_row") {
                         LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                            items(state.featuredArtists, key = { it.id }) { artist ->
+                            items(state.featuredArtists, key = { it.id }, contentType = { "artist_circle" }) { artist ->
                                 ArtistCircleCard(artist) { navController.navigate("artist/${artist.id}") }
                             }
                         }
                     }
                 } else if (state.isLoading) {
-                    item(key = "artists_shimmer_h") { SectionHeader("Top Artists") }
-                    item(key = "artists_shimmer") {
+                    item(key = "artists_shimmer_h", contentType = "header") { SectionHeader("Top Artists") }
+                    item(key = "artists_shimmer", contentType = "shimmer_row") {
                         ShimmerHost {
                             LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                                items(6, key = { it }) {
+                                items(6, key = { it }, contentType = { "artist_shimmer_item" }) {
                                     val placeholderColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
                                     Column(Modifier.width(96.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                                         Box(Modifier.size(96.dp).clip(CircleShape).background(placeholderColor))
@@ -349,7 +352,7 @@ fun HomeScreen(
 
                 // ── REDISCOVER ───────────────────────────────────
                 if (state.rediscover.isNotEmpty()) {
-                    item(key = "rediscover_header") {
+                    item(key = "rediscover_header", contentType = "header") {
                         SectionHeader("Rediscover Favorites")
                         Text(
                             text = "Songs you haven't played in a while",
@@ -358,10 +361,12 @@ fun HomeScreen(
                             modifier = Modifier.padding(horizontal = 20.dp).offset(y = (-8).dp)
                         )
                     }
-                    item(key = "rediscover_row") {
+                    item(key = "rediscover_row", contentType = "horizontal_row") {
                         LazyRow(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                            items(state.rediscover, key = { it.songId }) { entry ->
-                                RediscoverSongCard(entry) { }
+                            items(state.rediscover, key = { it.songId }, contentType = { "rediscover_card" }) { entry ->
+                                RediscoverSongCard(entry) {
+                                    playStatsSong(entry.songId, entry.title, entry.artist, entry.albumArtUri)
+                                }
                             }
                         }
                     }
@@ -369,7 +374,7 @@ fun HomeScreen(
 
                 // ── AI PLAYLIST BANNER ────────────────────────
                 if (aiEnabled) {
-                    item(key = "ai_playlist_banner") {
+                    item(key = "ai_playlist_banner", contentType = "banner") {
                         Surface(
                             onClick = { showAiDialog = true },
                             modifier = Modifier
@@ -414,20 +419,20 @@ fun HomeScreen(
 
                 // ── DYNAMIC SECTIONS ───────────────────────────
                 if (state.isLoading && state.sections.isEmpty()) {
-                    item { HomeShimmer() }
+                    item(contentType = "shimmer") { HomeShimmer() }
                 } else {
                     state.sections.forEachIndexed { index, section ->
-                        item(key = "sec_header_$index") {
+                        item(key = "sec_header_$index", contentType = "header") {
                             SectionHeader(title = section.title, showSeeAll = false)
                         }
-                        item(key = "sec_row_$index") {
+                        item(key = "sec_row_$index", contentType = "horizontal_row") {
                             LazyRow(
                                 contentPadding = PaddingValues(horizontal = 16.dp),
                                 horizontalArrangement = Arrangement.spacedBy(14.dp)
                             ) {
                                 when (section) {
                                     is HomeSection.LocalSongSection -> {
-                                        items(section.songs, key = { it.id }) { song ->
+                                        items(section.songs, key = { it.id }, contentType = { "local_song_card" }) { song ->
                                             LocalSongCard(song) { 
                                                 playerConnection?.playQueue(
                                                     ListQueue(
@@ -439,17 +444,17 @@ fun HomeScreen(
                                         }
                                     }
                                     is HomeSection.SongSection -> {
-                                        items(section.songs, key = { it.id }) { song ->
+                                        items(section.songs, key = { it.id }, contentType = { "song_card" }) { song ->
                                             SongCard(song) { playJioSaavnSong(song, playerConnection) }
                                         }
                                     }
                                     is HomeSection.AlbumSection -> {
-                                        items(section.albums, key = { it.id }) { album ->
+                                        items(section.albums, key = { it.id }, contentType = { "album_card" }) { album ->
                                             AlbumCard(album) { navController.navigate("album/${album.id}") }
                                         }
                                     }
                                     is HomeSection.PlaylistSection -> {
-                                        items(section.playlists, key = { it.id }) { playlist ->
+                                        items(section.playlists, key = { it.id }, contentType = { "playlist_card" }) { playlist ->
                                             PlaylistCard(playlist) { navController.navigate("playlist/${playlist.id}") }
                                         }
                                     }
@@ -461,7 +466,7 @@ fun HomeScreen(
 
                 // ── GLOBAL ERROR ────────────────────────────────
                 if (state.error != null && !state.isLoading && state.sections.isEmpty()) {
-                    item(key = "global_error") { GlobalErrorCard(state.error) { viewModel.loadAll() } }
+                    item(key = "global_error", contentType = "error") { GlobalErrorCard(state.error) { viewModel.loadAll() } }
                 }
             }
 
@@ -538,6 +543,7 @@ fun PlaylistSectionHeader(name: String, imageUrl: String, onSeeAll: (() -> Unit)
             AsyncImage(
                 model = ImageRequest.Builder(LocalContext.current)
                     .data(imageUrl.saavnHighResHttps())
+                    .crossfade(true)
                     .build(),
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
@@ -589,7 +595,9 @@ fun SongCard(song: com.vynce.jiosaavn.SaavnSong, onClick: () -> Unit) {
             Box {
                 AsyncImage(
                     model = ImageRequest.Builder(LocalContext.current)
-                        .data(song.image.saavnHighResHttps()).build(),
+                        .data(song.image.saavnHighResHttps())
+                        .crossfade(true)
+                        .build(),
                     placeholder = ColorPainter(Color(0xFF1A1A2E)),
                     fallback = ColorPainter(Color(0xFF1A1A2E)),
                     contentDescription = null, contentScale = ContentScale.Crop,
@@ -622,7 +630,9 @@ fun ArtistCircleCard(artist: com.vynce.jiosaavn.SaavnArtist, onClick: () -> Unit
                 ArtistLetterAvatar(artist.name, bgColor)
                 AsyncImage(
                     model = ImageRequest.Builder(LocalContext.current)
-                        .data(artist.image.saavnHighResHttps()).build(),
+                        .data(artist.image.saavnHighResHttps())
+                        .crossfade(true)
+                        .build(),
                     contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize()
                 )
             }
@@ -694,7 +704,9 @@ fun LocalSongCard(song: com.vynce.app.db.entities.Song, onClick: () -> Unit) {
             Box {
                 AsyncImage(
                     model = ImageRequest.Builder(LocalContext.current)
-                        .data(song.thumbnailUrl).build(),
+                        .data(song.thumbnailUrl)
+                        .crossfade(true)
+                        .build(),
                     placeholder = ColorPainter(Color(0xFF1A1A2E)),
                     fallback = ColorPainter(Color(0xFF1A1A2E)),
                     contentDescription = null, contentScale = ContentScale.Crop,
@@ -726,7 +738,9 @@ fun AlbumCard(album: com.vynce.jiosaavn.SaavnAlbumInfo, onClick: () -> Unit) {
             Box {
                 AsyncImage(
                     model = ImageRequest.Builder(LocalContext.current)
-                        .data(album.image.saavnHighResHttps()).build(),
+                        .data(album.image.saavnHighResHttps())
+                        .crossfade(true)
+                        .build(),
                     placeholder = ColorPainter(Color(0xFF1A1A2E)),
                     fallback = ColorPainter(Color(0xFF1A1A2E)),
                     contentDescription = null, contentScale = ContentScale.Crop,
@@ -751,7 +765,9 @@ fun PlaylistCard(playlist: com.vynce.jiosaavn.SaavnPlaylistInfo, onClick: () -> 
             Box {
                 AsyncImage(
                     model = ImageRequest.Builder(LocalContext.current)
-                        .data(playlist.image.saavnHighResHttps()).build(),
+                        .data(playlist.image.saavnHighResHttps())
+                        .crossfade(true)
+                        .build(),
                     placeholder = ColorPainter(Color(0xFF1A1A2E)),
                     fallback = ColorPainter(Color(0xFF1A1A2E)),
                     contentDescription = null, contentScale = ContentScale.Crop,
@@ -791,7 +807,9 @@ fun HistoryEntryCard(entry: com.vynce.app.data.stats.PlaybackStatsRepository.Pla
             Box {
                 AsyncImage(
                     model = ImageRequest.Builder(LocalContext.current)
-                        .data(entry.thumbnail?.saavnHighResHttps()).build(),
+                        .data(entry.thumbnail?.saavnHighResHttps())
+                        .crossfade(true)
+                        .build(),
                     placeholder = ColorPainter(Color(0xFF1A1A2E)),
                     fallback = ColorPainter(Color(0xFF1A1A2E)),
                     contentDescription = null, contentScale = ContentScale.Crop,
@@ -823,7 +841,9 @@ fun OnRepeatSongCard(entry: com.vynce.app.data.stats.PlaybackStatsRepository.Son
             Box {
                 AsyncImage(
                     model = ImageRequest.Builder(LocalContext.current)
-                        .data(entry.albumArtUri?.saavnHighResHttps()).build(),
+                        .data(entry.albumArtUri?.saavnHighResHttps())
+                        .crossfade(true)
+                        .build(),
                     placeholder = ColorPainter(Color(0xFF1A1A2E)),
                     fallback = ColorPainter(Color(0xFF1A1A2E)),
                     contentDescription = null, contentScale = ContentScale.Crop,
@@ -833,15 +853,6 @@ fun OnRepeatSongCard(entry: com.vynce.app.data.stats.PlaybackStatsRepository.Son
                     Modifier.fillMaxWidth().height(36.dp).align(Alignment.BottomCenter)
                         .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.6f))))
                 )
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.TopStart)
-                        .padding(4.dp)
-                        .background(Color.Black.copy(alpha = 0.7f), RoundedCornerShape(4.dp))
-                        .padding(horizontal = 4.dp, vertical = 2.dp)
-                ) {
-                    Text("🔥 ${entry.playCount} plays", style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp), color = Color.White)
-                }
             }
         }
         Spacer(Modifier.height(6.dp))
@@ -864,7 +875,9 @@ fun RediscoverSongCard(entry: com.vynce.app.data.stats.PlaybackStatsRepository.S
             Box {
                 AsyncImage(
                     model = ImageRequest.Builder(LocalContext.current)
-                        .data(entry.albumArtUri?.saavnHighResHttps()).build(),
+                        .data(entry.albumArtUri?.saavnHighResHttps())
+                        .crossfade(true)
+                        .build(),
                     placeholder = ColorPainter(Color(0xFF1A1A2E)),
                     fallback = ColorPainter(Color(0xFF1A1A2E)),
                     contentDescription = null, contentScale = ContentScale.Crop,

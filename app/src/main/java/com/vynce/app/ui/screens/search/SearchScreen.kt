@@ -22,6 +22,7 @@ import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Language
 import androidx.compose.material.icons.rounded.LibraryMusic
 import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.GraphicEq
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -195,44 +196,66 @@ fun SearchBarContainer(
             },
             trailingIcon = {
                 if (searchActive) {
-                    if (query.text.isNotEmpty()) {
+                    androidx.compose.foundation.layout.Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (query.text.isNotEmpty()) {
+                            IconButton(
+                                onClick = { onQueryChange(TextFieldValue("")) }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Rounded.Close,
+                                    contentDescription = "Clear"
+                                )
+                            }
+                        }
                         IconButton(
-                            onClick = { onQueryChange(TextFieldValue("")) }
+                            onClick = { navController.navigate("recognition") }
                         ) {
                             Icon(
-                                imageVector = Icons.Rounded.Close,
+                                imageVector = androidx.compose.material.icons.Icons.Rounded.GraphicEq,
+                                contentDescription = "Voice / Music Recognition",
+                                tint = com.vynce.app.ui.theme.VyncePurple
+                            )
+                        }
+                        IconButton(
+                            onClick = {
+                                searchSource =
+                                    if (searchSource == SearchSource.ONLINE) SearchSource.LOCAL else SearchSource.ONLINE
+                            }
+                        ) {
+                            Icon(
+                                imageVector = when (searchSource) {
+                                    SearchSource.LOCAL -> Icons.Rounded.LibraryMusic
+                                    SearchSource.ONLINE -> Icons.Rounded.Language
+                                },
                                 contentDescription = null
                             )
                         }
                     }
-                    IconButton(
-                        onClick = {
-                            searchSource =
-                                if (searchSource == SearchSource.ONLINE) SearchSource.LOCAL else SearchSource.ONLINE
-                        }
-                    ) {
-                        Icon(
-                            imageVector = when (searchSource) {
-                                SearchSource.LOCAL -> Icons.Rounded.LibraryMusic
-                                SearchSource.ONLINE -> Icons.Rounded.Language
-                            },
-                            contentDescription = null
-                        )
-                    }
                 } else {
-                    Box(
-                        contentAlignment = Alignment.Center,
-                        modifier = Modifier
-                            .size(48.dp)
-                            .clip(CircleShape)
-                            .clickable {
-                                navController.navigate("settings")
-                            }
-                    ) {
-                        Icon(
-                            imageVector = Icons.Rounded.Settings,
-                            contentDescription = null
-                        )
+                    androidx.compose.foundation.layout.Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(
+                            onClick = { navController.navigate("recognition") }
+                        ) {
+                            Icon(
+                                imageVector = androidx.compose.material.icons.Icons.Rounded.GraphicEq,
+                                contentDescription = "Voice / Music Recognition",
+                                tint = com.vynce.app.ui.theme.VyncePurple
+                            )
+                        }
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier
+                                .size(48.dp)
+                                .clip(CircleShape)
+                                .clickable {
+                                    navController.navigate("settings")
+                                }
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.Settings,
+                                contentDescription = "Settings"
+                            )
+                        }
                     }
                 }
             },

@@ -1,0 +1,81 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    /* Material 3 Dynamic Theme Defaults (from Vynce Color.kt seed #9B6EEA) */
+    --vynce-primary: #9B6EEA;
+    --vynce-on-primary: #FFFFFF;
+    --vynce-primary-container: #3A2966;
+    --vynce-on-primary-container: #E8DEFF;
+    --vynce-secondary: #CCC2DC;
+    --vynce-on-secondary: #332D41;
+    --vynce-secondary-container: #4A4458;
+    --vynce-on-secondary-container: #E8DEF8;
+    --vynce-tertiary: #EFB8C8;
+    --vynce-tertiary-container: #492532;
+    --vynce-surface: #000000;
+    --vynce-surface-container: #141218;
+    --vynce-surface-container-high: #1D1B20;
+    --vynce-surface-container-highest: #2B2930;
+    --vynce-on-surface: #E8E6F0;
+    --vynce-on-surface-variant: #CAC4D0;
+    --vynce-outline: rgba(255, 255, 255, 0.08);
+    --vynce-accent: #9B6EEA;
+    --vynce-glow: rgba(155, 110, 234, 0.35);
+    --vynce-gradient: radial-gradient(circle at 50% 15%, rgba(155, 110, 234, 0.35) 0%, rgba(0, 0, 0, 0.95) 75%);
+  }
+
+  body {
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    color: var(--vynce-on-surface);
+    background-color: var(--vynce-surface);
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    overflow-x: hidden;
+  }
+
+  /* Smooth Material You color morphing transitions */
+  button, nav, aside, footer, header, main, .theme-transition {
+    transition: background-color 450ms cubic-bezier(0.2, 0, 0, 1),
+                color 450ms cubic-bezier(0.2, 0, 0, 1),
+                border-color 450ms cubic-bezier(0.2, 0, 0, 1),
+                box-shadow 450ms cubic-bezier(0.2, 0, 0, 1);
+  }
+
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.08); border-radius: 9999px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.16); }
+}
+
+/* Material 3 Dynamic Classes */
+.bg-vynce-primary { background-color: var(--vynce-primary); }
+.text-vynce-primary { color: var(--vynce-primary); }
+.bg-vynce-primary-container { background-color: var(--vynce-primary-container); }
+.text-vynce-on-primary-container { color: var(--vynce-on-primary-container); }
+.bg-vynce-secondary-container { background-color: var(--vynce-secondary-container); }
+.text-vynce-on-secondary-container { color: var(--vynce-on-secondary-container); }
+.bg-vynce-surface-container { background-color: var(--vynce-surface-container); }
+.bg-vynce-surface-container-high { background-color: var(--vynce-surface-container-high); }
+.border-vynce-primary { border-color: var(--vynce-primary); }
+.border-vynce-outline { border-color: var(--vynce-outline); }
+
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+@keyframes spin-slow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin-slow {
+  animation: spin-slow 20s linear infinite;
+}
+
+.animate-spin-paused {
+  animation-play-state: paused;
+}

@@ -218,7 +218,7 @@ class LibraryAlbumsViewModel @Inject constructor(
 @HiltViewModel
 class LibraryPlaylistsViewModel @Inject constructor(
     @ApplicationContext context: Context,
-    database: MusicDatabase,
+    val database: MusicDatabase,
 ) : ViewModel() {
     val isSyncingRemotePlaylists = MutableStateFlow(false)
 

@@ -99,21 +99,35 @@ object JioSaavn {
     /**
      * Extracts the highest-quality image URL from a JioSaavn JSON image field.
      * Handles both array-of-objects format (from wrapper APIs) and plain string format
-     * (from direct JioSaavn API), always enforcing HTTPS.
+     * (from direct JioSaavn API), strips boolean falses / default placeholders,
+     * promotes 150x150/50x50 to 500x500, and enforces HTTPS.
      */
     private fun JsonElement?.extractImageUrl(): String {
         if (this == null) return ""
-        // Wrapper API format: [{"quality":"...","url":"..."}]
+        if (this is JsonPrimitive && this.booleanOrNull != null) return ""
         val fromArray = try {
             this.jsonArray.lastOrNull()?.jsonObject
                 ?.let { it["url"] ?: it["link"] }
                 ?.jsonPrimitive?.content
         } catch (_: Exception) { null }
-        // Direct API format: plain string
         val fromPrimitive = if (fromArray == null) {
             try { this.jsonPrimitive.content } catch (_: Exception) { null }
         } else null
-        return (fromArray ?: fromPrimitive ?: "").replace("http://", "https://")
+        var url = (fromArray ?: fromPrimitive ?: "").trim()
+        if (url.isEmpty() || url == "false" || url == "null") return ""
+        url = url.replace("http://", "https://")
+            .replace("150x150", "500x500")
+            .replace("50x50", "500x500")
+        if (
+            url.contains("artist-default", ignoreCase = true) ||
+            url.contains("default-artist", ignoreCase = true) ||
+            url.contains("default_artist", ignoreCase = true) ||
+            url.contains("artist-placeholder", ignoreCase = true) ||
+            url.contains("default_playlist", ignoreCase = true)
+        ) {
+            return ""
+        }
+        return url
     }
 
     suspend fun getHome(languages: String = "hindi,english"): List<SaavnHomeModule> {

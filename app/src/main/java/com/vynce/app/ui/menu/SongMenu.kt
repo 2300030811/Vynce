@@ -60,6 +60,7 @@ import com.vynce.app.extensions.toMediaItem
 import com.vynce.app.models.toMediaMetadata
 import com.vynce.app.playback.ExoDownloadService
 import com.vynce.app.playback.queues.ListQueue
+import com.vynce.app.ui.component.SourceBadge
 import com.vynce.app.ui.component.button.IconButton
 import com.vynce.app.ui.component.items.ListItem
 import com.vynce.app.ui.dialog.AddToPlaylistDialog
@@ -122,6 +123,11 @@ fun SongMenu(
             song.artists.joinToString { it.name },
             makeTimeString(song.song.duration * 1000L)
         ),
+        badges = {
+            SourceBadge(
+                text = if (song.song.isLocal) "LOCAL" else if (song.id.startsWith("saavn")) "SAAVN" else "ONLINE"
+            )
+        },
         thumbnailContent = {
             val px = (ListThumbnailSize.value * density.density).roundToInt()
             AsyncImage(

@@ -30,6 +30,7 @@ import com.vynce.app.LocalPlayerConnection
 import com.vynce.app.R
 import com.vynce.app.constants.ListThumbnailSize
 import com.vynce.app.constants.ThumbnailCornerRadius
+import com.vynce.app.ui.component.SourceBadge
 import com.vynce.app.ui.component.button.IconButton
 import com.vynce.app.ui.menu.SaavnSongMenu
 import com.vynce.app.utils.joinByBullet
@@ -82,18 +83,19 @@ fun SaavnSongListItem(
                 song.duration.let { makeTimeString(it.toLong() * 1000L) }
             ),
             badges = {
-                // Quality badge
                 Surface(
                     color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
                     shape = RoundedCornerShape(4.dp)
                 ) {
                     Text(
-                        text = "320",
-                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
-                        fontSize = 10.sp,
+                        text = "320k",
+                        modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp),
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary
                     )
                 }
+                Spacer(Modifier.width(6.dp))
             },
             thumbnailContent = {
                 ItemThumbnail(
@@ -196,13 +198,10 @@ fun SaavnArtistListItem(
         title = artist.name,
         subtitle = "Artist",
         thumbnailContent = {
-            AsyncImage(
-                model = artist.image.takeIf { it.isNotEmpty() },
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier
-                    .size(ListThumbnailSize)
-                    .clip(CircleShape)
+            com.vynce.app.ui.component.ArtistAvatar(
+                name = artist.name,
+                imageUrl = artist.image,
+                modifier = Modifier.size(ListThumbnailSize)
             )
         },
         modifier = modifier.clickable(onClick = onClick)

@@ -360,4 +360,23 @@
     <string name="update_downloading">Downloading…</string>
     <string name="update_download_failed">Download failed. Please try again.</string>
     <string name="update_retry">Retry</string>
+
+    <!-- Listen Together -->
+    <string name="listen_together">Listen Together</string>
+    <string name="listen_together_desc">Listen to music in real time with friends</string>
+    <string name="listen_together_code">Room Code</string>
+    <string name="session_code">Room Code</string>
+    <string name="create_session">Start Room</string>
+    <string name="join_session">Join Room</string>
+    <string name="leave_session">Leave Room</string>
+    <string name="copy_session_code">Copy Code</string>
+    <string name="session_code_copied">Room code copied to clipboard</string>
+    <string name="display_name">Your Name</string>
+    <string name="share_room">Share Room</string>
+    <string name="host">Host</string>
+    <string name="participants">Listeners</string>
+
+    <!-- Music Widget -->
+    <string name="widget_title">Vynce Music Widget</string>
+    <string name="tap_to_open">Tap to open</string>
 </resources>

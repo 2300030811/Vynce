@@ -14,16 +14,16 @@
 Vynce is a high-performance, Material 3-based music player designed for audiophiles. Seamlessly stream millions of tracks from JioSaavn or play your local high-fidelity collection with a beautiful, modern interface.
 
 ### ✨ Key Features
-- 🎵 **Unlimited Streaming**: Access 100M+ songs at **320kbps** via the JioSaavn database.
-- 🎨 **Modern Aesthetics**: Full Material 3 support with **Dynamic Colors** (Android 12+).
+- 🎵 **Unlimited High-Res Streaming**: Access 100M+ songs at **320kbps** with lossless caching.
+- 📱 **Native Home Screen Music Widget**: Sleek dark card with album art, live progress ticker, and 5 interactive controls (Shuffle, Prev, Play/Pause, Next, Favorite).
+- 📊 **Detailed Insights & Listening DNA**: Deep analytics for your listening habits with time filters (All Time, Month, Week, Today), top tracks, and daily distribution.
+- 🔎 **Discovery & Curated Mixes**: Spotify playlists, curated mixes on search, high-res artwork, and Shazam-style music recognition.
+- 🎨 **Modern Aesthetics**: Full Material 3 support with **Dynamic Colors** (Android 12+), glassmorphic backdrops, and fluid gesture navigation.
 - 💿 **Album Art & Visuals**: Rotating vinyl effects, sleek transitions, and a built-in audio visualizer.
-- 📂 **Local Library**: High-fidelity support for MP3, **FLAC**, OGG, and AAC.
-- 📊 **Insightful Stats**: Dedicated dashboard for your listening habits.
-- 💬 **Synchronized Lyrics**: Support for LRC and TTML synced lyrics.
-- 📥 **Offline Mode**: Download your favorite tracks for listening anywhere.
+- 📂 **Local Library & Offline Mode**: High-fidelity support for MP3, **FLAC**, OGG, and AAC, plus one-tap album & playlist downloads.
+- 💬 **Synchronized Lyrics**: Support for LRC and TTML synced lyrics with shareable lyric cards.
 - 🚗 **On the Road**: Full **Android Auto** integration.
-- 📻 **Scrobbling**: Last.fm integration to keep your history synced.
-- 🌙 **Smart Tools**: Sleep timer, audio normalization, and gapless playback.
+- 📻 **Scrobbling & Backup**: Last.fm scrobbling, M3U/JSON playlist import/export, and seamless data backup.
 
 ---
 

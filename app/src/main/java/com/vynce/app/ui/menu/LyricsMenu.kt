@@ -26,6 +26,7 @@ import androidx.compose.material.icons.rounded.ExpandLess
 import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.Sync
 import androidx.compose.material.icons.rounded.SyncAlt
 import androidx.compose.material3.CircularProgressIndicator
@@ -91,6 +92,19 @@ fun LyricsMenu(
 
     var showEditDialog by rememberSaveable {
         mutableStateOf(false)
+    }
+    var showShareLyricsDialog by rememberSaveable {
+        mutableStateOf(false)
+    }
+
+    if (showShareLyricsDialog) {
+        com.vynce.app.ui.component.ShareLyricsDialog(
+            lyricsText = lyricsEntity?.lyrics ?: "",
+            songTitle = mediaMetadataProvider().title,
+            artistName = mediaMetadataProvider().artists.joinToString { it.name },
+            mediaMetadata = mediaMetadataProvider(),
+            onDismiss = { showShareLyricsDialog = false }
+        )
     }
 
     if (showEditDialog) {
@@ -457,6 +471,13 @@ fun LyricsMenu(
             title = R.string.lyrics_offset,
         ) {
             showLyricOffset = true
+        }
+
+        GridMenuItem(
+            icon = Icons.Rounded.Share,
+            title = R.string.share,
+        ) {
+            showShareLyricsDialog = true
         }
 
         GridMenuItem(

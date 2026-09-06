@@ -111,4 +111,14 @@ lint/tmp/
 /SimpMusic-main/
 /namida-main/
 /nuclear-master/
+/AirBeats-main/
 
+# Logs & Archives
+*.logcat
+web.zip
+
+# Web & Desktop Build Outputs
+web/release-desktop/
+web/dist/
+web/node_modules/
+*.exe

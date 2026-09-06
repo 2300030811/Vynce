@@ -1,5 +1,6 @@
 package com.vynce.app.ui.navigation
 
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -76,9 +77,9 @@ fun VynceNavHost(
             }
 
             if (currentRouteIndex == -1 || currentRouteIndex > previousRouteIndex)
-                slideInHorizontally { it / 8 } + fadeIn(tween(200))
+                slideInHorizontally(animationSpec = tween(300, easing = FastOutSlowInEasing)) { it / 6 } + fadeIn(tween(300, easing = FastOutSlowInEasing))
             else
-                slideInHorizontally { -it / 8 } + fadeIn(tween(200))
+                slideInHorizontally(animationSpec = tween(300, easing = FastOutSlowInEasing)) { -it / 6 } + fadeIn(tween(300, easing = FastOutSlowInEasing))
         },
         exitTransition = {
             val currentRouteIndex = navigationItems.indexOfFirst {
@@ -89,9 +90,9 @@ fun VynceNavHost(
             }
 
             if (targetRouteIndex == -1 || targetRouteIndex > currentRouteIndex)
-                slideOutHorizontally { -it / 8 } + fadeOut(tween(100))
+                slideOutHorizontally(animationSpec = tween(300, easing = FastOutSlowInEasing)) { -it / 6 } + fadeOut(tween(300, easing = FastOutSlowInEasing))
             else
-                slideOutHorizontally { it / 8 } + fadeOut(tween(100))
+                slideOutHorizontally(animationSpec = tween(300, easing = FastOutSlowInEasing)) { it / 6 } + fadeOut(tween(300, easing = FastOutSlowInEasing))
         },
         popEnterTransition = {
             val currentRouteIndex = navigationItems.indexOfFirst {
@@ -102,9 +103,9 @@ fun VynceNavHost(
             }
 
             if (previousRouteIndex != -1 && previousRouteIndex < currentRouteIndex)
-                slideInHorizontally { it / 8 } + fadeIn(tween(200))
+                slideInHorizontally(animationSpec = tween(300, easing = FastOutSlowInEasing)) { it / 6 } + fadeIn(tween(300, easing = FastOutSlowInEasing))
             else
-                slideInHorizontally { -it / 8 } + fadeIn(tween(200))
+                slideInHorizontally(animationSpec = tween(300, easing = FastOutSlowInEasing)) { -it / 6 } + fadeIn(tween(300, easing = FastOutSlowInEasing))
         },
         popExitTransition = {
             val currentRouteIndex = navigationItems.indexOfFirst {
@@ -115,9 +116,9 @@ fun VynceNavHost(
             }
 
             if (currentRouteIndex != -1 && currentRouteIndex < targetRouteIndex)
-                slideOutHorizontally { -it / 8 } + fadeOut(tween(100))
+                slideOutHorizontally(animationSpec = tween(300, easing = FastOutSlowInEasing)) { -it / 6 } + fadeOut(tween(300, easing = FastOutSlowInEasing))
             else
-                slideOutHorizontally { it / 8 } + fadeOut(tween(100))
+                slideOutHorizontally(animationSpec = tween(300, easing = FastOutSlowInEasing)) { it / 6 } + fadeOut(tween(300, easing = FastOutSlowInEasing))
         },
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection)
     )
@@ -259,6 +260,20 @@ fun VynceNavHost(
         composable("playlist/{playlistId}") { backStack ->
             val playlistId = backStack.arguments?.getString("playlistId") ?: return@composable
             PlaylistScreen(playlistId = playlistId, navController = navController, playerConnection = playerConnection)
+        }
+        composable("spotify/playlist/{playlistId}") { backStack ->
+            val playlistId = backStack.arguments?.getString("playlistId") ?: return@composable
+            com.vynce.app.ui.screens.spotify.SpotifyPlaylistScreen(
+                playlistId = playlistId,
+                navController = navController,
+                playerConnection = playerConnection
+            )
+        }
+        composable("recognition") {
+            com.vynce.app.ui.screens.musicrecognition.MusicRecognitionScreen(
+                navController = navController,
+                playerConnection = playerConnection
+            )
         }
     }
 }

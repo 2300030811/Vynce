@@ -165,12 +165,7 @@ import kotlin.math.min
 import kotlin.math.pow
 import com.vynce.app.utils.reportException
 import com.vynce.app.data.stats.ListeningStatsTracker
-import com.vynce.app.widget.PlayerInfo
-import com.vynce.app.widget.PlayerInfoStateDefinition
-import com.vynce.app.widget.VynceBarWidget
-import com.vynce.app.widget.VynceControlWidget
-import androidx.glance.appwidget.GlanceAppWidgetManager
-import androidx.glance.appwidget.state.updateAppWidgetState
+import com.vynce.app.widget.MusicWidget
 import kotlinx.coroutines.Job
 
 private val AudioDecoderPreferenceKey = intPreferencesKey("audio_decoder")
@@ -287,7 +282,6 @@ class MusicService : MediaLibraryService(),
 
     // ── Widget state pipeline ──────────────────────────────────────
     private var debouncedWidgetUpdateJob: Job? = null
-    private var lastWidgetPlayerInfo: PlayerInfo? = null
     private val widgetStateDebounceMs = 300L
 
     private var progressTrackerJob: Job? = null
@@ -318,6 +312,7 @@ class MusicService : MediaLibraryService(),
     }
 
     override fun onCreate() {
+        instance = this
         Log.i(TAG, "Starting MusicService")
         super.onCreate()
 
@@ -502,8 +497,27 @@ class MusicService : MediaLibraryService(),
             currentSong.value?.let {
                 val song = it.song.toggleLike()
                 update(song)
+                MusicWidget.updateAllWidgets(applicationContext)
             }
         }
+    }
+
+    fun isCurrentSongLiked(): Boolean {
+        return currentSong.value?.song?.liked == true
+    }
+
+    fun toggleShuffle() {
+        player.shuffleModeEnabled = !player.shuffleModeEnabled
+        MusicWidget.updateAllWidgets(applicationContext)
+    }
+
+    fun togglePlayPause() {
+        if (player.isPlaying) {
+            player.pause()
+        } else {
+            player.play()
+        }
+        MusicWidget.updateAllWidgets(applicationContext)
     }
 
 
@@ -959,79 +973,13 @@ class MusicService : MediaLibraryService(),
     }
 
     // ── Widget update pipeline ─────────────────────────────────────
-
     private fun requestWidgetUpdate() {
         debouncedWidgetUpdateJob?.cancel()
         debouncedWidgetUpdateJob = offloadScope.launch {
             delay(widgetStateDebounceMs)
-            val playerInfo = buildPlayerInfo()
-            val oldInfo = lastWidgetPlayerInfo
-            if (oldInfo != null && !shouldUpdateWidget(oldInfo, playerInfo)) return@launch
-            lastWidgetPlayerInfo = playerInfo
-            updateGlanceWidgets(playerInfo)
-        }
-    }
-
-    private fun shouldUpdateWidget(old: PlayerInfo, new: PlayerInfo): Boolean {
-        if (old.songTitle != new.songTitle) return true
-        if (old.artistName != new.artistName) return true
-        if (old.isPlaying != new.isPlaying) return true
-        if (old.albumArtUri != new.albumArtUri) return true
-        if (old.isFavorite != new.isFavorite) return true
-        if (old.isShuffleEnabled != new.isShuffleEnabled) return true
-        if (old.repeatMode != new.repeatMode) return true
-        if (old.totalDurationMs != new.totalDurationMs) return true
-        val drift = kotlin.math.abs(old.currentPositionMs - new.currentPositionMs)
-        return drift > 3000L
-    }
-
-    private suspend fun buildPlayerInfo(): PlayerInfo {
-        val currentItem = withContext(Dispatchers.Main) { player.currentMediaItem }
-        val metadata = currentItem?.mediaMetadata
-        val isPlaying = withContext(Dispatchers.Main) { player.isPlaying }
-        val repeatMode = withContext(Dispatchers.Main) { player.repeatMode }
-        val currentPosition = withContext(Dispatchers.Main) { player.currentPosition }
-        val totalDuration = withContext(Dispatchers.Main) { player.duration.coerceAtLeast(0) }
-        val shuffleEnabled = queueBoard.value.getCurrentQueue()?.shuffled ?: false
-        val isFavorite = currentSong.value?.song?.liked ?: false
-
-        val artworkUri = metadata?.artworkUri?.toString()
-            ?: currentItem?.vynceMetadata?.thumbnailUrl
-
-        return PlayerInfo(
-            songTitle = metadata?.title?.toString().orEmpty(),
-            artistName = metadata?.artist?.toString().orEmpty(),
-            albumArtUri = artworkUri,
-            isPlaying = isPlaying,
-            currentPositionMs = currentPosition,
-            totalDurationMs = totalDuration,
-            isFavorite = isFavorite,
-            repeatMode = repeatMode,
-            isShuffleEnabled = shuffleEnabled,
-        )
-    }
-
-    private suspend fun updateGlanceWidgets(playerInfo: PlayerInfo) = withContext(Dispatchers.IO) {
-        try {
-            val glanceManager = GlanceAppWidgetManager(applicationContext)
-
-            val barGlanceIds = glanceManager.getGlanceIds(VynceBarWidget::class.java)
-            barGlanceIds.forEach { id ->
-                updateAppWidgetState(applicationContext, PlayerInfoStateDefinition, id) { playerInfo }
-                VynceBarWidget().update(applicationContext, id)
+            withContext(Dispatchers.Main) {
+                MusicWidget.updateAllWidgets(applicationContext)
             }
-
-            val controlGlanceIds = glanceManager.getGlanceIds(VynceControlWidget::class.java)
-            controlGlanceIds.forEach { id ->
-                updateAppWidgetState(applicationContext, PlayerInfoStateDefinition, id) { playerInfo }
-                VynceControlWidget().update(applicationContext, id)
-            }
-
-            if (barGlanceIds.isNotEmpty() || controlGlanceIds.isNotEmpty()) {
-                Log.d(TAG, "Widgets updated: ${playerInfo.songTitle} (Bar: ${barGlanceIds.size}, Control: ${controlGlanceIds.size})")
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Error updating widgets", e)
         }
     }
 
@@ -1301,6 +1249,7 @@ class MusicService : MediaLibraryService(),
     }
 
     override fun onDestroy() {
+        if (instance == this) instance = null
         Log.i(TAG, "Terminating MusicService.")
         
         stopProgressTracker()
@@ -1359,6 +1308,9 @@ class MusicService : MediaLibraryService(),
         // const val CHUNK_LENGTH = 2 * 1024 * 1024L  // 2MB chunks — no longer needed for keepalive connections
 
         const val COMMAND_GET_BINDER = "GET_BINDER"
+
+        var instance: MusicService? = null
+            private set
     }
 }
 

@@ -121,10 +121,12 @@ fun MiniPlayer(
 
 
 
-    LaunchedEffect(playbackState) {
-        if (playbackState == STATE_READY) {
+    LaunchedEffect(playbackState, isPlaying) {
+        position = playerConnection.player.currentPosition
+        duration = playerConnection.player.duration
+        if (playbackState == STATE_READY && isPlaying) {
             while (isActive) {
-                delay(500)
+                delay(1000)
                 position = playerConnection.player.currentPosition
                 duration = playerConnection.player.duration
             }

@@ -11,6 +11,7 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <uses-permission android:name="android.permission.READ_MEDIA_AUDIO"/>
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
         android:maxSdkVersion="32" />
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
@@ -97,35 +98,25 @@
             </intent-filter>
         </receiver>
 
-        <!-- Glance Widgets -->
+
+        <!-- Native Music Widget -->
         <receiver
-            android:name=".widget.VynceBarWidgetReceiver"
-            android:exported="false">
+            android:name=".widget.MusicWidget"
+            android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="com.vynce.app.ACTION_PLAY_PAUSE" />
+                <action android:name="com.vynce.app.ACTION_PREV" />
+                <action android:name="com.vynce.app.ACTION_NEXT" />
+                <action android:name="com.vynce.app.ACTION_SHUFFLE" />
+                <action android:name="com.vynce.app.ACTION_LIKE" />
+                <action android:name="com.vynce.app.ACTION_OPEN_APP" />
+                <action android:name="com.vynce.app.ACTION_STATE_CHANGED" />
+                <action android:name="com.vynce.app.ACTION_UPDATE_PROGRESS" />
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"
-                android:resource="@xml/vynce_bar_widget_info" />
-        </receiver>
-
-        <receiver
-            android:name=".widget.VynceControlWidgetReceiver"
-            android:exported="false">
-            <intent-filter>
-                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-            </intent-filter>
-            <meta-data
-                android:name="android.appwidget.provider"
-                android:resource="@xml/vynce_control_widget_info" />
-        </receiver>
-
-        <receiver
-            android:name=".widget.WidgetUpdateReceiver"
-            android:exported="false">
-            <intent-filter>
-                <action android:name="com.vynce.app.ACTION_WIDGET_UPDATE_PLAYBACK_STATE" />
-            </intent-filter>
+                android:resource="@xml/vynce_music_widget_info" />
         </receiver>
 
 
@@ -138,6 +129,22 @@
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </service>
+
+        <activity
+            android:name=".ui.activities.DebugActivity"
+            android:exported="false"
+            android:process=":crash_handler"
+            android:theme="@style/Theme.Vynce" />
+
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/provider_paths" />
+        </provider>
 
         <meta-data
             android:name="com.google.android.gms.car.application"

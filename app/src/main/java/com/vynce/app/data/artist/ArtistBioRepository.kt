@@ -99,15 +99,45 @@ object ArtistBioRepository {
             val summaryBody = summaryResponse.bodyAsText()
             val summaryData = json.decodeFromString<WikiSummaryResponse>(summaryBody)
 
+            var imageUrl = summaryData.thumbnail?.source
+            if (imageUrl.isNullOrBlank()) {
+                try {
+                    val spotifySearch = com.darkxvenom.airbeats.spotify.Spotify.search(
+                        query = artistName,
+                        types = listOf("artist"),
+                        limit = 1
+                    ).getOrNull()
+                    imageUrl = spotifySearch?.artists?.items?.firstOrNull()?.images?.firstOrNull()?.url
+                } catch (_: Exception) {
+                    // Spotify fallback failed silently
+                }
+            }
+
             ArtistBio(
                 bio = summaryData.extract ?: "",
-                imageUrl = summaryData.thumbnail?.source
+                imageUrl = imageUrl
             ).also { bio ->
                 synchronized(bioCache) { bioCache.put(cacheKey, bio) }
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to get artist bio for: $artistName", e)
-            null
+            // If Wikipedia fails completely, try Spotify artist image alone as last resort
+            val spotifyImage = try {
+                val spotifySearch = com.darkxvenom.airbeats.spotify.Spotify.search(
+                    query = artistName,
+                    types = listOf("artist"),
+                    limit = 1
+                ).getOrNull()
+                spotifySearch?.artists?.items?.firstOrNull()?.images?.firstOrNull()?.url
+            } catch (_: Exception) { null }
+
+            if (spotifyImage != null) {
+                ArtistBio(bio = "", imageUrl = spotifyImage).also { bio ->
+                    synchronized(bioCache) { bioCache.put(cacheKey, bio) }
+                }
+            } else {
+                Log.e(TAG, "Failed to get artist bio for: $artistName", e)
+                null
+            }
         }
     }
 }

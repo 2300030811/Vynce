@@ -1,5 +1,26 @@
 # Vynce Changelog
 
+## v3.0.0
+- **Native Music Widget**:
+  - Modern dark surface card (`#111318`) with 24dp rounded corners and border.
+  - High-resolution 80dp rounded album art rendering with fast Coil 3 bitmap pipeline.
+  - Real-time progress ticker bar with elapsed & total duration timestamps (1s periodic broadcasts).
+  - 5 interactive playback controls: Shuffle toggle, Previous, Play/Pause, Next, and Favorite / Like toggle.
+  - Instant two-way state synchronization directly with `MusicService`.
+- **Search Experience & Discovery Overhaul**:
+  - Re-architected Search Screen matching modern Vynce Web design principles.
+  - Curated Mixes relocated to Search page for clean discovery.
+  - High-resolution thumbnails and Spotify playlist integration.
+  - Accurate search ranking and cross-source metadata resolution.
+- **Detailed Insights & Listening Stats**:
+  - Direct quick-access button to the Detailed Insights dashboard (`StatsScreen`) from Home header and Settings.
+  - Persona DNA listening style calculator, top songs, top artists, and day listening habits distribution.
+- **Queue & Playlist Playback Reliability**:
+  - Fixed playlist queue progression to guarantee seamless sequential track progression.
+  - Added direct download and add-to-playlist action controls on JioSaavn and online playlists/albums.
+- **Music Recognition (Shazam-style) UI Optimization**:
+  - Polished recognition screen layout and bottom padding for seamless song identification.
+
 ## v2.2.0
 - **New Features & Streaming Integrations**:
   - Added SoundCloud & Bandcamp streaming support (#35).

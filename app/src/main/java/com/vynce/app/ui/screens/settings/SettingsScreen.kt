@@ -20,6 +20,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.LibraryBooks
 import androidx.compose.material.icons.rounded.AccountCircle
+import androidx.compose.material.icons.rounded.BarChart
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Interests
 import androidx.compose.material.icons.rounded.Palette
@@ -81,6 +82,12 @@ fun SettingsScreen(
         ElevatedCard(
             modifier = Modifier.fillMaxWidth()
         ) {
+            PreferenceEntry(
+                title = { Text("Detailed Insights & Stats") },
+                description = "View listening stats, persona, and top tracks",
+                icon = { Icon(Icons.Rounded.BarChart, null) },
+                onClick = { navController.navigate("stats") }
+            )
             PreferenceEntry(
                 title = { Text(stringResource(R.string.grp_account_sync)) },
                 icon = { Icon(Icons.Rounded.AccountCircle, null) },
