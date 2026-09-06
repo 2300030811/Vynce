@@ -3,6 +3,7 @@
   "productName": "Vynce",
   "description": "Vynce Music — High fidelity streaming desktop audio player",
   "author": "Vynce Team",
+  "homepage": "https://github.com/2300030811/Vynce",
   "private": true,
   "version": "1.0.0",
   "type": "module",
@@ -93,6 +94,7 @@
       "shortcutName": "Vynce Music"
     },
     "linux": {
+      "maintainer": "Vynce Team <support@vynce.example>",
       "target": [
         {
           "target": "AppImage",
