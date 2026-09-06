@@ -31,9 +31,9 @@ data class BcSearchRequest(
 
 @Serializable
 data class BcResult(
-    val type: String,
-    val name: String,
-    val url: String,
+    val type: String = "",
+    val name: String = "",
+    val url: String? = null,
     val band_name: String? = null,
     val album_name: String? = null,
     val img: String? = null,
@@ -108,7 +108,7 @@ object Bandcamp {
             val searchRes = json.decodeFromString<BcSearchResponse>(bodyText)
             
             searchRes.auto.results
-                .filter { it.type == "track" }
+                .filter { it.type == "track" && !it.url.isNullOrBlank() }
                 .map { result ->
                     val highResImage = result.img?.replace("_3.jpg", "_10.jpg")
                         ?.replace("_3.png", "_10.png") ?: ""

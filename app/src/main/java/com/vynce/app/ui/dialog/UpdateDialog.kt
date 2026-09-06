@@ -271,7 +271,7 @@ fun UpdateDialog(
                 Spacer(Modifier.height(8.dp))
             }
 
-            val cachedApk = remember(downloadState) { AppUpdateChecker.getCachedApk(context) }
+            val cachedApk = remember(downloadState) { AppUpdateChecker.getCachedApk(context, updateInfo.newVersion) }
 
             // Buttons
             Row(

@@ -11,6 +11,7 @@ package com.vynce.app.ui.screens.settings
 
 import android.content.ClipData
 import android.os.Build
+import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -31,6 +32,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.rounded.SystemUpdate
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -41,6 +44,11 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -48,6 +56,7 @@ import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -70,8 +79,11 @@ import com.vynce.app.ui.component.PreferenceEntry
 import com.vynce.app.ui.component.SettingsClickToReveal
 import com.vynce.app.ui.component.button.IconButton
 import com.vynce.app.ui.component.button.IconLabelButton
+import com.vynce.app.ui.dialog.UpdateDialog
 import com.vynce.app.ui.utils.backToMain
+import com.vynce.app.utils.AppUpdateChecker
 import com.vynce.app.utils.scanners.FFmpegScanner
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -82,9 +94,14 @@ fun AboutScreen(
     val context = LocalContext.current
     val clipboardManager = LocalClipboard.current
     val uriHandler = LocalUriHandler.current
+    val scope = rememberCoroutineScope()
     val appName = stringResource(R.string.app_name)
 
     val showDebugInfo = BuildConfig.DEBUG || BuildConfig.BUILD_TYPE == "userdebug"
+
+    var checkingForUpdates by remember { mutableStateOf(false) }
+    var updateInfo by remember { mutableStateOf<AppUpdateChecker.UpdateInfo?>(null) }
+    var showUpdateDialog by remember { mutableStateOf(false) }
 
     ColumnWithContentPadding(
         modifier = Modifier.fillMaxHeight(),
@@ -152,19 +169,19 @@ fun AboutScreen(
             IconLabelButton(
                 text = "GitHub",
                 painter = painterResource(R.drawable.github),
-                onClick = { uriHandler.openUri("https://github.com/Vynce/Vynce") },
+                onClick = { uriHandler.openUri("https://github.com/2300030811/Vynce") },
                 modifier = Modifier.padding(horizontal = 8.dp)
             )
 
             IconLabelButton(
                 text = stringResource(R.string.wiki),
                 icon = Icons.Outlined.Info,
-                onClick = { uriHandler.openUri("https://github.com/Vynce/Vynce/wiki") },
+                onClick = { uriHandler.openUri("https://github.com/2300030811/Vynce/wiki") },
                 modifier = Modifier.padding(horizontal = 8.dp)
             )
         }
 
-        Spacer(Modifier.height(96.dp))
+        Spacer(Modifier.height(24.dp))
 
         Column(
             modifier = Modifier.padding(horizontal = 16.dp)
@@ -172,6 +189,37 @@ fun AboutScreen(
             ElevatedCard(
                 modifier = Modifier.fillMaxWidth()
             ) {
+                PreferenceEntry(
+                    title = { Text("Check for updates") },
+                    description = if (checkingForUpdates) "Checking GitHub for latest release…" else "Installed: v${BuildConfig.VERSION_NAME}",
+                    icon = {
+                        if (checkingForUpdates) {
+                            CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
+                        } else {
+                            Icon(Icons.Rounded.SystemUpdate, null)
+                        }
+                    },
+                    onClick = {
+                        if (!checkingForUpdates) {
+                            checkingForUpdates = true
+                            scope.launch {
+                                try {
+                                    val info = AppUpdateChecker.checkForUpdate()
+                                    if (info.isUpdateAvailable) {
+                                        updateInfo = info
+                                        showUpdateDialog = true
+                                    } else {
+                                        Toast.makeText(context, "Vynce is up to date (v${BuildConfig.VERSION_NAME})", Toast.LENGTH_SHORT).show()
+                                    }
+                                } catch (e: Exception) {
+                                    Toast.makeText(context, "Failed to check for updates: ${e.localizedMessage ?: "Unknown error"}", Toast.LENGTH_SHORT).show()
+                                } finally {
+                                    checkingForUpdates = false
+                                }
+                            }
+                        }
+                    }
+                )
                 PreferenceEntry(
                     title = { Text(stringResource(R.string.attribution_title)) },
                     onClick = {
@@ -193,13 +241,13 @@ fun AboutScreen(
                 PreferenceEntry(
                     title = { Text(stringResource(R.string.help_bug_report_action)) },
                     onClick = {
-                        uriHandler.openUri("https://github.com/Vynce/Vynce/issues")
+                        uriHandler.openUri("https://github.com/2300030811/Vynce/issues")
                     }
                 )
                 PreferenceEntry(
                     title = { Text(stringResource(R.string.help_support_forum)) },
                     onClick = {
-                        uriHandler.openUri("https://github.com/Vynce/Vynce/discussions")
+                        uriHandler.openUri("https://github.com/2300030811/Vynce/discussions")
                     }
                 )
                 PreferenceEntry(
@@ -248,19 +296,10 @@ fun AboutScreen(
                     ) {
                         val info = mutableListOf<String>(
                             "Device: ${Build.BRAND} ${Build.DEVICE} (${Build.MODEL})",
-                            "Manufacturer: ${Build.MANUFACTURER}",
-                            "HW: ${Build.BOARD} (${Build.HARDWARE})",
-                            "ABIs: ${Build.SUPPORTED_ABIS.joinToString()})",
-                            "Android: ${Build.VERSION.SDK_INT} (${Build.ID})",
-                            Build.DISPLAY,
-                            Build.PRODUCT,
-                            Build.FINGERPRINT,
-                            Build.VERSION.SECURITY_PATCH
+                            "Android: ${Build.VERSION.RELEASE} (SDK ${Build.VERSION.SDK_INT})",
+                            "Supported ABIs: ${Build.SUPPORTED_ABIS.joinToString()}",
+                            "Build ID: ${Build.ID}"
                         )
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                            info.add("SOC: ${Build.SOC_MODEL} (${Build.SOC_MANUFACTURER})")
-                            info.add("SKU: ${Build.SKU} (${Build.ODM_SKU})")
-                        }
 
                         Column(
                             modifier = Modifier.padding(16.dp)
@@ -275,20 +314,25 @@ fun AboutScreen(
                     }
                 }
             }
-            Spacer(modifier = Modifier.height(16.dp))
 
-            if (ENABLE_FFMETADATAEX) {
-                ContributorCard(
-                    contributor = ContributorInfo(
-                        name = "FFmpeg",
-                        description = stringResource(R.string.ffmpeg_lgpl),
-                        type = listOf(CUSTOM),
-                        url = "https://github.com/Vynce/ffMetadataEx/blob/main/Modules.md"
-                    )
+            ContributorCard(
+                contributor = ContributorInfo(
+                    name = "Bhima",
+                    type = listOf(CUSTOM),
+                    description = "Maintainer and lead developer of Vynce Music Player.",
+                    url = "https://github.com/2300030811"
                 )
-            }
+            )
         }
 
+        Spacer(Modifier.height(16.dp))
+    }
+
+    if (showUpdateDialog && updateInfo != null) {
+        UpdateDialog(
+            updateInfo = updateInfo!!,
+            onDismiss = { showUpdateDialog = false }
+        )
     }
 
     TopAppBar(
@@ -308,4 +352,3 @@ fun AboutScreen(
         scrollBehavior = scrollBehavior
     )
 }
-

@@ -25,7 +25,7 @@ object ComposeToImage {
 
             val contentUri: Uri = FileProvider.getUriForFile(
                 context,
-                "${context.packageName}.fileprovider",
+                "${context.packageName}.FileProvider",
                 file
             )
 

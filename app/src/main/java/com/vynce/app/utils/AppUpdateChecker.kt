@@ -8,7 +8,10 @@ package com.vynce.app.utils
 
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
+import android.provider.Settings
 import android.util.Log
 import androidx.core.content.FileProvider
 import com.vynce.app.BuildConfig
@@ -16,8 +19,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import org.json.JSONObject
 import org.json.JSONArray
+import org.json.JSONObject
 import java.io.File
 import java.io.FileOutputStream
 import java.util.concurrent.TimeUnit
@@ -60,7 +63,7 @@ object AppUpdateChecker {
                 return@withContext noUpdate()
             }
 
-            val body = response.body?.string() ?: return@withContext noUpdate()
+            val body = response.body.string()
             val json = JSONObject(body)
 
             val tagName = json.optString("tag_name", "")
@@ -68,29 +71,50 @@ object AppUpdateChecker {
             val publishedAt = json.optString("published_at", "")
             val assets = json.optJSONArray("assets") ?: JSONArray()
 
-            // Find the universal APK or any APK asset
-            var downloadUrl: String? = null
+            val apkAssets = mutableListOf<Pair<String, String>>()
             for (i in 0 until assets.length()) {
                 val asset = assets.getJSONObject(i)
                 val name = asset.optString("name", "")
-                if (name.endsWith(".apk")) {
-                    // Prefer universal APK
-                    if (name.contains("universal", ignoreCase = true)) {
-                        downloadUrl = asset.optString("browser_download_url")
-                        break
-                    }
-                    // Fallback to first APK found
-                    if (downloadUrl == null) {
-                        downloadUrl = asset.optString("browser_download_url")
-                    }
+                val url = asset.optString("browser_download_url", "")
+                if (name.endsWith(".apk", ignoreCase = true) && url.isNotBlank()) {
+                    apkAssets.add(name to url)
                 }
             }
 
-            val remoteVersion = tagName.removePrefix("v").removePrefix("V")
-            val currentVersion = BuildConfig.VERSION_NAME
+            // Find best matching APK based on device supported ABIs, fallback to universal, then first APK
+            var downloadUrl: String? = null
+            val supportedAbis = Build.SUPPORTED_ABIS ?: emptyArray()
+
+            // 1. Check for device-specific ABI match
+            for (abi in supportedAbis) {
+                val match = apkAssets.firstOrNull { it.first.contains(abi, ignoreCase = true) }
+                if (match != null) {
+                    downloadUrl = match.second
+                    Log.i(TAG, "Selected ABI-specific APK (${match.first}) for ABI $abi")
+                    break
+                }
+            }
+
+            // 2. Check for universal APK fallback
+            if (downloadUrl == null) {
+                val universalMatch = apkAssets.firstOrNull { it.first.contains("universal", ignoreCase = true) }
+                if (universalMatch != null) {
+                    downloadUrl = universalMatch.second
+                    Log.i(TAG, "Selected universal APK (${universalMatch.first})")
+                }
+            }
+
+            // 3. Fallback to any APK
+            if (downloadUrl == null && apkAssets.isNotEmpty()) {
+                downloadUrl = apkAssets.first().second
+                Log.i(TAG, "Selected fallback APK (${apkAssets.first().first})")
+            }
+
+            val remoteVersion = tagName.removePrefix("v").removePrefix("V").trim()
+            val currentVersion = BuildConfig.VERSION_NAME.trim()
 
             val isNewer = isNewerVersion(remoteVersion, currentVersion)
-            Log.i(TAG, "Current: $currentVersion, Remote: $remoteVersion, Update: $isNewer")
+            Log.i(TAG, "Current: $currentVersion, Remote: $remoteVersion, Update: $isNewer, Url: $downloadUrl")
 
             UpdateInfo(
                 isUpdateAvailable = isNewer,
@@ -117,45 +141,75 @@ object AppUpdateChecker {
     }
 
     /**
-     * Check if a completed update APK already exists in cache.
+     * Check if a completed update APK already exists in cache and verify it matches the expected version.
      */
-    fun getCachedApk(context: Context): File? {
-        val updateDir = File(context.cacheDir, "updates")
-        val apkFile = File(updateDir, "vynce-update.apk")
-        return if (apkFile.exists() && apkFile.length() > 1_000_000L) apkFile else null
+    fun getCachedApk(context: Context, expectedVersion: String? = null): File? {
+        try {
+            val updateDir = File(context.cacheDir, "updates")
+            val apkFile = File(updateDir, "vynce-update.apk")
+            if (!apkFile.exists() || apkFile.length() < 1_000_000L) {
+                return null
+            }
+
+            // Validate that the cached APK is a valid package and matches the expected version
+            val pkgInfo = context.packageManager.getPackageArchiveInfo(apkFile.absolutePath, 0)
+            if (pkgInfo == null) {
+                Log.w(TAG, "Cached APK is invalid or corrupt. Deleting.")
+                apkFile.delete()
+                return null
+            }
+
+            if (expectedVersion != null && pkgInfo.versionName != expectedVersion) {
+                Log.i(TAG, "Cached APK version (${pkgInfo.versionName}) != expected ($expectedVersion). Deleting stale APK.")
+                apkFile.delete()
+                return null
+            }
+
+            return apkFile
+        } catch (e: Exception) {
+            Log.e(TAG, "Error checking cached APK", e)
+            return null
+        }
     }
 
     /**
-     * Download the APK to the app's cache directory.
-     * @param onProgress callback with progress (0.0 to 1.0), -1 for indeterminate, plus downloaded & total bytes
-     * @return the downloaded File, or null on failure
+     * Download the APK to the app's cache directory via a temporary file.
      */
     suspend fun downloadApk(
         context: Context,
         url: String,
         onProgress: (progress: Float, downloadedBytes: Long, totalBytes: Long) -> Unit = { _, _, _ -> }
     ): File? = withContext(Dispatchers.IO) {
+        val updateDir = File(context.cacheDir, "updates")
+        updateDir.mkdirs()
+
+        val tmpFile = File(updateDir, "vynce-update.apk.tmp")
+        val apkFile = File(updateDir, "vynce-update.apk")
+
+        if (tmpFile.exists()) {
+            tmpFile.delete()
+        }
+
         try {
-            val updateDir = File(context.cacheDir, "updates")
-            updateDir.mkdirs()
+            val request = Request.Builder()
+                .url(url)
+                .header("User-Agent", "Vynce-App/${BuildConfig.VERSION_NAME}")
+                .build()
 
-            val apkFile = File(updateDir, "vynce-update.apk")
-
-            val request = Request.Builder().url(url).build()
             val call = client.newCall(request)
             activeDownloadCall = call
             val response = call.execute()
 
             if (!response.isSuccessful) {
-                Log.e(TAG, "Download failed: ${response.code}")
+                Log.e(TAG, "Download failed: HTTP ${response.code}")
                 return@withContext null
             }
 
-            val responseBody = response.body ?: return@withContext null
+            val responseBody = response.body
             val contentLength = responseBody.contentLength()
             val inputStream = responseBody.byteStream()
 
-            FileOutputStream(apkFile).use { output ->
+            FileOutputStream(tmpFile).use { output ->
                 val buffer = ByteArray(8192)
                 var bytesRead: Long = 0
                 var read: Int
@@ -167,51 +221,103 @@ object AppUpdateChecker {
                     val progress = if (contentLength > 0) bytesRead.toFloat() / contentLength.toFloat() else -1f
                     onProgress(progress, bytesRead, contentLength)
                 }
+                output.flush()
             }
 
             activeDownloadCall = null
 
             // Verify the download completed fully
-            if (contentLength > 0 && apkFile.length() != contentLength) {
-                Log.e(TAG, "Download incomplete: expected $contentLength bytes, got ${apkFile.length()}")
-                apkFile.delete()
+            if (contentLength > 0 && tmpFile.length() != contentLength) {
+                Log.e(TAG, "Download incomplete: expected $contentLength bytes, got ${tmpFile.length()}")
+                tmpFile.delete()
                 return@withContext null
             }
 
-            Log.i(TAG, "APK downloaded: ${apkFile.absolutePath} (${apkFile.length()} bytes)")
-            apkFile
+            // Verify the downloaded file is a valid Android APK package
+            val pkgInfo = context.packageManager.getPackageArchiveInfo(tmpFile.absolutePath, 0)
+            if (pkgInfo == null) {
+                Log.e(TAG, "Downloaded file is not a valid APK package")
+                tmpFile.delete()
+                return@withContext null
+            }
+
+            if (apkFile.exists()) {
+                apkFile.delete()
+            }
+
+            val renamed = tmpFile.renameTo(apkFile)
+            val finalFile = if (renamed) apkFile else tmpFile
+
+            Log.i(TAG, "APK downloaded & verified: ${finalFile.absolutePath} (${finalFile.length()} bytes)")
+            finalFile
         } catch (e: Exception) {
             activeDownloadCall = null
             Log.e(TAG, "Failed to download APK", e)
+            if (tmpFile.exists()) {
+                tmpFile.delete()
+            }
             null
         }
     }
 
     /**
      * Trigger the Android package installer to install the downloaded APK.
+     * Handles unknown sources permission check on Android 8.0+ (Oreo+).
      */
     fun installApk(context: Context, apkFile: File) {
-        val uri: Uri = FileProvider.getUriForFile(
-            context,
-            "${context.packageName}.FileProvider",
-            apkFile
-        )
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                if (!context.packageManager.canRequestPackageInstalls()) {
+                    val permissionIntent = Intent(
+                        Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                        Uri.parse("package:${context.packageName}")
+                    ).apply {
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                    }
+                    context.startActivity(permissionIntent)
+                    return
+                }
+            }
 
-        val intent = Intent(Intent.ACTION_VIEW).apply {
-            setDataAndType(uri, "application/vnd.android.package-archive")
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION
+            val uri: Uri = FileProvider.getUriForFile(
+                context,
+                "${context.packageName}.FileProvider",
+                apkFile
+            )
+
+            val intent = Intent(Intent.ACTION_VIEW).apply {
+                setDataAndType(uri, "application/vnd.android.package-archive")
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            }
+
+            val resolveInfoList = context.packageManager.queryIntentActivities(
+                intent,
+                PackageManager.MATCH_DEFAULT_ONLY
+            )
+            for (resolveInfo in resolveInfoList) {
+                val packageName = resolveInfo.activityInfo.packageName
+                context.grantUriPermission(
+                    packageName,
+                    uri,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION
+                )
+            }
+
+            context.startActivity(intent)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to launch package installer", e)
         }
-
-        context.startActivity(intent)
     }
 
     /**
-     * Compare two semantic version strings (e.g., "2.0.1" > "2.0.0").
+     * Compare two semantic version strings (e.g., "3.0.0" > "2.2.0").
      */
     private fun isNewerVersion(remote: String, current: String): Boolean {
         try {
-            val remoteParts = remote.split(".").map { it.toIntOrNull() ?: 0 }
-            val currentParts = current.split(".").map { it.toIntOrNull() ?: 0 }
+            val remoteParts = remote.split(".").map { it.filter { c -> c.isDigit() }.toIntOrNull() ?: 0 }
+            val currentParts = current.split(".").map { it.filter { c -> c.isDigit() }.toIntOrNull() ?: 0 }
 
             val maxLen = maxOf(remoteParts.size, currentParts.size)
             for (i in 0 until maxLen) {
