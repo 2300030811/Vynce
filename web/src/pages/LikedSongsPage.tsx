@@ -8,9 +8,7 @@ import {
   Shuffle,
   Clock,
   Search,
-  Music,
   Compass,
-  ArrowLeft,
   Share2,
   Check,
 } from 'lucide-react';
@@ -24,8 +22,6 @@ interface LikedSongsPageProps {
 
 export const LikedSongsPage: React.FC<LikedSongsPageProps> = ({
   onNavigateToExplore,
-  onSelectAlbum,
-  onSelectArtist,
 }) => {
   const { likedSongs } = useLibraryStore();
   const { playSong } = usePlayerStore();
@@ -67,7 +63,7 @@ export const LikedSongsPage: React.FC<LikedSongsPageProps> = ({
   };
 
   return (
-    <div className="flex flex-col gap-8 pb-36 w-full animate-in fade-in duration-300">
+    <div className="flex flex-col gap-6 pb-36 w-full animate-in fade-in duration-300">
       {/* ── Top Header Controls ── */}
       <div className="flex items-center justify-between pt-1">
         <button
@@ -75,13 +71,13 @@ export const LikedSongsPage: React.FC<LikedSongsPageProps> = ({
           className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/[0.04] hover:bg-white/[0.08] text-[#E8E6F0] hover:text-white transition-all text-xs font-bold border border-white/5 shadow-sm"
         >
           <Compass className="w-4 h-4 text-[var(--vynce-primary)]" />
-          <span>Explore More Music</span>
+          <span>Discover Music</span>
         </button>
 
         <div className="flex items-center gap-2">
           <button
             onClick={handleShare}
-            className="p-2.5 rounded-full bg-white/[0.04] hover:bg-white/[0.08] text-[#E8E6F0] hover:text-white transition-colors border border-white/5"
+            className="p-2 rounded-full bg-white/[0.04] hover:bg-white/[0.08] text-[#E8E6F0] hover:text-white transition-colors border border-white/5"
             title="Share Collection Info"
           >
             {copied ? <Check className="w-4 h-4 text-green-400" /> : <Share2 className="w-4 h-4" />}
@@ -89,64 +85,60 @@ export const LikedSongsPage: React.FC<LikedSongsPageProps> = ({
         </div>
       </div>
 
-      {/* ── Cinematic Hero Banner ── */}
+      {/* ── Compact Cinematic Hero Banner ── */}
       <div
         style={{
           background:
             'radial-gradient(ellipse at 80% 20%, var(--vynce-primary-container) 0%, rgba(20,16,30,0.95) 60%, #0A0A0A 100%)',
         }}
-        className="relative overflow-hidden rounded-[36px] p-6 md:p-10 border border-white/10 shadow-2xl flex flex-col md:flex-row items-center md:items-end gap-8 group"
+        className="relative overflow-hidden rounded-[28px] p-5 sm:p-6 md:p-7 border border-white/10 shadow-xl flex flex-col sm:flex-row items-center sm:items-center gap-5 sm:gap-6 group"
       >
         {/* Ambient Top Glow */}
         <div
-          className="absolute right-0 top-0 w-96 h-96 pointer-events-none opacity-30 blur-3xl scale-125 transition-all duration-700"
+          className="absolute right-0 top-0 w-72 h-72 pointer-events-none opacity-30 blur-3xl scale-125"
           style={{ background: 'var(--vynce-primary)' }}
         />
 
-        {/* Liked Songs Big Cover Art Icon */}
-        <div className="relative shrink-0 flex items-center justify-center">
+        {/* Compact Liked Songs Big Cover Art Icon */}
+        <div className="relative shrink-0">
           <div
             style={{
               background:
                 'radial-gradient(circle at 40% 35%, var(--vynce-primary-container) 0%, rgba(15,13,24,0.95) 100%)',
             }}
-            className="relative aspect-square w-48 sm:w-56 md:w-64 rounded-[28px] overflow-hidden shadow-2xl z-10 border border-white/15 flex items-center justify-center group-hover:scale-102 transition-transform duration-500"
+            className="relative w-24 h-24 sm:w-28 sm:h-28 md:w-32 md:h-32 rounded-2xl overflow-hidden shadow-lg border border-white/15 flex items-center justify-center group-hover:scale-105 transition-transform duration-300"
           >
             <Heart
               style={{ color: 'var(--vynce-primary)' }}
-              className="w-28 h-28 sm:w-32 sm:h-32 fill-current drop-shadow-2xl animate-pulse"
+              className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 fill-current drop-shadow-lg"
             />
           </div>
         </div>
 
         {/* Metadata Info */}
-        <div className="relative z-10 flex flex-col gap-3 min-w-0 flex-1 text-center md:text-left">
-          <div className="flex items-center justify-center md:justify-start gap-2">
+        <div className="relative z-10 flex flex-col gap-2 min-w-0 flex-1 text-center sm:text-left">
+          <div className="flex items-center justify-center sm:justify-start gap-2">
             <span
               style={{
                 backgroundColor: 'var(--vynce-primary-container)',
                 color: 'var(--vynce-on-primary-container)',
               }}
-              className="text-[11px] font-extrabold px-3 py-1 rounded-full uppercase tracking-wider shadow-sm"
+              className="text-[10px] font-extrabold px-2.5 py-0.5 rounded-full uppercase tracking-wider shadow-sm"
             >
               Auto Collection
             </span>
           </div>
 
-          <h1 className="text-3xl sm:text-4xl md:text-6xl font-black text-white tracking-tight font-['Outfit'] drop-shadow-md">
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight font-['Outfit'] drop-shadow-sm">
             Liked Songs
           </h1>
 
-          <p className="text-xs sm:text-sm font-medium text-[#E8E6F0]/80 line-clamp-2">
-            Your personal collection of favorite tracks, auto-saved whenever you tap the heart icon across Vynce.
-          </p>
-
-          <div className="flex items-center justify-center md:justify-start gap-3 text-xs font-semibold text-[#8E8D9F] mt-1">
-            <span>{likedSongs.length} saved songs</span>
+          <div className="flex items-center justify-center sm:justify-start gap-3 text-xs font-semibold text-[#8E8D9F] flex-wrap">
+            <span>{likedSongs.length} saved tracks</span>
             {totalDuration > 0 && (
               <>
                 <span>•</span>
-                <span className="flex items-center gap-1">
+                <span className="flex items-center gap-1 font-mono">
                   <Clock className="w-3.5 h-3.5" />
                   {formatTime(totalDuration)}
                 </span>
@@ -156,23 +148,23 @@ export const LikedSongsPage: React.FC<LikedSongsPageProps> = ({
 
           {/* Action Buttons */}
           {likedSongs.length > 0 && (
-            <div className="flex items-center justify-center md:justify-start gap-3 mt-3">
+            <div className="flex items-center justify-center sm:justify-start gap-2.5 mt-1">
               <button
                 onClick={handlePlayAll}
                 style={{
                   backgroundColor: 'var(--vynce-primary-container)',
                   color: 'var(--vynce-on-primary-container)',
                 }}
-                className="flex items-center gap-2.5 py-3 px-7 rounded-full font-bold text-sm shadow-xl transition-transform active:scale-95 hover:scale-105"
+                className="flex items-center gap-2 py-2 px-5 rounded-full font-bold text-xs shadow-md transition-transform active:scale-95 hover:scale-105"
               >
-                <Play className="w-4 h-4 fill-current" /> Play All
+                <Play className="w-3.5 h-3.5 fill-current" /> Play All
               </button>
 
               <button
                 onClick={handleShufflePlay}
-                className="flex items-center gap-2.5 py-3 px-6 rounded-full bg-white/[0.06] text-[#E8E6F0] hover:bg-white/[0.12] hover:text-white border border-white/10 font-bold text-sm shadow-md transition-all active:scale-95"
+                className="flex items-center gap-2 py-2 px-4 rounded-full bg-white/[0.06] text-[#E8E6F0] hover:bg-white/[0.12] hover:text-white border border-white/10 font-bold text-xs shadow-sm transition-all active:scale-95"
               >
-                <Shuffle className="w-4 h-4" /> Shuffle
+                <Shuffle className="w-3.5 h-3.5" /> Shuffle
               </button>
             </div>
           )}
@@ -181,10 +173,10 @@ export const LikedSongsPage: React.FC<LikedSongsPageProps> = ({
 
       {/* ── Search Within Liked Songs + Track List ── */}
       {likedSongs.length > 0 ? (
-        <div className="flex flex-col gap-5">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-1">
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-1">
             <div className="flex items-center gap-2">
-              <h2 className="text-xl sm:text-2xl font-extrabold text-white tracking-tight font-['Outfit']">
+              <h2 className="text-lg sm:text-xl font-extrabold text-white tracking-tight font-['Outfit']">
                 Tracks
               </h2>
               <span className="text-xs font-bold text-[#6B6A7A] bg-white/5 px-2.5 py-0.5 rounded-full">
@@ -193,14 +185,14 @@ export const LikedSongsPage: React.FC<LikedSongsPageProps> = ({
             </div>
 
             {/* Quick Filter Search Bar */}
-            <div className="relative w-full sm:w-72">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6B6A7A]" />
+            <div className="relative w-full sm:w-64">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#6B6A7A]" />
               <input
                 type="text"
                 placeholder="Filter saved songs..."
                 value={searchFilter}
                 onChange={(e) => setSearchFilter(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 rounded-2xl bg-white/[0.04] border border-white/10 focus:border-[var(--vynce-primary)]/40 text-xs text-white placeholder:text-[#6B6A7A] outline-none transition-colors font-medium"
+                className="w-full pl-9 pr-3.5 py-1.5 rounded-xl bg-white/[0.04] border border-white/10 focus:border-[var(--vynce-primary)]/40 text-xs text-white placeholder:text-[#6B6A7A] outline-none transition-colors font-medium"
               />
             </div>
           </div>
@@ -218,8 +210,8 @@ export const LikedSongsPage: React.FC<LikedSongsPageProps> = ({
           </div>
 
           {filteredSongs.length === 0 && searchFilter && (
-            <div className="flex flex-col items-center justify-center py-12 text-[#6B6A7A] gap-2">
-              <p className="text-sm font-semibold text-white">No songs match "{searchFilter}"</p>
+            <div className="flex flex-col items-center justify-center py-10 text-[#6B6A7A] gap-2">
+              <p className="text-xs font-semibold text-white">No songs match "{searchFilter}"</p>
               <button
                 onClick={() => setSearchFilter('')}
                 className="text-xs text-[var(--vynce-primary)] hover:underline font-bold"
@@ -231,12 +223,12 @@ export const LikedSongsPage: React.FC<LikedSongsPageProps> = ({
         </div>
       ) : (
         /* Empty State */
-        <div className="flex flex-col items-center justify-center py-20 text-[#6B6A7A] gap-4 bg-[#121118]/60 rounded-3xl border border-white/5 p-8 text-center">
-          <div className="p-5 rounded-full bg-white/[0.03] border border-white/10">
-            <Heart className="w-10 h-10 text-[var(--vynce-primary)]/60" />
+        <div className="flex flex-col items-center justify-center py-16 text-[#6B6A7A] gap-4 bg-[#121118]/60 rounded-2xl border border-white/5 p-6 text-center">
+          <div className="p-4 rounded-full bg-white/[0.03] border border-white/10">
+            <Heart className="w-8 h-8 text-[var(--vynce-primary)]/60" />
           </div>
           <div className="flex flex-col gap-1 max-w-sm">
-            <p className="text-lg font-bold text-white font-['Outfit']">No Liked Songs Yet</p>
+            <p className="text-base font-bold text-white font-['Outfit']">No Liked Songs Yet</p>
             <p className="text-xs text-[#8E8D9F] leading-relaxed">
               Tap the heart icon on any song while listening or browsing to save your favorite music here.
             </p>
@@ -247,9 +239,9 @@ export const LikedSongsPage: React.FC<LikedSongsPageProps> = ({
               backgroundColor: 'var(--vynce-primary-container)',
               color: 'var(--vynce-on-primary-container)',
             }}
-            className="flex items-center gap-2 px-6 py-3 rounded-full text-xs font-bold shadow-lg transition-transform active:scale-95 hover:scale-105 mt-2"
+            className="flex items-center gap-2 px-5 py-2.5 rounded-full text-xs font-bold shadow-md transition-transform active:scale-95 hover:scale-105 mt-1"
           >
-            <Compass className="w-4 h-4" />
+            <Compass className="w-3.5 h-3.5" />
             <span>Discover Music</span>
           </button>
         </div>

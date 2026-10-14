@@ -1,15 +1,30 @@
-name: Build Desktop Apps (Windows, Linux, macOS)
+name: Desktop Build & Beta Release (Windows, Linux, macOS)
 
 on:
   push:
     branches: [ main ]
     tags:
-      - 'v*'
+      - 'v*-beta*'
+      - 'v*-rc*'
+      - 'desktop-v*'
   workflow_dispatch:
+    inputs:
+      publish_prerelease:
+        description: 'Publish as a GitHub Pre-release (never affects stable /releases/latest)'
+        required: false
+        type: boolean
+        default: false
+      prerelease_tag:
+        description: 'Pre-release tag name (e.g. v3.0.1-beta.1)'
+        required: false
+        type: string
+        default: ''
 
 jobs:
   build-desktop:
+    name: Build Desktop (${{ matrix.os }})
     strategy:
+      fail-fast: false
       matrix:
         os: [windows-latest, ubuntu-latest, macos-latest]
     runs-on: ${{ matrix.os }}
@@ -39,6 +54,18 @@ jobs:
         working-directory: ./web
         run: npm run build
 
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install PyYAML
+        run: pip install pyyaml==6.0.2
+
+      - name: Run Regression Tests
+        working-directory: ./web
+        run: npm test
+
       - name: Build Desktop Binaries (Windows)
         if: runner.os == 'Windows'
         working-directory: ./web
@@ -57,11 +84,149 @@ jobs:
       - name: Upload Desktop Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: vynce-desktop-${{ runner.os }}
+          name: vynce-desktop-${{ matrix.os }}
           path: |
             web/release-desktop/*.exe
             web/release-desktop/*.AppImage
             web/release-desktop/*.deb
             web/release-desktop/*.dmg
             web/release-desktop/*.zip
-          if-no-files-found: warn
+            web/release-desktop/*.blockmap
+            web/release-desktop/latest*.yml
+          if-no-files-found: error
+
+  publish-desktop-beta:
+    name: Publish Desktop Pre-Release (Single Owner)
+    needs: [build-desktop]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    if: startsWith(github.ref, 'refs/tags/v') || startsWith(github.ref, 'refs/tags/desktop-v') || (github.event_name == 'workflow_dispatch' && inputs.publish_prerelease == true)
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Create Platform Staging Directories
+        run: mkdir -p ./staging/windows ./staging/linux ./staging/macos ./publish-assets
+
+      - name: Download Windows Artifacts (Mandatory)
+        uses: actions/download-artifact@v4
+        with:
+          name: vynce-desktop-windows-latest
+          path: ./staging/windows
+
+      - name: Download Linux Artifacts (Mandatory)
+        uses: actions/download-artifact@v4
+        with:
+          name: vynce-desktop-ubuntu-latest
+          path: ./staging/linux
+
+      - name: Download macOS Artifacts (Mandatory)
+        uses: actions/download-artifact@v4
+        with:
+          name: vynce-desktop-macos-latest
+          path: ./staging/macos
+
+      - name: Determine Beta Tag Name and Enforce Version Consistency
+        id: tag_info
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ inputs.prerelease_tag }}" ]; then
+            TAG_NAME="${{ inputs.prerelease_tag }}"
+          elif [ -n "${{ github.ref_name }}" ]; then
+            TAG_NAME="${{ github.ref_name }}"
+          else
+            TAG_NAME="v3.0.1-beta.$(date +'%Y%m%d%H%M')"
+          fi
+          echo "Determined release tag: $TAG_NAME"
+          echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
+
+          # Extract base semver from tag (e.g. desktop-v3.0.1 -> 3.0.1, v3.0.1-beta.1 -> 3.0.1)
+          if [[ "$TAG_NAME" =~ ^desktop-v([0-9]+\.[0-9]+\.[0-9]+) ]]; then
+            TAG_BASE="${BASH_REMATCH[1]}"
+          elif [[ "$TAG_NAME" =~ ^v([0-9]+\.[0-9]+\.[0-9]+) ]]; then
+            TAG_BASE="${BASH_REMATCH[1]}"
+          else
+            echo "ERROR: Release tag '$TAG_NAME' does not match accepted beta tag format (vX.Y.Z-beta* or desktop-vX.Y.Z)."
+            exit 1
+          fi
+
+          PKG_VER=$(python3 -c "import json; print(json.load(open('web/package.json'))['version'])")
+          if [[ "$PKG_VER" =~ ^([0-9]+\.[0-9]+\.[0-9]+) ]]; then
+            PKG_BASE="${BASH_REMATCH[1]}"
+          else
+            PKG_BASE="$PKG_VER"
+          fi
+
+          echo "Tag base version: $TAG_BASE, web/package.json version: $PKG_VER (base: $PKG_BASE)"
+          if [ "$TAG_BASE" != "$PKG_BASE" ]; then
+            echo "ERROR: Version mismatch between tag '$TAG_NAME' ($TAG_BASE) and web/package.json '$PKG_VER' ($PKG_BASE)!"
+            echo "Aborting beta publication to prevent broken auto-update discovery."
+            exit 1
+          fi
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install PyYAML
+        run: pip install pyyaml==6.0.2
+
+      - name: Validate Windows Desktop Beta Artifacts
+        run: |
+          PKG_VER=$(python3 -c "import json; print(json.load(open('web/package.json'))['version'])")
+          echo "Validating Windows beta release assets for version $PKG_VER..."
+          python3 .github/scripts/validate_release_assets.py --version "$PKG_VER" --assets-dir "./staging/windows" --platform windows
+
+      - name: Validate Linux Desktop Beta Artifacts
+        run: |
+          PKG_VER=$(python3 -c "import json; print(json.load(open('web/package.json'))['version'])")
+          echo "Validating Linux beta release assets for version $PKG_VER..."
+          python3 .github/scripts/validate_release_assets.py --version "$PKG_VER" --assets-dir "./staging/linux" --platform linux
+
+      - name: Validate macOS Desktop Beta Artifacts
+        run: |
+          PKG_VER=$(python3 -c "import json; print(json.load(open('web/package.json'))['version'])")
+          echo "Validating macOS beta release assets for version $PKG_VER..."
+          python3 .github/scripts/validate_release_assets.py --version "$PKG_VER" --assets-dir "./staging/macos" --platform macos
+
+      - name: Assemble Verified Multiplatform Beta Assets
+        run: |
+          echo "Assembling verified assets into release package..."
+          cp -v ./staging/windows/* ./publish-assets/
+          cp -v ./staging/linux/* ./publish-assets/
+          cp -v ./staging/macos/* ./publish-assets/
+          echo "Assembled release assets:"
+          ls -lh ./publish-assets/
+
+      - name: Publish Desktop Pre-Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag_info.outputs.tag_name }}
+          name: "Vynce Desktop Beta ${{ steps.tag_info.outputs.tag_name }}"
+          draft: false
+          prerelease: true
+          generate_release_notes: true
+          body: |
+            ## Vynce Desktop Beta (${{ steps.tag_info.outputs.tag_name }})
+
+            This is an experimental pre-release build of **Vynce Desktop** for testing and feedback.
+            It does not affect stable auto-updater channels or stable Android releases.
+
+            ### 💻 Platform Downloads
+            - **Windows Installer:** `Vynce Setup *.exe` (NSIS setup wizard)
+            - **Windows Portable:** `Vynce *.exe` (Standalone single file)
+            - **Linux Packages:** `*.AppImage` and `*.deb`
+            - **macOS Packages:** `*.dmg` and `*.zip`
+
+            > **Windows SmartScreen Notice:** Because this build is unsigned, click **More info** -> **Run anyway** on first launch.
+
+            ### 📝 Notes
+            - Report any desktop defects at [GitHub Issues](https://github.com/2300030811/Vynce/issues).
+          files: |
+            ./publish-assets/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+

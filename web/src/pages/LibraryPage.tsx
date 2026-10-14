@@ -5,12 +5,13 @@ import { SongCard } from '../components/cards/SongCard';
 import { PlaylistCard } from '../components/cards/PlaylistCard';
 import { AlbumCard } from '../components/cards/AlbumCard';
 import { SpotifyImportModal } from '../components/modals/SpotifyImportModal';
-import { Heart, Download, Upload, ArrowDown, ListPlus, Trash2, Play, Check, DownloadCloud, Disc3 } from 'lucide-react';
+import { Heart, Download, Upload, ListPlus, Trash2, Play, Check, DownloadCloud } from 'lucide-react';
 
 interface LibraryPageProps {
   onSelectPlaylist: (id: string) => void;
   onSelectAlbum?: (id: string) => void;
   onNavigateToLiked?: () => void;
+  onNavigateToDownloads?: () => void;
 }
 
 type LibraryFilter = 'all' | 'playlists' | 'albums' | 'offline';
@@ -19,6 +20,7 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({
   onSelectPlaylist,
   onSelectAlbum,
   onNavigateToLiked,
+  onNavigateToDownloads,
 }) => {
   const {
     likedSongs,
@@ -27,12 +29,14 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({
     playlists,
     createPlaylist,
     deletePlaylist,
+    downloadedSongs,
     exportLibrary,
     importLibrary,
   } = useLibraryStore();
   const { playSong } = usePlayerStore();
   const [filter, setFilter] = useState<LibraryFilter>('all');
   const [showLikedSongsList, setShowLikedSongsList] = useState(false);
+  const [showDownloadedSongsList, setShowDownloadedSongsList] = useState(false);
   const [isSpotifyModalOpen, setIsSpotifyModalOpen] = useState(false);
   const [backupMsg, setBackupMsg] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -81,8 +85,16 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({
     { id: 'all', label: 'All Items' },
     { id: 'playlists', label: 'Playlists' },
     { id: 'albums', label: 'Saved Albums' },
-    { id: 'offline', label: 'Offline Cache' },
+    { id: 'offline', label: 'Offline Downloads' },
   ];
+
+  const handleOpenDownloads = () => {
+    if (onNavigateToDownloads) {
+      onNavigateToDownloads();
+    } else {
+      setShowDownloadedSongsList(true);
+    }
+  };
 
   return (
     <div className="flex flex-col gap-8 w-full pb-36 animate-in fade-in duration-300">
@@ -92,7 +104,11 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({
           {filterLabels.map((f) => (
             <button
               key={f.id}
-              onClick={() => setFilter(f.id)}
+              onClick={() => {
+                setFilter(f.id);
+                setShowLikedSongsList(false);
+                setShowDownloadedSongsList(false);
+              }}
               style={
                 filter === f.id
                   ? {
@@ -167,8 +183,58 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({
         </div>
       )}
 
-      {/* Primary Auto Playlists Grid */}
-      {!showLikedSongsList ? (
+      {/* Expanded Downloaded Songs View */}
+      {showDownloadedSongsList || filter === 'offline' ? (
+        <div className="flex flex-col gap-6">
+          <div className="flex items-center justify-between">
+            <button
+              onClick={() => {
+                setShowDownloadedSongsList(false);
+                setFilter('all');
+              }}
+              style={{ color: 'var(--vynce-primary)' }}
+              className="text-sm font-bold hover:underline flex items-center gap-1"
+            >
+              ← Back to Collection
+            </button>
+            {downloadedSongs.length > 0 && (
+              <button
+                onClick={() => playSong(downloadedSongs[0], downloadedSongs, 0)}
+                style={{
+                  backgroundColor: 'var(--vynce-primary-container)',
+                  color: 'var(--vynce-on-primary-container)',
+                }}
+                className="px-6 py-2.5 rounded-full font-bold text-xs shadow-md transition-transform active:scale-95 hover:scale-105 flex items-center gap-2"
+              >
+                <Play className="w-4 h-4 fill-current" /> Play All ({downloadedSongs.length})
+              </button>
+            )}
+          </div>
+
+          {downloadedSongs.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+              {downloadedSongs.map((song, idx) => (
+                <SongCard
+                  key={song.id}
+                  song={song}
+                  index={idx}
+                  queueContext={downloadedSongs}
+                  showAlbum={false}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-16 text-[#6B6A7A] gap-3 bg-[#121118]/40 rounded-3xl border border-white/5 p-6 text-center">
+              <Download className="w-10 h-10 text-[#6B6A7A]/60" />
+              <p className="text-sm font-semibold text-white">No downloaded songs yet</p>
+              <p className="text-xs text-[#8E8D9F]">
+                Download your favorite tracks to listen offline without internet connection.
+              </p>
+            </div>
+          )}
+        </div>
+      ) : !showLikedSongsList ? (
+        /* Primary Auto Playlists Grid */
         <div className="flex flex-col gap-8">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {/* Quick Create Playlist Card */}
@@ -202,7 +268,7 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({
             )}
 
             {/* Liked Songs Big Card */}
-            {(filter === 'all') && (
+            {filter === 'all' && (
               <div
                 onClick={() => {
                   if (onNavigateToLiked) {
@@ -253,24 +319,45 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({
             )}
 
             {/* Downloaded Songs Big Card */}
-            {(filter === 'all' || filter === 'offline') && (
+            {filter === 'all' && (
               <div
-                onClick={() => {
-                  if (likedSongs.length > 0) {
-                    playSong(likedSongs[0], likedSongs, 0);
-                  }
-                }}
+                onClick={handleOpenDownloads}
                 className="group relative flex flex-col cursor-pointer transition-all"
               >
-                <div className="relative aspect-square w-full rounded-[28px] bg-[var(--vynce-surface-container)] flex items-center justify-center transition-all shadow-xl border border-white/5 group-hover:border-white/20">
-                  <Download className="w-24 h-24 text-[#E8E6F0] transition-transform group-hover:scale-110" />
+                <div
+                  style={{
+                    background:
+                      'radial-gradient(circle at 50% 40%, var(--vynce-primary-container) 0%, rgba(15,18,28,0.95) 100%)',
+                  }}
+                  className="relative aspect-square w-full rounded-[28px] flex items-center justify-center transition-all shadow-xl border border-white/5 group-hover:border-[var(--vynce-primary)]/40"
+                >
+                  <Download
+                    style={{ color: 'var(--vynce-primary)' }}
+                    className="w-24 h-24 drop-shadow-lg transition-transform group-hover:scale-110"
+                  />
+                  {downloadedSongs.length > 0 && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        playSong(downloadedSongs[0], downloadedSongs, 0);
+                      }}
+                      style={{
+                        backgroundColor: 'var(--vynce-primary-container)',
+                        color: 'var(--vynce-on-primary-container)',
+                      }}
+                      className="absolute bottom-4 right-4 p-4 rounded-full shadow-2xl opacity-0 group-hover:opacity-100 transition-all duration-200 active:scale-95 hover:scale-105"
+                      title="Play Downloaded Songs"
+                    >
+                      <Play className="w-5 h-5 fill-current translate-x-0.5" />
+                    </button>
+                  )}
                 </div>
                 <div className="flex flex-col px-2 mt-3">
                   <span className="text-base font-bold text-white group-hover:text-[var(--vynce-primary)] transition-colors font-['Outfit']">
                     Downloaded songs
                   </span>
                   <span className="text-xs text-[#6B6A7A]">
-                    Auto playlist • Offline Cache
+                    Auto playlist • {downloadedSongs.length} songs
                   </span>
                 </div>
               </div>

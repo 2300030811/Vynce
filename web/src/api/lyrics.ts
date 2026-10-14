@@ -323,28 +323,48 @@ export const LyricsApi = {
       }
     } catch {}
 
-    // 7. Try JioSaavn native lyrics (direct or proxied)
+    // 7. Try JioSaavn native lyrics (direct via Electron IPC, dev proxy, or public mirror)
     if (songId) {
       try {
-        const saavnUrls = [
-          `/jiosaavn-direct/api.php?__call=lyrics.getLyrics&lyrics_id=${songId}&ctx=web6dot0&api_version=4&_format=json`,
-          `https://my-repo-nine-phi.vercel.app/api/songs/${songId}`,
-        ];
+        const cleanSongId = encodeURIComponent(songId);
+        let sData: any = null;
 
-        for (const sUrl of saavnUrls) {
+        // Try direct fetch via Electron IPC if available
+        if (typeof window !== 'undefined' && window.electronAPI?.fetchJioSaavnDirect) {
           try {
-            const sRes = await fetch(sUrl);
-            if (sRes.ok) {
-              const sData = await sRes.json();
-              const rawLyrics = sData.lyrics || sData?.data?.[0]?.lyrics || sData?.data?.lyrics;
-              if (rawLyrics) {
-                const plain = decodeHtml(String(rawLyrics).replace(/<br\s*[\/]?>/gi, '\n'));
-                const parsed = { synced: false, lines: [], plainLyrics: plain };
-                this.cacheLyrics(songId, parsed, plain);
-                return parsed;
-              }
-            }
+            sData = await window.electronAPI.fetchJioSaavnDirect(
+              `__call=lyrics.getLyrics&lyrics_id=${cleanSongId}&ctx=web6dot0&api_version=4&_format=json`
+            );
           } catch {}
+        }
+
+        // In web or as fallback, try URLs (avoiding relative /jiosaavn-direct under file://)
+        if (!sData) {
+          const isFileProto = typeof window !== 'undefined' && window.location?.protocol === 'file:';
+          const saavnUrls = [
+            ...(isFileProto ? [] : [`/jiosaavn-direct/api.php?__call=lyrics.getLyrics&lyrics_id=${cleanSongId}&ctx=web6dot0&api_version=4&_format=json`]),
+            `https://my-repo-nine-phi.vercel.app/api/songs/${cleanSongId}`,
+          ];
+
+          for (const sUrl of saavnUrls) {
+            try {
+              const sRes = await fetch(sUrl);
+              if (sRes.ok) {
+                sData = await sRes.json();
+                if (sData) break;
+              }
+            } catch {}
+          }
+        }
+
+        if (sData) {
+          const rawLyrics = sData.lyrics || sData?.data?.[0]?.lyrics || sData?.data?.lyrics;
+          if (rawLyrics) {
+            const plain = decodeHtml(String(rawLyrics).replace(/<br\s*[\/]?>/gi, '\n'));
+            const parsed = { synced: false, lines: [], plainLyrics: plain };
+            this.cacheLyrics(songId, parsed, plain);
+            return parsed;
+          }
         }
       } catch {}
     }

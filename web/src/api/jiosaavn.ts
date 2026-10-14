@@ -82,21 +82,26 @@ function parseSong(item: any): Song {
   };
 }
 
-async function getJson(path: string, params: Record<string, string> = {}): Promise<any> {
+async function getJson(path: string, params: Record<string, string> = {}, signal?: AbortSignal): Promise<any> {
   const query = new URLSearchParams(params).toString();
   const urlPath = `${path}${query ? `?${query}` : ''}`;
   const basesToTry = [lastGoodBase, ...BASES.filter((b) => b !== lastGoodBase)];
 
   for (const base of basesToTry) {
+    if (signal?.aborted) return null;
     try {
       const res = await fetch(`${base}${urlPath}`, {
         headers: { Accept: 'application/json' },
+        signal,
       });
       if (!res.ok) continue;
       const json = await res.json();
       lastGoodBase = base;
       return json;
-    } catch {
+    } catch (err: any) {
+      if (err?.name === 'AbortError' || signal?.aborted) {
+        throw err;
+      }
       // Try next base URL
     }
   }
@@ -105,12 +110,22 @@ async function getJson(path: string, params: Record<string, string> = {}): Promi
 
 export const JioSaavnApi = {
   async getHome(languages: string = 'hindi,english', category: string = 'all'): Promise<HomeModule[]> {
-    // 1. First attempt: Try direct launch data via local proxy
+    // 1. First attempt: Try direct launch data via Electron IPC or local dev proxy
     try {
-      const url = `/jiosaavn-direct/api.php?__call=webapi.getLaunchData&api_version=4&_format=json&_marker=0&ctx=web6dot0&language=${languages}`;
-      const res = await fetch(url);
-      if (res.ok) {
-        const root = await res.json();
+      const queryString = `__call=webapi.getLaunchData&api_version=4&_format=json&_marker=0&ctx=web6dot0&language=${encodeURIComponent(languages)}`;
+      let root: any = null;
+
+      if (typeof window !== 'undefined' && window.electronAPI?.fetchJioSaavnDirect) {
+        root = await window.electronAPI.fetchJioSaavnDirect(queryString);
+      } else if (typeof window === 'undefined' || window.location?.protocol !== 'file:') {
+        const url = `/jiosaavn-direct/api.php?${queryString}`;
+        const res = await fetch(url);
+        if (res.ok) {
+          root = await res.json();
+        }
+      }
+
+      if (root) {
         const modulesMap = root.modules;
         if (modulesMap && Object.keys(modulesMap).length > 0) {
           const sortedModules = Object.entries(modulesMap)
@@ -365,18 +380,19 @@ export const JioSaavnApi = {
     }
   },
 
-  async searchAll(query: string) {
+  // ponytail: optional signal parameter propagates request cancellation to native fetch
+  async searchAll(query: string, signal?: AbortSignal) {
     const [songs, albums, artists, playlists] = await Promise.all([
-      this.searchSongs(query),
-      this.searchAlbums(query),
-      this.searchArtists(query),
-      this.searchPlaylists(query),
+      this.searchSongs(query, 20, signal),
+      this.searchAlbums(query, 10, signal),
+      this.searchArtists(query, 10, signal),
+      this.searchPlaylists(query, 10, signal),
     ]);
     return { songs, albums, artists, playlists };
   },
 
-  async searchGlobal(query: string): Promise<GlobalSearchResult> {
-    const json = await getJson('/api/search', { query });
+  async searchGlobal(query: string, signal?: AbortSignal): Promise<GlobalSearchResult> {
+    const json = await getJson('/api/search', { query }, signal);
     const data = json?.data;
 
     let topQuery: TopQueryResult | null = null;
@@ -401,7 +417,9 @@ export const JioSaavnApi = {
     const albums: Album[] = (data?.albums?.results || []).map((al: any) => ({
       id: String(al.id || ''),
       name: decodeHtml(al.title || al.name || ''),
-      artists: decodeHtml(al.artist || al.artists || al.description || ''),
+      artists: decodeHtml(
+        Array.isArray(al.artists?.primary) ? al.artists.primary.map((art: any) => art.name).join(', ') : al.artist || ''
+      ),
       image: extractImageUrl(al.image),
       year: String(al.year || ''),
     }));
@@ -413,25 +431,25 @@ export const JioSaavnApi = {
     }));
 
     if (songs.length === 0) {
-      const fallbackSongs = await this.searchSongs(query, 12);
+      const fallbackSongs = await this.searchSongs(query, 12, signal);
       songs.push(...fallbackSongs);
     }
     if (artists.length === 0 && !topQuery) {
-      const fallbackArtists = await this.searchArtists(query, 6);
+      const fallbackArtists = await this.searchArtists(query, 6, signal);
       artists.push(...fallbackArtists);
     }
 
     return { topQuery, songs, artists, albums, playlists };
   },
 
-  async searchSongs(query: string, limit: number = 20): Promise<Song[]> {
-    const json = await getJson('/api/search/songs', { query, limit: String(limit) });
+  async searchSongs(query: string, limit: number = 20, signal?: AbortSignal): Promise<Song[]> {
+    const json = await getJson('/api/search/songs', { query, limit: String(limit) }, signal);
     const results = json?.data?.results || [];
     return results.map((item: any) => parseSong(item));
   },
 
-  async searchAlbums(query: string, limit: number = 10): Promise<Album[]> {
-    const json = await getJson('/api/search/albums', { query, limit: String(limit) });
+  async searchAlbums(query: string, limit: number = 10, signal?: AbortSignal): Promise<Album[]> {
+    const json = await getJson('/api/search/albums', { query, limit: String(limit) }, signal);
     const results = json?.data?.results || [];
     return results.map((a: any) => ({
       id: String(a.id || ''),
@@ -445,8 +463,8 @@ export const JioSaavnApi = {
     }));
   },
 
-  async searchArtists(query: string, limit: number = 10): Promise<Artist[]> {
-    const json = await getJson('/api/search/artists', { query, limit: String(limit) });
+  async searchArtists(query: string, limit: number = 10, signal?: AbortSignal): Promise<Artist[]> {
+    const json = await getJson('/api/search/artists', { query, limit: String(limit) }, signal);
     const results = json?.data?.results || [];
     return results.map((a: any) => ({
       id: String(a.id || ''),
@@ -456,8 +474,8 @@ export const JioSaavnApi = {
     }));
   },
 
-  async searchPlaylists(query: string, limit: number = 10): Promise<Playlist[]> {
-    const json = await getJson('/api/search/playlists', { query, limit: String(limit) });
+  async searchPlaylists(query: string, limit: number = 10, signal?: AbortSignal): Promise<Playlist[]> {
+    const json = await getJson('/api/search/playlists', { query, limit: String(limit) }, signal);
     const results = json?.data?.results || [];
     return results.map((p: any) => ({
       id: String(p.id || ''),

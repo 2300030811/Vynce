@@ -74,7 +74,7 @@ export const SPOTIFY_CURATED_PLAYLISTS: SpotifyCuratedPlaylist[] = [
     id: '37i9dQZF1DXcBWIGoYBM5M',
     name: "Today's Top Hits",
     subtitle: 'The hottest tracks right now worldwide',
-    coverArt: '',
+    coverArt: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=500&auto=format&fit=crop&q=80',
     category: 'charts',
     spotifyUrl: 'https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M',
     gradient: 'from-emerald-950/80 via-neutral-950 to-black',
@@ -83,7 +83,7 @@ export const SPOTIFY_CURATED_PLAYLISTS: SpotifyCuratedPlaylist[] = [
     id: '37i9dQZEVXbMDoHDwVN2tF',
     name: 'Top 50 - Global',
     subtitle: 'Daily update of the most played tracks worldwide',
-    coverArt: '',
+    coverArt: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=500&auto=format&fit=crop&q=80',
     category: 'charts',
     spotifyUrl: 'https://open.spotify.com/playlist/37i9dQZEVXbMDoHDwVN2tF',
     gradient: 'from-blue-950/80 via-neutral-950 to-black',
@@ -92,7 +92,7 @@ export const SPOTIFY_CURATED_PLAYLISTS: SpotifyCuratedPlaylist[] = [
     id: '37i9dQZEVXbLZ52XmnySJg',
     name: 'Top 50 - India',
     subtitle: 'Daily update of the most played tracks in India',
-    coverArt: '',
+    coverArt: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=500&auto=format&fit=crop&q=80',
     category: 'charts',
     spotifyUrl: 'https://open.spotify.com/playlist/37i9dQZEVXbLZ52XmnySJg',
     gradient: 'from-amber-950/80 via-neutral-950 to-black',
@@ -101,7 +101,7 @@ export const SPOTIFY_CURATED_PLAYLISTS: SpotifyCuratedPlaylist[] = [
     id: '37i9dQZEVXbLRQDuF5jeBp',
     name: 'Top 50 - USA',
     subtitle: 'Daily update of the most played tracks in the United States',
-    coverArt: '',
+    coverArt: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=500&auto=format&fit=crop&q=80',
     category: 'charts',
     spotifyUrl: 'https://open.spotify.com/playlist/37i9dQZEVXbLRQDuF5jeBp',
     gradient: 'from-cyan-950/80 via-neutral-950 to-black',
@@ -110,7 +110,7 @@ export const SPOTIFY_CURATED_PLAYLISTS: SpotifyCuratedPlaylist[] = [
     id: '37i9dQZF1DX4JAvHpjipBk',
     name: 'New Music Friday',
     subtitle: 'The best new releases of the week',
-    coverArt: '',
+    coverArt: 'https://images.unsplash.com/photo-1511735111819-9a3f7709049c?w=500&auto=format&fit=crop&q=80',
     category: 'charts',
     spotifyUrl: 'https://open.spotify.com/playlist/37i9dQZF1DX4JAvHpjipBk',
     gradient: 'from-purple-950/80 via-neutral-950 to-black',
@@ -121,7 +121,7 @@ export const SPOTIFY_CURATED_PLAYLISTS: SpotifyCuratedPlaylist[] = [
     id: '37i9dQZF1DXdpQPPZq3F7n',
     name: 'Bollywood Mush',
     subtitle: 'Soulful Hindi melodies and heartwarming love anthems',
-    coverArt: '',
+    coverArt: 'https://images.unsplash.com/photo-1518609878373-06d740f60d8b?w=500&auto=format&fit=crop&q=80',
     category: 'desi',
     spotifyUrl: 'https://open.spotify.com/playlist/37i9dQZF1DXdpQPPZq3F7n',
     gradient: 'from-rose-950/80 via-neutral-950 to-black',
@@ -130,7 +130,7 @@ export const SPOTIFY_CURATED_PLAYLISTS: SpotifyCuratedPlaylist[] = [
     id: '37i9dQZF1DX5q67ZpWyRrZ',
     name: 'Indie India',
     subtitle: 'The finest independent artists and sounds across India',
-    coverArt: '',
+    coverArt: 'https://images.unsplash.com/photo-1465847899084-d164df4dedc6?w=500&auto=format&fit=crop&q=80',
     category: 'desi',
     spotifyUrl: 'https://open.spotify.com/playlist/37i9dQZF1DX5q67ZpWyRrZ',
     gradient: 'from-teal-950/80 via-neutral-950 to-black',
@@ -139,7 +139,7 @@ export const SPOTIFY_CURATED_PLAYLISTS: SpotifyCuratedPlaylist[] = [
     id: '37i9dQZF1DX1lVhptIYRda',
     name: 'Hot Country & Acoustic',
     subtitle: 'Heartland acoustic anthems and contemporary sounds',
-    coverArt: '',
+    coverArt: 'https://images.unsplash.com/photo-1510915361894-db8b60106cb1?w=500&auto=format&fit=crop&q=80',
     category: 'desi',
     spotifyUrl: 'https://open.spotify.com/playlist/37i9dQZF1DX1lVhptIYRda',
     gradient: 'from-orange-950/80 via-neutral-950 to-black',
@@ -150,7 +150,7 @@ export const SPOTIFY_CURATED_PLAYLISTS: SpotifyCuratedPlaylist[] = [
     id: '37i9dQZF1DX4WYpdgoIcn6',
     name: 'Chill Hits',
     subtitle: 'Kick back to the best chill tunes and calm melodies',
-    coverArt: '',
+    coverArt: 'https://images.unsplash.com/photo-1518495973542-4542c06a5843?w=500&auto=format&fit=crop&q=80',
     category: 'mood',
     spotifyUrl: 'https://open.spotify.com/playlist/37i9dQZF1DX4WYpdgoIcn6',
     gradient: 'from-teal-950/80 via-neutral-950 to-black',
@@ -159,7 +159,7 @@ export const SPOTIFY_CURATED_PLAYLISTS: SpotifyCuratedPlaylist[] = [
     id: '37i9dQZF1DX3rxVfibe1L0',
     name: 'Mood Booster',
     subtitle: "Get happy with today's dose of feel-good anthems",
-    coverArt: '',
+    coverArt: 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=500&auto=format&fit=crop&q=80',
     category: 'mood',
     spotifyUrl: 'https://open.spotify.com/playlist/37i9dQZF1DX3rxVfibe1L0',
     gradient: 'from-yellow-950/80 via-neutral-950 to-black',
@@ -168,7 +168,7 @@ export const SPOTIFY_CURATED_PLAYLISTS: SpotifyCuratedPlaylist[] = [
     id: '37i9dQZF1DX4sWSpwq3LiO',
     name: 'Peaceful Piano',
     subtitle: 'Relax and unwind with beautiful solo piano pieces',
-    coverArt: '',
+    coverArt: 'https://images.unsplash.com/photo-1520523839898-50712708b764?w=500&auto=format&fit=crop&q=80',
     category: 'mood',
     spotifyUrl: 'https://open.spotify.com/playlist/37i9dQZF1DX4sWSpwq3LiO',
     gradient: 'from-slate-950/80 via-neutral-950 to-black',
@@ -177,7 +177,7 @@ export const SPOTIFY_CURATED_PLAYLISTS: SpotifyCuratedPlaylist[] = [
     id: '37i9dQZF1DX7qK8ma5wgG1',
     name: 'Sad Songs',
     subtitle: 'Emotional acoustic and melancholic reflection',
-    coverArt: '',
+    coverArt: 'https://images.unsplash.com/photo-1509114397022-ed747cca3f65?w=500&auto=format&fit=crop&q=80',
     category: 'mood',
     spotifyUrl: 'https://open.spotify.com/playlist/37i9dQZF1DX7qK8ma5wgG1',
     gradient: 'from-sky-950/80 via-neutral-950 to-black',
@@ -186,7 +186,7 @@ export const SPOTIFY_CURATED_PLAYLISTS: SpotifyCuratedPlaylist[] = [
     id: '37i9dQZF1DX3YSRoSdA634',
     name: 'Life Sucks',
     subtitle: 'When everything is too much, this is for you',
-    coverArt: '',
+    coverArt: 'https://images.unsplash.com/photo-1518895949257-7621c3c786d7?w=500&auto=format&fit=crop&q=80',
     category: 'mood',
     spotifyUrl: 'https://open.spotify.com/playlist/37i9dQZF1DX3YSRoSdA634',
     gradient: 'from-zinc-950/80 via-neutral-950 to-black',
@@ -197,7 +197,7 @@ export const SPOTIFY_CURATED_PLAYLISTS: SpotifyCuratedPlaylist[] = [
     id: '37i9dQZF1DWZeKCadgRdKQ',
     name: 'Deep Focus',
     subtitle: 'Ambient electronic study beats for high productivity',
-    coverArt: '',
+    coverArt: 'https://images.unsplash.com/photo-1507679799987-c73779587ccf?w=500&auto=format&fit=crop&q=80',
     category: 'focus',
     spotifyUrl: 'https://open.spotify.com/playlist/37i9dQZF1DWZeKCadgRdKQ',
     gradient: 'from-indigo-950/80 via-neutral-950 to-black',
@@ -206,7 +206,7 @@ export const SPOTIFY_CURATED_PLAYLISTS: SpotifyCuratedPlaylist[] = [
     id: '37i9dQZF1DWWQRwui0ExPn',
     name: 'Lo-Fi Beats',
     subtitle: 'Warm analog beats to relax, code, and study to',
-    coverArt: '',
+    coverArt: 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=500&auto=format&fit=crop&q=80',
     category: 'focus',
     spotifyUrl: 'https://open.spotify.com/playlist/37i9dQZF1DWWQRwui0ExPn',
     gradient: 'from-purple-950/80 via-neutral-950 to-black',
@@ -215,7 +215,7 @@ export const SPOTIFY_CURATED_PLAYLISTS: SpotifyCuratedPlaylist[] = [
     id: '37i9dQZF1DX8Uebhn9wzrS',
     name: 'Chill Lo-Fi Study',
     subtitle: 'Soft instrumental lo-fi background beats',
-    coverArt: '',
+    coverArt: 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=500&auto=format&fit=crop&q=80',
     category: 'focus',
     spotifyUrl: 'https://open.spotify.com/playlist/37i9dQZF1DX8Uebhn9wzrS',
     gradient: 'from-emerald-950/80 via-neutral-950 to-black',
@@ -224,7 +224,7 @@ export const SPOTIFY_CURATED_PLAYLISTS: SpotifyCuratedPlaylist[] = [
     id: '37i9dQZF1DXdLEN7aqioXM',
     name: 'Retrowave Flow',
     subtitle: 'Retro synthwave and dreamwave drive',
-    coverArt: '',
+    coverArt: 'https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?w=500&auto=format&fit=crop&q=80',
     category: 'focus',
     spotifyUrl: 'https://open.spotify.com/playlist/37i9dQZF1DXdLEN7aqioXM',
     gradient: 'from-fuchsia-950/80 via-neutral-950 to-black',
@@ -235,7 +235,7 @@ export const SPOTIFY_CURATED_PLAYLISTS: SpotifyCuratedPlaylist[] = [
     id: '37i9dQZF1DX76Wlfdnj7AP',
     name: 'Beast Mode',
     subtitle: 'Pure adrenaline and heavy bass for max performance',
-    coverArt: '',
+    coverArt: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=500&auto=format&fit=crop&q=80',
     category: 'workout',
     spotifyUrl: 'https://open.spotify.com/playlist/37i9dQZF1DX76Wlfdnj7AP',
     gradient: 'from-red-950/80 via-neutral-950 to-black',
@@ -244,7 +244,7 @@ export const SPOTIFY_CURATED_PLAYLISTS: SpotifyCuratedPlaylist[] = [
     id: '37i9dQZF1DX70RN3TfWWJh',
     name: 'Workout Motivation',
     subtitle: 'Upbeat pop, hip-hop, and EDM fitness fuel',
-    coverArt: '',
+    coverArt: 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=500&auto=format&fit=crop&q=80',
     category: 'workout',
     spotifyUrl: 'https://open.spotify.com/playlist/37i9dQZF1DX70RN3TfWWJh',
     gradient: 'from-orange-950/80 via-neutral-950 to-black',
@@ -253,7 +253,7 @@ export const SPOTIFY_CURATED_PLAYLISTS: SpotifyCuratedPlaylist[] = [
     id: '37i9dQZF1DX4eRPd9frC1m',
     name: 'Pure Hype',
     subtitle: 'Unstoppable high-energy bangers',
-    coverArt: '',
+    coverArt: 'https://images.unsplash.com/photo-1501386761578-eac5c94b800a?w=500&auto=format&fit=crop&q=80',
     category: 'workout',
     spotifyUrl: 'https://open.spotify.com/playlist/37i9dQZF1DX4eRPd9frC1m',
     gradient: 'from-amber-950/80 via-neutral-950 to-black',
@@ -262,7 +262,7 @@ export const SPOTIFY_CURATED_PLAYLISTS: SpotifyCuratedPlaylist[] = [
     id: '37i9dQZF1DX32NsLKyzScr',
     name: 'Power Hour',
     subtitle: 'Fast-paced rhythmic motivation',
-    coverArt: '',
+    coverArt: 'https://images.unsplash.com/photo-1518609878373-06d740f60d8b?w=500&auto=format&fit=crop&q=80',
     category: 'workout',
     spotifyUrl: 'https://open.spotify.com/playlist/37i9dQZF1DX32NsLKyzScr',
     gradient: 'from-rose-950/80 via-neutral-950 to-black',
@@ -273,7 +273,7 @@ export const SPOTIFY_CURATED_PLAYLISTS: SpotifyCuratedPlaylist[] = [
     id: '37i9dQZF1DX0BcQWzuB7ZO',
     name: 'Dance Hits',
     subtitle: 'Club anthems and peak-hour electronic beats',
-    coverArt: '',
+    coverArt: 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=500&auto=format&fit=crop&q=80',
     category: 'party',
     spotifyUrl: 'https://open.spotify.com/playlist/37i9dQZF1DX0BcQWzuB7ZO',
     gradient: 'from-violet-950/80 via-neutral-950 to-black',
@@ -282,7 +282,7 @@ export const SPOTIFY_CURATED_PLAYLISTS: SpotifyCuratedPlaylist[] = [
     id: '37i9dQZF1DX6J5NfMJS675',
     name: 'Techno Bunker',
     subtitle: 'Deep underground techno and dark industrial grooves',
-    coverArt: '',
+    coverArt: 'https://images.unsplash.com/photo-1574391884720-bbc3740c59d1?w=500&auto=format&fit=crop&q=80',
     category: 'party',
     spotifyUrl: 'https://open.spotify.com/playlist/37i9dQZF1DX6J5NfMJS675',
     gradient: 'from-zinc-950/80 via-neutral-950 to-black',
@@ -291,7 +291,7 @@ export const SPOTIFY_CURATED_PLAYLISTS: SpotifyCuratedPlaylist[] = [
     id: '37i9dQZF1DXaXB8fQg7xif',
     name: 'Dance Party',
     subtitle: 'Festival anthems and high-energy club tracks',
-    coverArt: '',
+    coverArt: 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=500&auto=format&fit=crop&q=80',
     category: 'party',
     spotifyUrl: 'https://open.spotify.com/playlist/37i9dQZF1DXaXB8fQg7xif',
     gradient: 'from-pink-950/80 via-neutral-950 to-black',
@@ -302,7 +302,7 @@ export const SPOTIFY_CURATED_PLAYLISTS: SpotifyCuratedPlaylist[] = [
     id: '37i9dQZF1DWUa8ZRTfalHk',
     name: 'Pop Rising',
     subtitle: 'The freshest pop anthems and viral hits',
-    coverArt: '',
+    coverArt: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=500&auto=format&fit=crop&q=80',
     category: 'pop',
     spotifyUrl: 'https://open.spotify.com/playlist/37i9dQZF1DWUa8ZRTfalHk',
     gradient: 'from-rose-950/80 via-neutral-950 to-black',
@@ -313,7 +313,7 @@ export const SPOTIFY_CURATED_PLAYLISTS: SpotifyCuratedPlaylist[] = [
     id: '37i9dQZF1DX0XUsuxWHRQd',
     name: 'RapCaviar',
     subtitle: 'Heavy-hitting hip-hop and trap chartbusters',
-    coverArt: '',
+    coverArt: 'https://images.unsplash.com/photo-1509198397868-475647b2a1e5?w=500&auto=format&fit=crop&q=80',
     category: 'hiphop',
     spotifyUrl: 'https://open.spotify.com/playlist/37i9dQZF1DX0XUsuxWHRQd',
     gradient: 'from-neutral-950/80 via-zinc-950 to-black',
@@ -322,7 +322,7 @@ export const SPOTIFY_CURATED_PLAYLISTS: SpotifyCuratedPlaylist[] = [
     id: '37i9dQZF1DWY4xHQp97fN6',
     name: 'Get Turnt',
     subtitle: 'High energy trap, drill, and heavy bars',
-    coverArt: '',
+    coverArt: 'https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?w=500&auto=format&fit=crop&q=80',
     category: 'hiphop',
     spotifyUrl: 'https://open.spotify.com/playlist/37i9dQZF1DWY4xHQp97fN6',
     gradient: 'from-stone-950/80 via-neutral-950 to-black',
@@ -331,7 +331,7 @@ export const SPOTIFY_CURATED_PLAYLISTS: SpotifyCuratedPlaylist[] = [
     id: '37i9dQZF1DX186v583rmzp',
     name: "90s Hip-Hop Anthems",
     subtitle: 'Golden era hip-hop classics and boom bap beats',
-    coverArt: '',
+    coverArt: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=500&auto=format&fit=crop&q=80',
     category: 'hiphop',
     spotifyUrl: 'https://open.spotify.com/playlist/37i9dQZF1DX186v583rmzp',
     gradient: 'from-yellow-950/80 via-neutral-950 to-black',
@@ -342,7 +342,7 @@ export const SPOTIFY_CURATED_PLAYLISTS: SpotifyCuratedPlaylist[] = [
     id: '37i9dQZF1DX2Nc3B70tvx0',
     name: "Indie's Top 50",
     subtitle: 'The definitive sound of modern indie and alternative',
-    coverArt: '',
+    coverArt: 'https://images.unsplash.com/photo-1465847899084-d164df4dedc6?w=500&auto=format&fit=crop&q=80',
     category: 'indie',
     spotifyUrl: 'https://open.spotify.com/playlist/37i9dQZF1DX2Nc3B70tvx0',
     gradient: 'from-blue-950/80 via-neutral-950 to-black',
@@ -351,7 +351,7 @@ export const SPOTIFY_CURATED_PLAYLISTS: SpotifyCuratedPlaylist[] = [
     id: '37i9dQZF1DXdbXrPNafg9d',
     name: 'All New Indie',
     subtitle: 'Essential new indie rock, bedroom pop, and post-punk',
-    coverArt: '',
+    coverArt: 'https://images.unsplash.com/photo-1511735111819-9a3f7709049c?w=500&auto=format&fit=crop&q=80',
     category: 'indie',
     spotifyUrl: 'https://open.spotify.com/playlist/37i9dQZF1DXdbXrPNafg9d',
     gradient: 'from-teal-950/80 via-neutral-950 to-black',
@@ -360,7 +360,7 @@ export const SPOTIFY_CURATED_PLAYLISTS: SpotifyCuratedPlaylist[] = [
     id: '37i9dQZF1DWWEcRhUVtL8n',
     name: 'Indie Pop',
     subtitle: 'Bright hooks, jangly guitars, and catchy melodies',
-    coverArt: '',
+    coverArt: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=500&auto=format&fit=crop&q=80',
     category: 'indie',
     spotifyUrl: 'https://open.spotify.com/playlist/37i9dQZF1DWWEcRhUVtL8n',
     gradient: 'from-purple-950/80 via-neutral-950 to-black',
@@ -371,7 +371,7 @@ export const SPOTIFY_CURATED_PLAYLISTS: SpotifyCuratedPlaylist[] = [
     id: '37i9dQZF1DX4E3UdUs7fUx',
     name: 'Afternoon Acoustic',
     subtitle: 'Warm acoustic guitars, gentle vocals, and mellow vibes',
-    coverArt: '',
+    coverArt: 'https://images.unsplash.com/photo-1510915361894-db8b60106cb1?w=500&auto=format&fit=crop&q=80',
     category: 'romance',
     spotifyUrl: 'https://open.spotify.com/playlist/37i9dQZF1DX4E3UdUs7fUx',
     gradient: 'from-amber-950/80 via-neutral-950 to-black',
@@ -380,7 +380,7 @@ export const SPOTIFY_CURATED_PLAYLISTS: SpotifyCuratedPlaylist[] = [
     id: '37i9dQZF1DX6ziVCJnEm59',
     name: 'Your Favorite Coffeehouse',
     subtitle: 'Catch up or slow down with acoustic singer-songwriters',
-    coverArt: '',
+    coverArt: 'https://images.unsplash.com/photo-1501386761578-eac5c94b800a?w=500&auto=format&fit=crop&q=80',
     category: 'romance',
     spotifyUrl: 'https://open.spotify.com/playlist/37i9dQZF1DX6ziVCJnEm59',
     gradient: 'from-stone-950/80 via-neutral-950 to-black',
@@ -391,7 +391,7 @@ export const SPOTIFY_CURATED_PLAYLISTS: SpotifyCuratedPlaylist[] = [
     id: '37i9dQZF1DXbcPC6Vvqudd',
     name: 'Night Rain',
     subtitle: 'The soothing, restful sound of steady rainfall',
-    coverArt: '',
+    coverArt: 'https://images.unsplash.com/photo-1515694346937-94d85e41e6f0?w=500&auto=format&fit=crop&q=80',
     category: 'sleep',
     spotifyUrl: 'https://open.spotify.com/playlist/37i9dQZF1DXbcPC6Vvqudd',
     gradient: 'from-sky-950/80 via-neutral-950 to-black',
@@ -400,7 +400,7 @@ export const SPOTIFY_CURATED_PLAYLISTS: SpotifyCuratedPlaylist[] = [
     id: '37i9dQZF1DX3Ogo9pFvBkY',
     name: 'Ambient Relaxation',
     subtitle: 'Gentle soundscapes and calm textures for relaxation',
-    coverArt: '',
+    coverArt: 'https://images.unsplash.com/photo-1518495973542-4542c06a5843?w=500&auto=format&fit=crop&q=80',
     category: 'sleep',
     spotifyUrl: 'https://open.spotify.com/playlist/37i9dQZF1DX3Ogo9pFvBkY',
     gradient: 'from-slate-950/80 via-neutral-950 to-black',
@@ -550,7 +550,7 @@ export class SpotifyImporter {
   }
 
   /**
-   * Fetches playlist metadata and tracklist using Spotify Embed with cache
+   * Fetches playlist metadata and tracklist using Spotify Embed with cache & native fallback
    */
   public static async fetchSpotifyPlaylist(playlistId: string): Promise<SpotifyPlaylistResult | null> {
     if (!playlistId) return null;
@@ -559,16 +559,35 @@ export class SpotifyImporter {
     }
 
     try {
-      // ponytail: proxy through Vite dev server to bypass CORS in web/desktop environment
-      const embedRes = await fetch(`/spotify-embed/playlist/${playlistId}`);
-      if (embedRes.ok) {
-        const html = await embedRes.text();
+      let html: string | null = null;
+
+      // 1. In Electron desktop app, fetch via IPC to bypass browser CORS completely
+      if (typeof window !== 'undefined' && window.electronAPI?.fetchSpotifyEmbed) {
+        try {
+          html = await window.electronAPI.fetchSpotifyEmbed(`playlist/${playlistId}`);
+        } catch {}
+      }
+
+      // 2. In web dev/production, proxy through /spotify-embed if available (skip under file://)
+      if (!html) {
+        const isFileProto = typeof window !== 'undefined' && window.location?.protocol === 'file:';
+        if (!isFileProto) {
+          try {
+            const embedRes = await fetch(`/spotify-embed/playlist/${playlistId}`).catch(() => null);
+            if (embedRes && embedRes.ok) {
+              html = await embedRes.text();
+            }
+          } catch {}
+        }
+      }
+
+      if (html) {
         const nextDataMatch = html.match(/<script id="__NEXT_DATA__" type="application\/json">([^<]+)<\/script>/);
         if (nextDataMatch) {
           const nextData = JSON.parse(nextDataMatch[1]);
           const entity = nextData?.props?.pageProps?.state?.data?.entity;
-          if (entity) {
-            const trackList: SpotifyTrackInfo[] = (entity.trackList || []).map((t: any) => ({
+          if (entity && Array.isArray(entity.trackList) && entity.trackList.length > 0) {
+            const trackList: SpotifyTrackInfo[] = entity.trackList.map((t: any) => ({
               name: t.title || t.name || '',
               artists: t.subtitle || (Array.isArray(t.artists) ? t.artists.map((a: any) => a.name).join(', ') : ''),
               album: t.album?.name || '',
@@ -591,7 +610,33 @@ export class SpotifyImporter {
         }
       }
     } catch {
-      // Fallback
+      // Fallback below
+    }
+
+    // 3. Fallback: if Spotify embed was blocked or unavailable, populate curated playlist via JioSaavn catalog
+    const curated = SPOTIFY_CURATED_PLAYLISTS.find((p) => p.id === playlistId);
+    if (curated) {
+      try {
+        const cleanQuery = curated.name.replace(/[^\w\s]/gi, '').trim();
+        const songs = await JioSaavnApi.searchSongs(cleanQuery, 30);
+        if (songs && songs.length > 0) {
+          const result: SpotifyPlaylistResult = {
+            id: playlistId,
+            name: curated.name,
+            description: curated.subtitle,
+            coverArt: curated.coverArt || songs[0].image,
+            tracks: songs.map((s) => ({
+              name: s.name,
+              artists: s.primaryArtists || '',
+              album: s.album || '',
+              durationMs: (typeof s.duration === 'number' ? s.duration : 180) * 1000,
+              coverArt: s.image,
+            })),
+          };
+          this.playlistCache.set(playlistId, result);
+          return result;
+        }
+      } catch {}
     }
 
     return null;
@@ -729,9 +774,23 @@ export class SpotifyImporter {
    */
   public static async fetchSpotifyTrack(trackId: string): Promise<SpotifyTrackInfo | null> {
     try {
-      const embedRes = await fetch(`/spotify-embed/track/${trackId}`);
-      if (embedRes.ok) {
-        const html = await embedRes.text();
+      let html: string | null = null;
+      if (typeof window !== 'undefined' && window.electronAPI?.fetchSpotifyEmbed) {
+        try {
+          html = await window.electronAPI.fetchSpotifyEmbed(`track/${trackId}`);
+        } catch {}
+      }
+      if (!html) {
+        const isFileProto = typeof window !== 'undefined' && window.location?.protocol === 'file:';
+        if (!isFileProto) {
+          const embedRes = await fetch(`/spotify-embed/track/${trackId}`).catch(() => null);
+          if (embedRes && embedRes.ok) {
+            html = await embedRes.text();
+          }
+        }
+      }
+
+      if (html) {
         const nextDataMatch = html.match(/<script id="__NEXT_DATA__" type="application\/json">([^<]+)<\/script>/);
         if (nextDataMatch) {
           const nextData = JSON.parse(nextDataMatch[1]);
@@ -800,7 +859,17 @@ export class SpotifyImporter {
       } catch {}
     }
 
-    if (!firstSong) return false;
+    if (!firstSong) {
+      try {
+        const query = data.name.replace(/[^\w\s]/gi, '').trim();
+        const fallbackSongs = await JioSaavnApi.searchSongs(query, 10);
+        if (fallbackSongs && fallbackSongs.length > 0) {
+          await playerStore.playSong(fallbackSongs[0], fallbackSongs, 0);
+          return true;
+        }
+      } catch {}
+      return false;
+    }
 
     // Set initial queue
     useQueueStore.getState().setQueue(initialBatch, 0);

@@ -38,6 +38,7 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { ListenTogetherModal } from '../components/modals/ListenTogetherModal';
+import { APP_ICONS } from '../utils/assets';
 import { useListenTogetherStore } from '../stores/listenTogetherStore';
 
 import { NavTab } from '../components/layout/Sidebar';
@@ -149,12 +150,26 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigateToTab }) =
   const handleCheckUpdates = async () => {
     if (!window.electronAPI) return;
     setUpdateStatus('checking');
-    setUpdateMsg('Checking for updates...');
+    setUpdateMsg('Checking GitHub Releases for updates...');
     try {
       const res = await window.electronAPI.checkForUpdates();
       if (res?.status === 'dev-mode') {
         setUpdateStatus('dev-mode');
         setUpdateMsg(res.message || 'Auto-updater is disabled in dev mode.');
+      } else if (res?.status === 'not-available') {
+        setUpdateStatus('up-to-date');
+        setUpdateMsg(res.message || 'Vynce is up to date.');
+      } else if (res?.status === 'error') {
+        setUpdateStatus('error');
+        setUpdateMsg(res.error || 'Update check failed.');
+      } else if (res?.status === 'available') {
+        setUpdateStatus('available');
+        setUpdateMsg(`Version ${res.version || res.updateInfo?.version || ''} is available!`);
+      } else if (res?.status === 'success') {
+        if (!res.updateInfo) {
+          setUpdateStatus('up-to-date');
+          setUpdateMsg('Vynce is up to date.');
+        }
       }
     } catch (err: any) {
       setUpdateStatus('error');
@@ -1065,6 +1080,17 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigateToTab }) =
                   Check for Updates
                 </button>
               )}
+
+              <a
+                href="https://github.com/2300030811/Vynce/releases"
+                target="_blank"
+                rel="noreferrer"
+                className="py-2.5 px-3.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-slate-300 hover:text-white font-semibold text-xs flex items-center justify-center gap-1.5 transition-all border border-white/10 shrink-0"
+                title="View All GitHub Releases"
+              >
+                <ExternalLink className="w-3.5 h-3.5" />
+                <span>Releases</span>
+              </a>
             </div>
           </div>
         </section>
@@ -1119,7 +1145,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigateToTab }) =
       {/* ── CARD 7: ℹ️ ABOUT & SYSTEM FOOTER ───────────────── */}
       <footer className="bg-[#0A0A0A] rounded-[32px] p-6 md:p-8 border border-white/10 shadow-xl flex flex-col sm:flex-row items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <img src="/favicon.svg" alt="Vynce Logo" className="w-8 h-8 rounded-xl shadow-md" />
+          <img src={APP_ICONS.favicon} alt="Vynce Logo" className="w-8 h-8 rounded-xl shadow-md" />
           <div className="flex flex-col">
             <span className="text-sm font-extrabold text-white font-['Outfit']">
               Vynce Music • Material You 3 Web Edition

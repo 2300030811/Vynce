@@ -207,7 +207,9 @@ class WebAudioEngine {
     if (!url) return;
 
     // If crossfade enabled and currently playing, do smooth audio fade-out and fade-in
-    if (crossfadeDuration > 0 && !this.audio.paused && this.audio.currentTime > 0) {
+    // If window is backgrounded/minimized (document.hidden), transition immediately to avoid throttled timer delays
+    const isBackgrounded = typeof document !== 'undefined' && document.hidden;
+    if (crossfadeDuration > 0 && !this.audio.paused && this.audio.currentTime > 0 && !isBackgrounded) {
       const origVolume = this.audio.volume;
       const fadeStep = 50; // 50ms interval
       const steps = Math.max(4, Math.floor((crossfadeDuration * 500) / fadeStep));

@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { useLibraryStore } from '../../stores/libraryStore';
 import { usePlayerStore } from '../../stores/playerStore';
+import { APP_ICONS } from '../../utils/assets';
 
 export type NavTab = 'home' | 'songs' | 'liked' | 'library' | 'equalizer' | 'settings';
 
@@ -45,7 +46,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           className="flex items-center gap-3 px-2 py-1 cursor-pointer group"
         >
           <img
-            src="/favicon.svg"
+            src={APP_ICONS.favicon}
             alt="Vynce"
             className="w-9 h-9 rounded-2xl shadow-md transition-transform group-hover:scale-105"
           />

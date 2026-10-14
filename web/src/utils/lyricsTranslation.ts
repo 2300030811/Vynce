@@ -94,6 +94,23 @@ export function reattachTimestamps(
 }
 
 /**
+ * Resolves the appropriate translation API endpoint for the runtime environment:
+ * - VITE_TRANSLATION_API_URL if configured
+ * - Direct http://127.0.0.1:8000/translate under file:// protocol
+ * - Relative /api/translate in browser development/production reverse proxy
+ */
+export function getTranslationEndpoint(): string {
+  const envUrl = (import.meta as any)?.env?.VITE_TRANSLATION_API_URL || (typeof globalThis !== 'undefined' && (globalThis as any).process?.env?.VITE_TRANSLATION_API_URL);
+  if (envUrl) {
+    return envUrl;
+  }
+  if (typeof window !== 'undefined' && window.location?.protocol === 'file:') {
+    return 'http://127.0.0.1:8000/translate';
+  }
+  return '/api/translate';
+}
+
+/**
  * Primary Lyrics Translation Function
  */
 export async function translateLyrics(req: TranslationRequest): Promise<TranslationResponse> {
@@ -160,7 +177,8 @@ export async function translateLyrics(req: TranslationRequest): Promise<Translat
 
     try {
       // Server-side translation request to application API endpoint
-      const response = await fetch('/api/translate', {
+      const endpoint = getTranslationEndpoint();
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -174,6 +192,7 @@ export async function translateLyrics(req: TranslationRequest): Promise<Translat
           targetLanguage: req.targetLanguage,
           mode,
         }),
+        signal: typeof AbortSignal?.timeout === 'function' ? AbortSignal.timeout(5000) : undefined,
       });
 
       if (!response.ok) {

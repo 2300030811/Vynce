@@ -17,6 +17,8 @@ import {
   Check,
 } from 'lucide-react';
 import { AddToPlaylistModal } from '../modals/AddToPlaylistModal';
+import { downloadSongFile } from '../../utils/songDownloader';
+import { APP_ICONS, handleImageFallback } from '../../utils/assets';
 
 interface SongCardProps {
   song: Song;
@@ -79,33 +81,12 @@ export const SongCard: React.FC<SongCardProps> = ({ song, index, queueContext })
   const handleDownload = async (e: React.MouseEvent) => {
     e.stopPropagation();
     setShowMenu(false);
-    let url = song.downloadUrl;
-    if (!url) {
-      const details = await JioSaavnApi.getSong(song.id);
-      url = details?.downloadUrl || '';
-    }
-    if (url) {
-      try {
-        const response = await fetch(url);
-        const blob = await response.blob();
-        const blobUrl = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = blobUrl;
-        a.download = `${song.name} - ${song.primaryArtists}.mp3`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
-      } catch {
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${song.name} - ${song.primaryArtists}.mp3`;
-        a.target = '_blank';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
+    await downloadSongFile(song, (_status, msg) => {
+      if (msg) {
+        setFeedbackToast(msg);
+        setTimeout(() => setFeedbackToast(null), 2500);
       }
-    }
+    });
   };
 
   const handleCopyLink = (e: React.MouseEvent) => {
@@ -137,13 +118,11 @@ export const SongCard: React.FC<SongCardProps> = ({ song, index, queueContext })
       <div className="flex items-center gap-3 min-w-0 flex-1">
         <div className="relative w-12 h-12 rounded-xl overflow-hidden shrink-0 bg-[var(--vynce-surface-container)] shadow-sm">
           <img
-            src={song.image || '/favicon.svg'}
+            src={song.image || APP_ICONS.favicon}
             alt={song.name}
             className="w-full h-full object-cover transition-transform group-hover:scale-105"
             loading="lazy"
-            onError={(e) => {
-              (e.target as HTMLImageElement).src = '/favicon.svg';
-            }}
+            onError={handleImageFallback}
           />
           {isCurrent && (
             <div className="absolute inset-0 bg-black/40 flex items-center justify-center">

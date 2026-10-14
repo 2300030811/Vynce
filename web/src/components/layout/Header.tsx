@@ -25,6 +25,7 @@ import { HistoryModal } from '../modals/HistoryModal';
 import { StatsModal } from '../modals/StatsModal';
 import { ProfileModal } from '../modals/ProfileModal';
 import { ListenTogetherModal } from '../modals/ListenTogetherModal';
+import { APP_ICONS, handleImageFallback } from '../../utils/assets';
 
 interface HeaderProps {
   currentSearchQuery?: string;
@@ -74,34 +75,50 @@ export const Header: React.FC<HeaderProps> = ({
     }
   }, [currentSearchQuery]);
 
+  // ponytail: AbortController + isCurrent prevents stale in-flight responses from overwriting newer queries
   useEffect(() => {
-    if (!searchQuery.trim() || searchQuery.length < 2) {
+    const trimmed = searchQuery.trim();
+    if (!trimmed || trimmed.length < 2) {
       setTopResult(null);
       setSongSuggestions([]);
       setArtistSuggestions([]);
       setAlbumSuggestions([]);
       setIsSearching(false);
+      setShowDropdown(false);
       return;
     }
 
     setIsSearching(true);
+    let isCurrent = true;
+    const controller = new AbortController();
+
     const t = setTimeout(async () => {
       try {
-        const res = await JioSaavnApi.searchGlobal(searchQuery.trim());
+        const res = await JioSaavnApi.searchGlobal(trimmed, controller.signal);
+        if (!isCurrent) return;
         setTopResult(res.topQuery);
         setSongSuggestions(res.songs.slice(0, 5));
         setArtistSuggestions(res.artists.slice(0, 4));
         setAlbumSuggestions(res.albums.slice(0, 3));
         setShowDropdown(true);
-      } catch {
+      } catch (err: any) {
+        if (!isCurrent || err?.name === 'AbortError') return;
         setTopResult(null);
         setSongSuggestions([]);
+        setArtistSuggestions([]);
+        setAlbumSuggestions([]);
       } finally {
-        setIsSearching(false);
+        if (isCurrent) {
+          setIsSearching(false);
+        }
       }
     }, 180);
 
-    return () => clearTimeout(t);
+    return () => {
+      isCurrent = false;
+      controller.abort();
+      clearTimeout(t);
+    };
   }, [searchQuery]);
 
   useEffect(() => {
@@ -127,6 +144,7 @@ export const Header: React.FC<HeaderProps> = ({
     setArtistSuggestions([]);
     setAlbumSuggestions([]);
     setShowDropdown(false);
+    setIsSearching(false);
     onSearchSubmit('');
   };
 
@@ -160,7 +178,7 @@ export const Header: React.FC<HeaderProps> = ({
         onClick={() => onTabChange?.('home')}
         className="flex items-center gap-2 md:hidden cursor-pointer shrink-0"
       >
-        <img src="/favicon.svg" alt="Vynce" className="w-8 h-8 rounded-xl" />
+        <img src={APP_ICONS.favicon} alt="Vynce" className="w-8 h-8 rounded-xl" />
         <span className="text-lg font-bold tracking-tight text-white font-['Outfit']">Vynce</span>
       </div>
 
@@ -287,12 +305,10 @@ export const Header: React.FC<HeaderProps> = ({
                     className="flex items-center gap-3 p-2 rounded-2xl hover:bg-white/[0.06] cursor-pointer transition-colors group"
                   >
                     <img
-                      src={song.image || '/favicon.svg'}
+                      src={song.image || APP_ICONS.favicon}
                       alt={song.name}
                       className="w-10 h-10 rounded-xl object-cover shadow-sm shrink-0"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).src = '/favicon.svg';
-                      }}
+                      onError={handleImageFallback}
                     />
                     <div className="flex flex-col min-w-0 flex-1">
                       <span className="text-sm font-semibold text-white group-hover:text-[var(--vynce-primary)] transition-colors truncate">

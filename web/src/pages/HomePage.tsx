@@ -15,6 +15,7 @@ import {
   ChevronRight,
   Radio,
 } from 'lucide-react';
+import { APP_ICONS, handleImageFallback } from '../utils/assets';
 
 interface HomePageProps {
   onSelectAlbum: (id: string) => void;
@@ -198,12 +199,10 @@ export const HomePage: React.FC<HomePageProps> = ({
                 {/* Main Artwork Sleeve */}
                 <div className="relative aspect-square w-48 sm:w-52 md:w-60 rounded-[28px] overflow-hidden shadow-2xl border border-white/15 bg-black z-10 transition-transform group-hover:scale-102">
                   <img
-                    src={heroSong.image || '/favicon.svg'}
+                    src={heroSong.image || APP_ICONS.favicon}
                     alt={heroSong.name}
                     className="w-full h-full object-cover"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src = '/favicon.svg';
-                    }}
+                    onError={handleImageFallback}
                   />
                 </div>
               </div>
@@ -237,9 +236,10 @@ export const HomePage: React.FC<HomePageProps> = ({
                       className="group flex items-center gap-3 p-2.5 rounded-2xl bg-[var(--vynce-surface-container)] hover:bg-[var(--vynce-surface-container-high)] cursor-pointer transition-all border border-white/5 shadow-sm"
                     >
                       <img
-                        src={item.song.image || '/favicon.svg'}
+                        src={item.song.image || APP_ICONS.favicon}
                         alt={item.song.name}
                         className="w-12 h-12 rounded-xl object-cover shrink-0 group-hover:scale-105 transition-transform"
+                        onError={handleImageFallback}
                       />
                       <div className="flex flex-col min-w-0 flex-1">
                         <span className="text-xs font-bold text-white truncate group-hover:text-[var(--vynce-primary)] transition-colors">
@@ -329,10 +329,11 @@ export const HomePage: React.FC<HomePageProps> = ({
                       >
                         <div className="relative aspect-square w-full rounded-2xl overflow-hidden bg-[var(--vynce-surface-container)] mb-2.5 shadow-md border border-white/5">
                           <img
-                            src={song.image || '/favicon.svg'}
+                            src={song.image || APP_ICONS.favicon}
                             alt={song.name}
                             className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                             loading="lazy"
+                            onError={handleImageFallback}
                           />
                           {/* Play button overlay on hover */}
                           <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">

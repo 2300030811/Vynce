@@ -285,8 +285,16 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
 
       // MediaSession setup
       updateMediaSession(song, {
-        onPlay: () => get().togglePlay(),
-        onPause: () => get().togglePlay(),
+        onPlay: () => {
+          if (get().status !== 'playing') {
+            audioEngine.play().catch(() => {});
+          }
+        },
+        onPause: () => {
+          if (get().status === 'playing') {
+            audioEngine.pause();
+          }
+        },
         onNext: () => get().nextTrack(),
         onPrev: () => get().prevTrack(),
         onSeek: (details) => {
@@ -416,10 +424,13 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
 
       const initialVolume = get().volume;
       const FADE_WINDOW_SECS = Math.min(15, Math.floor(totalSecs / 2));
+      const targetEndTime = Date.now() + totalSecs * 1000;
 
       sleepTimerInterval = setInterval(() => {
-        const rem = get().sleepTimerRemaining;
-        if (rem === null || rem <= 1) {
+        const now = Date.now();
+        const rem = Math.max(0, Math.round((targetEndTime - now) / 1000));
+
+        if (rem <= 0) {
           if (sleepTimerInterval) clearInterval(sleepTimerInterval);
           sleepTimerInterval = null;
 
@@ -427,13 +438,12 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
           audioEngine.setVolume(initialVolume);
           set({ sleepTimerRemaining: null, status: 'paused' });
         } else {
-          const nextRem = rem - 1;
           // Smooth progressive fade over the final FADE_WINDOW_SECS
-          if (nextRem <= FADE_WINDOW_SECS && FADE_WINDOW_SECS > 0) {
-            const factor = Math.max(0.05, nextRem / FADE_WINDOW_SECS);
+          if (rem <= FADE_WINDOW_SECS && FADE_WINDOW_SECS > 0) {
+            const factor = Math.max(0.05, rem / FADE_WINDOW_SECS);
             audioEngine.setVolume(initialVolume * factor);
           }
-          set({ sleepTimerRemaining: nextRem });
+          set({ sleepTimerRemaining: rem });
         }
       }, 1000);
     },

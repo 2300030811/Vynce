@@ -17,14 +17,17 @@ export interface ElectronAPI {
   minimize: () => Promise<void>;
   maximize: () => Promise<void>;
   close: () => Promise<void>;
+  quit: () => Promise<void>;
   isMaximized: () => Promise<boolean>;
   getAppVersion: () => Promise<string>;
-  checkForUpdates: () => Promise<{ status: string; error?: string; message?: string }>;
+  checkForUpdates: () => Promise<{ status: string; error?: string; message?: string; updateInfo?: any; version?: string }>;
   downloadUpdate: () => Promise<{ status: string; error?: string }>;
   quitAndInstall: () => Promise<void>;
   onMaximizeChange: (callback: (isMaximized: boolean) => void) => () => void;
   onTrayAction: (callback: (action: string) => void) => () => void;
   onUpdaterEvent: (callback: (data: UpdateEvent) => void) => () => void;
+  fetchSpotifyEmbed?: (resourcePath: string) => Promise<string | null>;
+  fetchJioSaavnDirect?: (queryString: string) => Promise<any>;
 }
 
 declare global {

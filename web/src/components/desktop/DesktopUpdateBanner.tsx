@@ -27,8 +27,8 @@ export const DesktopUpdateBanner: React.FC = () => {
     return null;
   }
 
-  // Only render banner if there is an active event worth displaying
-  if (!['available', 'downloading', 'downloaded', 'error'].includes(updateInfo.status)) {
+  // Only render banner if there is an update available or downloading
+  if (!['available', 'downloading', 'downloaded'].includes(updateInfo.status)) {
     return null;
   }
 

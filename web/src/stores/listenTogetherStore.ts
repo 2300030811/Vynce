@@ -1,16 +1,17 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 import { Song } from '../types/music';
 import { usePlayerStore } from './playerStore';
 import { useSettingsStore } from './settingsStore';
-
-export interface Participant {
-  id: string;
-  name: string;
-  avatar: string;
-  isHost: boolean;
-  joinedAt: number;
-}
+import { JioSaavnApi } from '../api/jiosaavn';
+import {
+  ListenTogetherClient,
+  ListenTogetherSession,
+  ListenTogetherParticipant,
+  ListenTogetherPlaybackState,
+  generateRandomRoomCode,
+  roomCodeToIp,
+  ipToRoomCode,
+} from '../utils/listenTogetherClient';
 
 export interface Reaction {
   id: string;
@@ -32,18 +33,22 @@ interface ListenTogetherState {
   roomCode: string | null;
   isHost: boolean;
   participantId: string;
-  participants: Participant[];
+  participants: ListenTogetherParticipant[];
   reactions: Reaction[];
-  syncStatus: 'idle' | 'connected' | 'syncing';
+  syncStatus: 'idle' | 'connected' | 'syncing' | 'error';
   lastSyncedAt: number | null;
+  syncLatencyMs: number | null;
+  hostDeviceType: 'web' | 'vynce_app' | 'local';
+  errorMessage: string | null;
 
   // Actions
   createRoom: (hostName: string) => string;
-  joinRoom: (code: string, userName: string) => boolean;
+  joinRoom: (code: string, userName: string) => Promise<boolean>;
   leaveRoom: () => void;
   sendReaction: (emoji: string) => void;
   broadcastPlayback: (song: Song | null, isPlaying: boolean, currentTime: number) => void;
   addReactionLocally: (emoji: string, fromName: string) => void;
+  forceResync: () => Promise<void>;
 }
 
 // Global broadcast channel for cross-tab realtime sync
@@ -52,18 +57,91 @@ if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
   broadcastChannel = new BroadcastChannel('vynce_listen_together');
 }
 
-const generateRoomCode = () => {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  let code = '';
-  for (let i = 0; i < 6; i++) {
-    code += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return code;
-};
+let syncIntervalTimer: any = null;
+let lastAppliedVersion = 0;
+let isResolvingSong = false;
 
 export const useListenTogetherStore = create<ListenTogetherState>()((set, get) => {
-  // Generate random client ID for this session
   const participantId = `usr_${Math.random().toString(36).substring(2, 9)}`;
+
+  const stopSyncLoop = () => {
+    if (syncIntervalTimer) {
+      clearInterval(syncIntervalTimer);
+      syncIntervalTimer = null;
+    }
+  };
+
+  const startSyncLoop = (code: string) => {
+    stopSyncLoop();
+    syncIntervalTimer = setInterval(async () => {
+      const { roomCode, isHost, hostDeviceType } = get();
+      if (!roomCode || isHost || hostDeviceType !== 'vynce_app') return;
+
+      const startPing = Date.now();
+      try {
+        const session = await ListenTogetherClient.getSession(roomCode, participantId);
+        const latency = Date.now() - startPing;
+
+        set({
+          participants: session.participantList || [],
+          lastSyncedAt: Date.now(),
+          syncLatencyMs: latency,
+          syncStatus: 'connected',
+        });
+
+        // Apply state if newer or if drift is significant
+        if (session.state && session.stateVersion > lastAppliedVersion) {
+          lastAppliedVersion = session.stateVersion;
+          await applyRemotePlaybackState(session.state);
+        }
+      } catch (err: any) {
+        // Fallback or retry
+      }
+    }, 800);
+  };
+
+  const applyRemotePlaybackState = async (state: ListenTogetherPlaybackState) => {
+    if (!state || isResolvingSong) return;
+    const player = usePlayerStore.getState();
+
+    const targetPosSec = (state.positionMs || 0) / 1000;
+    const isPlaying = state.isPlaying ?? true;
+
+    // Check if song needs to be loaded
+    const isSameSong =
+      (state.songId && player.currentSong?.id === state.songId) ||
+      (state.title && player.currentSong?.name.toLowerCase() === state.title.toLowerCase());
+
+    if (!isSameSong && state.title) {
+      isResolvingSong = true;
+      try {
+        const query = `${state.title} ${(state.artists && state.artists[0]) || ''}`.trim();
+        const results = await JioSaavnApi.searchSongs(query, 5);
+        if (results && results.length > 0) {
+          const match = results[0];
+          await player.playSong(match, results, 0);
+          player.seek(targetPosSec);
+          if (!isPlaying && player.status === 'playing') {
+            player.togglePlay();
+          }
+        }
+      } catch (err) {
+        console.error('Failed to resolve song from sync:', err);
+      } finally {
+        isResolvingSong = false;
+      }
+    } else {
+      // Song already loaded, check seek drift & play state
+      if (Math.abs(player.currentTime - targetPosSec) > 1.5) {
+        player.seek(targetPosSec);
+      }
+      if (isPlaying && player.status !== 'playing') {
+        player.togglePlay();
+      } else if (!isPlaying && player.status === 'playing') {
+        player.togglePlay();
+      }
+    }
+  };
 
   // Listen for broadcast messages across tabs / windows
   if (typeof window !== 'undefined') {
@@ -73,7 +151,6 @@ export const useListenTogetherStore = create<ListenTogetherState>()((set, get) =
       if (msg.senderId === participantId) return; // ignore self
 
       if (msg.type === 'SYNC_STATE' && !isHost) {
-        // Non-hosts receive playback updates from the host
         const { song, isPlaying, currentTime } = msg.payload || {};
         const player = usePlayerStore.getState();
 
@@ -81,7 +158,7 @@ export const useListenTogetherStore = create<ListenTogetherState>()((set, get) =
           if (!player.currentSong || player.currentSong.id !== song.id) {
             player.playSong(song, [song], 0);
           }
-          if (typeof currentTime === 'number' && Math.abs(player.currentTime - currentTime) > 2) {
+          if (typeof currentTime === 'number' && Math.abs(player.currentTime - currentTime) > 1.5) {
             player.seek(currentTime);
           }
           if (isPlaying && player.status !== 'playing') {
@@ -92,7 +169,6 @@ export const useListenTogetherStore = create<ListenTogetherState>()((set, get) =
         }
         set({ lastSyncedAt: Date.now(), syncStatus: 'connected' });
       } else if (msg.type === 'JOIN') {
-        // Add new participant
         set((state) => {
           const exists = state.participants.some((p) => p.id === msg.senderId);
           if (exists) return state;
@@ -102,15 +178,12 @@ export const useListenTogetherStore = create<ListenTogetherState>()((set, get) =
               {
                 id: msg.senderId,
                 name: msg.senderName,
-                avatar: msg.avatar || 'purple',
                 isHost: false,
-                joinedAt: Date.now(),
               },
             ],
           };
         });
 
-        // If we are host, reply with our current state
         if (isHost) {
           const player = usePlayerStore.getState();
           get().broadcastPlayback(player.currentSong, player.status === 'playing', player.currentTime);
@@ -133,15 +206,12 @@ export const useListenTogetherStore = create<ListenTogetherState>()((set, get) =
       };
     }
 
-    // Also support storage event for broader cross-context sync
     window.addEventListener('storage', (e) => {
       if (e.key === 'vynce_listen_together_event' && e.newValue) {
         try {
           const data = JSON.parse(e.newValue);
           handleIncomingMessage(data);
-        } catch {
-          // ignore
-        }
+        } catch {}
       }
     });
   }
@@ -156,9 +226,7 @@ export const useListenTogetherStore = create<ListenTogetherState>()((set, get) =
           'vynce_listen_together_event',
           JSON.stringify({ ...msg, _t: Date.now() })
         );
-      } catch {
-        // ignore
-      }
+      } catch {}
     }
   };
 
@@ -170,16 +238,17 @@ export const useListenTogetherStore = create<ListenTogetherState>()((set, get) =
     reactions: [],
     syncStatus: 'idle',
     lastSyncedAt: null,
+    syncLatencyMs: null,
+    hostDeviceType: 'local',
+    errorMessage: null,
 
     createRoom: (hostName: string) => {
-      const code = generateRoomCode();
+      const code = generateRandomRoomCode();
       const settings = useSettingsStore.getState();
-      const host: Participant = {
+      const host: ListenTogetherParticipant = {
         id: participantId,
         name: hostName || settings.userName,
-        avatar: settings.userAvatar || 'purple',
         isHost: true,
-        joinedAt: Date.now(),
       };
 
       set({
@@ -188,18 +257,18 @@ export const useListenTogetherStore = create<ListenTogetherState>()((set, get) =
         participants: [host],
         syncStatus: 'connected',
         lastSyncedAt: Date.now(),
+        hostDeviceType: 'local',
+        errorMessage: null,
       });
 
-      // Broadcast room creation
       broadcast({
         type: 'JOIN',
         senderId: participantId,
         senderName: host.name,
-        avatar: host.avatar,
+        avatar: settings.userAvatar || 'purple',
         roomCode: code,
       });
 
-      // Initial state sync
       const player = usePlayerStore.getState();
       if (player.currentSong) {
         get().broadcastPlayback(player.currentSong, player.status === 'playing', player.currentTime);
@@ -208,42 +277,71 @@ export const useListenTogetherStore = create<ListenTogetherState>()((set, get) =
       return code;
     },
 
-    joinRoom: (code: string, userName: string) => {
+    joinRoom: async (code: string, userName: string) => {
       const cleanCode = code.trim().toUpperCase();
       if (!cleanCode) return false;
 
       const settings = useSettingsStore.getState();
-      const me: Participant = {
+      const myName = userName || settings.userName || 'Guest';
+
+      set({ syncStatus: 'syncing', errorMessage: null });
+
+      // Check if this looks like a Vynce Android app host code (8 hex digits or IP:Port)
+      const isIpOrHex = roomCodeToIp(cleanCode) !== null || cleanCode.includes(':') || cleanCode.includes('.');
+
+      if (isIpOrHex) {
+        try {
+          const session = await ListenTogetherClient.joinSession(cleanCode, myName);
+          set({
+            roomCode: cleanCode,
+            isHost: false,
+            participants: session.participantList || [],
+            syncStatus: 'connected',
+            lastSyncedAt: Date.now(),
+            hostDeviceType: 'vynce_app',
+          });
+
+          if (session.state) {
+            lastAppliedVersion = session.stateVersion;
+            await applyRemotePlaybackState(session.state);
+          }
+
+          startSyncLoop(cleanCode);
+          return true;
+        } catch (err: any) {
+          console.warn('Direct HTTP join failed, falling back to peer sync:', err);
+        }
+      }
+
+      // Default to cross-tab / peer broadcast channel sync
+      const me: ListenTogetherParticipant = {
         id: participantId,
-        name: userName || settings.userName,
-        avatar: settings.userAvatar || 'purple',
+        name: myName,
         isHost: false,
-        joinedAt: Date.now(),
       };
 
       set({
         roomCode: cleanCode,
         isHost: false,
         participants: [me],
-        syncStatus: 'syncing',
+        syncStatus: 'connected',
         lastSyncedAt: Date.now(),
+        hostDeviceType: 'local',
       });
 
-      // Announce join
       broadcast({
         type: 'JOIN',
         senderId: participantId,
         senderName: me.name,
-        avatar: me.avatar,
+        avatar: settings.userAvatar || 'purple',
         roomCode: cleanCode,
       });
 
-      // Request host to send current track
       broadcast({
         type: 'REQUEST_SYNC',
         senderId: participantId,
         senderName: me.name,
-        avatar: me.avatar,
+        avatar: settings.userAvatar || 'purple',
         roomCode: cleanCode,
       });
 
@@ -251,7 +349,8 @@ export const useListenTogetherStore = create<ListenTogetherState>()((set, get) =
     },
 
     leaveRoom: () => {
-      const { roomCode, participants } = get();
+      stopSyncLoop();
+      const { roomCode, isHost } = get();
       if (roomCode) {
         const settings = useSettingsStore.getState();
         broadcast({
@@ -261,6 +360,10 @@ export const useListenTogetherStore = create<ListenTogetherState>()((set, get) =
           avatar: settings.userAvatar,
           roomCode,
         });
+
+        if (get().hostDeviceType === 'vynce_app') {
+          ListenTogetherClient.leaveSession(roomCode, participantId);
+        }
       }
 
       set({
@@ -269,6 +372,8 @@ export const useListenTogetherStore = create<ListenTogetherState>()((set, get) =
         participants: [],
         syncStatus: 'idle',
         lastSyncedAt: null,
+        syncLatencyMs: null,
+        errorMessage: null,
       });
     },
 
@@ -290,10 +395,12 @@ export const useListenTogetherStore = create<ListenTogetherState>()((set, get) =
     },
 
     broadcastPlayback: (song: Song | null, isPlaying: boolean, currentTime: number) => {
-      const { roomCode, isHost } = get();
+      const { roomCode, isHost, hostDeviceType } = get();
       if (!roomCode || !isHost || !song) return;
 
       const settings = useSettingsStore.getState();
+
+      // Broadcast to local tabs
       broadcast({
         type: 'SYNC_STATE',
         senderId: participantId,
@@ -307,6 +414,18 @@ export const useListenTogetherStore = create<ListenTogetherState>()((set, get) =
           timestamp: Date.now(),
         },
       });
+
+      // If connected to HTTP room coordinator
+      if (hostDeviceType === 'vynce_app') {
+        ListenTogetherClient.updateState(roomCode, participantId, {
+          songId: song.id,
+          title: song.name,
+          artists: song.primaryArtists ? [song.primaryArtists] : [],
+          thumbnailUrl: song.image,
+          positionMs: Math.floor(currentTime * 1000),
+          isPlaying,
+        }).catch(() => {});
+      }
 
       set({ lastSyncedAt: Date.now() });
     },
@@ -322,6 +441,32 @@ export const useListenTogetherStore = create<ListenTogetherState>()((set, get) =
       set((state) => ({
         reactions: [...state.reactions.slice(-15), reaction],
       }));
+    },
+
+    forceResync: async () => {
+      const { roomCode, isHost, hostDeviceType } = get();
+      if (!roomCode) return;
+
+      if (isHost) {
+        const player = usePlayerStore.getState();
+        get().broadcastPlayback(player.currentSong, player.status === 'playing', player.currentTime);
+      } else if (hostDeviceType === 'vynce_app') {
+        try {
+          const session = await ListenTogetherClient.getSession(roomCode, participantId);
+          if (session.state) {
+            await applyRemotePlaybackState(session.state);
+          }
+        } catch {}
+      } else {
+        const settings = useSettingsStore.getState();
+        broadcast({
+          type: 'REQUEST_SYNC',
+          senderId: participantId,
+          senderName: settings.userName,
+          avatar: settings.userAvatar,
+          roomCode,
+        });
+      }
     },
   };
 });

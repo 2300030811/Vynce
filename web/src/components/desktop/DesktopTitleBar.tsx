@@ -1,12 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { Minus, Square, Copy, X } from 'lucide-react';
 import { usePlayerStore } from '../../stores/playerStore';
+import { APP_ICONS } from '../../utils/assets';
 
 export const DesktopTitleBar: React.FC = () => {
   const isElectron = typeof window !== 'undefined' && Boolean(window.electronAPI?.isElectron);
   const [isMaximized, setIsMaximized] = useState(false);
 
-  const { togglePlay, nextTrack, prevTrack } = usePlayerStore();
+  const togglePlay = usePlayerStore((s) => s.togglePlay);
+  const nextTrack = usePlayerStore((s) => s.nextTrack);
+  const prevTrack = usePlayerStore((s) => s.prevTrack);
 
   useEffect(() => {
     if (!isElectron || !window.electronAPI) return;
@@ -55,7 +58,7 @@ export const DesktopTitleBar: React.FC = () => {
     >
       {/* Brand / Logo */}
       <div className="flex items-center gap-2 px-1">
-        <img src="/vynce_logo.png" alt="Vynce" className="w-4 h-4 rounded-full object-cover" />
+        <img src={APP_ICONS.favicon} alt="Vynce" className="w-4 h-4 rounded-full object-cover" />
         <span className="font-bold tracking-wider text-[11px] text-white/80">VYNCE</span>
       </div>
 

@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { Song, Album, Playlist } from '../types/music';
-import { db, DbLikedSong, DbPlaylist, DbHistoryEntry, DbSavedAlbum } from '../db';
+import { db, DbLikedSong, DbPlaylist, DbHistoryEntry, DbSavedAlbum, DbDownloadedSong } from '../db';
+import { AudioCacheManager } from '../utils/audioCache';
 
 export interface LibraryState {
   likedSongIds: Set<string>;
@@ -9,11 +10,19 @@ export interface LibraryState {
   savedAlbums: DbSavedAlbum[];
   playlists: DbPlaylist[];
   history: DbHistoryEntry[];
+  downloadedSongIds: Set<string>;
+  downloadedSongs: DbDownloadedSong[];
   isLoading: boolean;
 
   loadLibrary: () => Promise<void>;
   toggleLike: (song: Song) => Promise<boolean>;
   isLiked: (songId: string) => boolean;
+
+  // Downloaded Songs
+  recordDownload: (song: Song, fileSize?: number) => Promise<void>;
+  deleteDownloadedSong: (songId: string) => Promise<void>;
+  clearDownloadedSongs: () => Promise<void>;
+  isDownloaded: (songId: string) => boolean;
 
   // Album Saving in Library
   toggleSaveAlbum: (album: Album, songs?: Song[]) => Promise<boolean>;
@@ -44,15 +53,18 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
   savedAlbums: [],
   playlists: [],
   history: [],
+  downloadedSongIds: new Set(),
+  downloadedSongs: [],
   isLoading: true,
 
   loadLibrary: async () => {
     try {
-      const [likes, savedAlbums, playlists, history] = await Promise.all([
+      const [likes, savedAlbums, playlists, history, downloaded] = await Promise.all([
         db.likedSongs.orderBy('addedAt').reverse().toArray(),
         db.savedAlbums ? db.savedAlbums.orderBy('addedAt').reverse().toArray() : Promise.resolve([]),
         db.playlists.orderBy('createdAt').reverse().toArray(),
         db.history.orderBy('playedAt').reverse().limit(100).toArray(),
+        db.downloadedSongs ? db.downloadedSongs.orderBy('downloadedAt').reverse().toArray() : Promise.resolve([]),
       ]);
 
       // Deduplicate history entries to show each unique song only once
@@ -72,6 +84,8 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
         savedAlbumIds: new Set((savedAlbums || []).map((a) => a.id)),
         playlists,
         history: uniqueHistory,
+        downloadedSongs: downloaded || [],
+        downloadedSongIds: new Set((downloaded || []).map((s) => s.id)),
         isLoading: false,
       });
     } catch {
@@ -110,6 +124,66 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
 
   isLiked: (songId: string) => {
     return get().likedSongIds.has(songId);
+  },
+
+  // ── Downloaded Songs ──────────────────────────────────────
+  recordDownload: async (song: Song, fileSize?: number) => {
+    try {
+      const { downloadedSongs, downloadedSongIds } = get();
+      const entry: DbDownloadedSong = {
+        ...song,
+        downloadedAt: Date.now(),
+        fileSize,
+      };
+      await db.downloadedSongs.put(entry);
+
+      const nextIds = new Set(downloadedSongIds);
+      nextIds.add(song.id);
+
+      set({
+        downloadedSongIds: nextIds,
+        downloadedSongs: [entry, ...downloadedSongs.filter((s) => s.id !== song.id)],
+      });
+    } catch (err) {
+      console.warn('Failed to record downloaded song in IndexedDB:', err);
+    }
+  },
+
+  deleteDownloadedSong: async (songId: string) => {
+    try {
+      const { downloadedSongs, downloadedSongIds } = get();
+      const target = downloadedSongs.find((s) => s.id === songId);
+      if (target?.downloadUrl) {
+        await AudioCacheManager.deleteDownloadedTrack(target.downloadUrl);
+      }
+      await db.downloadedSongs.delete(songId);
+      const nextIds = new Set(downloadedSongIds);
+      nextIds.delete(songId);
+
+      set({
+        downloadedSongIds: nextIds,
+        downloadedSongs: downloadedSongs.filter((s) => s.id !== songId),
+      });
+    } catch (err) {
+      console.warn('Failed to delete downloaded song:', err);
+    }
+  },
+
+  clearDownloadedSongs: async () => {
+    try {
+      await AudioCacheManager.clearAllDownloadedAudio();
+      await db.downloadedSongs.clear();
+      set({
+        downloadedSongIds: new Set(),
+        downloadedSongs: [],
+      });
+    } catch (err) {
+      console.warn('Failed to clear downloaded songs:', err);
+    }
+  },
+
+  isDownloaded: (songId: string) => {
+    return get().downloadedSongIds.has(songId);
   },
 
   // ── Album Saving ──────────────────────────────────────────
@@ -320,19 +394,21 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
   },
 
   exportLibrary: async () => {
-    const [likes, savedAlbums, playlists, playlistSongs] = await Promise.all([
+    const [likes, savedAlbums, playlists, playlistSongs, downloaded] = await Promise.all([
       db.likedSongs.toArray(),
       db.savedAlbums ? db.savedAlbums.toArray() : Promise.resolve([]),
       db.playlists.toArray(),
       db.playlistSongs.toArray(),
+      db.downloadedSongs ? db.downloadedSongs.toArray() : Promise.resolve([]),
     ]);
     const backup = {
-      version: 2,
+      version: 3,
       exportedAt: new Date().toISOString(),
       likes,
       savedAlbums,
       playlists,
       playlistSongs,
+      downloadedSongs: downloaded,
     };
     return JSON.stringify(backup, null, 2);
   },
@@ -350,6 +426,14 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
         if (song?.id) {
           await db.likedSongs.put(song);
           likesCount++;
+        }
+      }
+    }
+
+    if (Array.isArray(parsed.downloadedSongs)) {
+      for (const song of parsed.downloadedSongs) {
+        if (song?.id) {
+          await db.downloadedSongs.put(song);
         }
       }
     }

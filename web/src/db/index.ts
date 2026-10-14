@@ -47,6 +47,11 @@ export interface DbLyricsEntry {
   fetchedAt: number;
 }
 
+export interface DbDownloadedSong extends Song {
+  downloadedAt: number;
+  fileSize?: number;
+}
+
 export class VynceDatabase extends Dexie {
   likedSongs!: Table<DbLikedSong, string>;
   savedAlbums!: Table<DbSavedAlbum, string>;
@@ -55,6 +60,7 @@ export class VynceDatabase extends Dexie {
   history!: Table<DbHistoryEntry, number>;
   lyrics!: Table<DbLyricsEntry, string>;
   lyricsTranslations!: Table<LyricsTranslation, number>;
+  downloadedSongs!: Table<DbDownloadedSong, string>;
 
   constructor() {
     super('VynceDB');
@@ -88,6 +94,16 @@ export class VynceDatabase extends Dexie {
       history: '++id, songId, playedAt',
       lyrics: 'songId, fetchedAt',
       lyricsTranslations: '++id, songId, contentHash, [songId+sourceLanguage+targetLanguage+mode], [contentHash+targetLanguage+mode], createdAt',
+    });
+    this.version(5).stores({
+      likedSongs: 'id, name, primaryArtists, addedAt',
+      savedAlbums: 'id, name, artists, addedAt',
+      playlists: 'id, name, createdAt',
+      playlistSongs: '++id, playlistId, [playlistId+orderIndex], addedAt',
+      history: '++id, songId, playedAt',
+      lyrics: 'songId, fetchedAt',
+      lyricsTranslations: '++id, songId, contentHash, [songId+sourceLanguage+targetLanguage+mode], [contentHash+targetLanguage+mode], createdAt',
+      downloadedSongs: 'id, name, primaryArtists, downloadedAt',
     });
   }
 }

@@ -1,25 +1,105 @@
-name: Build & Release Vynce
+name: Vynce Multiplatform Stable Release
 
 on:
-  workflow_dispatch:
   push:
     tags:
-      - 'v*'
+      - 'v[0-9]*.[0-9]*.[0-9]*'
+      - '!v*-beta*'
+      - '!v*-rc*'
+      - '!v*-alpha*'
+      - '!desktop-v*'
+  workflow_dispatch:
+    inputs:
+      release_version:
+        description: 'Stable release version without leading v (e.g. 3.0.1)'
+        required: true
+        type: string
 
 jobs:
-  build:
+  validate-release:
+    name: Validate Release Pre-conditions
     runs-on: ubuntu-latest
-
-    permissions:
-      contents: write
-      actions: read
-
+    outputs:
+      version: ${{ steps.check.outputs.version }}
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Verify Versions, Tags & Secrets
+        id: check
+        env:
+          SECRET_SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
+          SECRET_KEY_STORE_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}
+          SECRET_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          SECRET_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          # 1. Determine target version
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TARGET_VER="${{ inputs.release_version }}"
+          else
+            TARGET_VER="${GITHUB_REF_NAME#v}"
+          fi
+          echo "Target release version: $TARGET_VER"
+
+          # 2. Prevent reuse of existing v3.0.0
+          if [ "$TARGET_VER" = "3.0.0" ]; then
+            echo "ERROR: Version 3.0.0 is already published on GitHub. A stable release must bump the version (e.g. 3.0.1)."
+            exit 1
+          fi
+
+          # 3. Check semver format
+          if ! echo "$TARGET_VER" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "ERROR: Target version '$TARGET_VER' does not follow strict semver format (X.Y.Z)."
+            exit 1
+          fi
+
+          # 4. Check web/package.json version
+          WEB_VER=$(node -p "require('./web/package.json').version")
+          echo "web/package.json version: $WEB_VER"
+          if [ "$WEB_VER" != "$TARGET_VER" ]; then
+            echo "ERROR: web/package.json version ($WEB_VER) does not match target release version ($TARGET_VER)."
+            echo "Please update web/package.json version before cutting a stable release."
+            exit 1
+          fi
+
+          # 5. Check app/build.gradle.kts versionName
+          ANDROID_VER=$(grep -E 'versionName\s*=\s*"[^"]+"' app/build.gradle.kts | head -n1 | sed -E 's/.*"([^"]+)".*/\1/')
+          echo "app/build.gradle.kts versionName: $ANDROID_VER"
+          if [ "$ANDROID_VER" != "$TARGET_VER" ]; then
+            echo "ERROR: app/build.gradle.kts versionName ($ANDROID_VER) does not match target release version ($TARGET_VER)."
+            echo "Please update app/build.gradle.kts before cutting a stable release."
+            exit 1
+          fi
+
+          # 6. Verify all 4 required Android signing secrets are present
+          MISSING_SECRETS=()
+          [ -z "$SECRET_SIGNING_KEY" ] && MISSING_SECRETS+=("SIGNING_KEY")
+          [ -z "$SECRET_KEY_STORE_PASSWORD" ] && MISSING_SECRETS+=("KEY_STORE_PASSWORD")
+          [ -z "$SECRET_KEY_ALIAS" ] && MISSING_SECRETS+=("KEY_ALIAS")
+          [ -z "$SECRET_KEY_PASSWORD" ] && MISSING_SECRETS+=("KEY_PASSWORD")
+
+          if [ ${#MISSING_SECRETS[@]} -gt 0 ]; then
+            echo "ERROR: Missing required Android signing secret(s): ${MISSING_SECRETS[*]}"
+            echo "Cannot produce a verified signed Android release without all 4 secrets configured."
+            exit 1
+          fi
+          echo "All 4 required Android signing secrets are verified present."
+
+          echo "version=$TARGET_VER" >> $GITHUB_OUTPUT
+          echo "All pre-release validations passed successfully."
+
+  build-android:
+    name: Build Android Signed Release APK
+    needs: [validate-release]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
         with:
           submodules: recursive
 
-      - uses: actions/setup-java@v4
+      - name: Setup Java 21
+        uses: actions/setup-java@v4
         with:
           java-version: 21
           distribution: temurin
@@ -44,15 +124,136 @@ jobs:
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
 
-      - name: Create GitHub Release
+      - name: Upload Android Release Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: vynce-release-android
+          path: app/build/outputs/apk/core/release/*.apk
+          if-no-files-found: error
+
+  build-desktop-windows:
+    name: Build Windows Desktop & Test
+    needs: [validate-release]
+    runs-on: windows-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install PyYAML
+        run: pip install pyyaml==6.0.2
+
+      - name: Install NPM Dependencies
+        working-directory: ./web
+        run: npm ci
+
+      - name: Build Web Application
+        working-directory: ./web
+        run: npm run build
+
+      - name: Run Regression Tests
+        working-directory: ./web
+        run: npm test
+
+      - name: Build Desktop Binaries (Windows)
+        working-directory: ./web
+        run: npx electron-builder --win --publish never
+
+      - name: Upload Windows Desktop Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: vynce-release-desktop-windows
+          path: |
+            web/release-desktop/*.exe
+            web/release-desktop/*.blockmap
+            web/release-desktop/latest*.yml
+          if-no-files-found: error
+
+  publish-stable-release:
+    name: Publish Coordinated Stable Release (Single Owner)
+    needs: [validate-release, build-android, build-desktop-windows]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install PyYAML
+        run: pip install pyyaml==6.0.2
+
+      - name: Stage Artifacts Directory
+        run: mkdir -p ./release-assets
+
+      - name: Download Android Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: vynce-release-android
+          path: ./release-assets
+
+      - name: Download Windows Desktop Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: vynce-release-desktop-windows
+          path: ./release-assets
+
+      - name: Verify Completeness of All Required Release Artifacts
+        env:
+          TARGET_VER: ${{ needs.validate-release.outputs.version }}
+        run: |
+          echo "Checking collected release assets for version $TARGET_VER:"
+          ls -lh ./release-assets
+          python3 .github/scripts/validate_release_assets.py --version "$TARGET_VER" --assets-dir "./release-assets" --require-apk
+
+      - name: Publish Coordinated GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: app/build/outputs/apk/core/release/*.apk
+          tag_name: "v${{ needs.validate-release.outputs.version }}"
+          name: "Vynce v${{ needs.validate-release.outputs.version }}"
+          draft: false
+          prerelease: false
           generate_release_notes: true
-          name: "Vynce ${{ github.ref_name }}"
           body: |
-            ## Vynce ${{ github.ref_name }}
-            Download the APK below and install it on your Android device (Android 7+).
-            Enable "Install from unknown sources" if prompted.
+            ## Vynce v${{ needs.validate-release.outputs.version }}
+
+            ### 📱 Android
+            - **Download:** `app-core-release.apk`
+            - Compatible with Android 7.0+ (Nougat and above).
+            - Enable *"Install from unknown sources"* if prompted.
+
+            ### 🖥️ Windows Desktop
+            - **Installer (Recommended):** `Vynce Setup ${{ needs.validate-release.outputs.version }}.exe`
+              - Full Start Menu integration and clean uninstaller in Windows Settings.
+            - **Portable:** `Vynce ${{ needs.validate-release.outputs.version }}.exe`
+              - Single self-contained file; no installation required.
+            - Supports Windows 10 & 11 (64-bit / x64).
+
+            > **Windows Defender SmartScreen:** Because Vynce is a community open-source project without a commercial EV certificate, click **More info** -> **Run anyway** on first launch.
+
+            ---
+            *This coordinated release contains synchronized packages for both Android and Windows desktop with full auto-update manifest verification.*
+          files: |
+            ./release-assets/*.apk
+            ./release-assets/*.exe
+            ./release-assets/*.blockmap
+            ./release-assets/latest*.yml
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+

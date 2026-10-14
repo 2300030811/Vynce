@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { JioSaavnApi } from '../api/jiosaavn';
 import { Song, Album, Artist, Playlist, TopQueryResult } from '../types/music';
 import { usePlayerStore } from '../stores/playerStore';
@@ -104,8 +104,13 @@ export const SearchPage: React.FC<SearchPageProps> = ({
   const [albums, setAlbums] = useState<Album[]>([]);
   const [artists, setArtists] = useState<Artist[]>([]);
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
+  const activeSearchIdRef = useRef(0);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const handleClearSearch = () => {
+    activeSearchIdRef.current++;
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = null;
     setQuery('');
     setTopResult(null);
     setSongs([]);
@@ -113,6 +118,8 @@ export const SearchPage: React.FC<SearchPageProps> = ({
     setArtists([]);
     setPlaylists([]);
     setMatchedPlaylistResult(null);
+    setIsLoading(false);
+    setStatusMsg(null);
     onClearSearch?.();
   };
 
@@ -161,16 +168,28 @@ export const SearchPage: React.FC<SearchPageProps> = ({
   }, [curatedPlaylists]);
 
   const performSearch = async (searchTerm: string) => {
-    if (!searchTerm.trim()) return;
+    const trimmed = searchTerm.trim();
+    if (!trimmed) {
+      handleClearSearch();
+      return;
+    }
+
+    // Cancel any previous in-flight search
+    abortControllerRef.current?.abort();
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+    const searchId = ++activeSearchIdRef.current;
+
     setIsLoading(true);
     setMatchedPlaylistResult(null);
 
     // 1. Check if input is a Spotify Track link or URI
-    const trackId = SpotifyImporter.extractTrackId(searchTerm);
+    const trackId = SpotifyImporter.extractTrackId(trimmed);
     if (trackId) {
       try {
         setStatusMsg('Resolving audio stream...');
-        const resolvedSong = await SpotifyImporter.resolveSpotifyTrack(searchTerm);
+        const resolvedSong = await SpotifyImporter.resolveSpotifyTrack(trimmed);
+        if (searchId !== activeSearchIdRef.current || controller.signal.aborted) return;
         if (resolvedSong) {
           setTopResult({
             id: resolvedSong.id,
@@ -188,45 +207,65 @@ export const SearchPage: React.FC<SearchPageProps> = ({
           return;
         }
       } catch {
+        if (searchId !== activeSearchIdRef.current || controller.signal.aborted) return;
         setStatusMsg(null);
       }
     }
 
+    if (searchId !== activeSearchIdRef.current || controller.signal.aborted) return;
+
     // 2. Check if input is a Spotify Playlist link or URI
-    const playlistId = SpotifyImporter.extractPlaylistId(searchTerm);
+    let spotifyPlaylistTopResult: TopQueryResult | null = null;
+    const playlistId = SpotifyImporter.extractPlaylistId(trimmed);
     if (playlistId) {
       try {
         setStatusMsg('Loading playlist tracks...');
         const spData = await SpotifyImporter.fetchSpotifyPlaylist(playlistId);
+        if (searchId !== activeSearchIdRef.current || controller.signal.aborted) return;
         if (spData) {
           setMatchedPlaylistResult(spData);
-          setTopResult({
+          spotifyPlaylistTopResult = {
             id: spData.id,
             name: spData.name,
             type: 'playlist',
             image: spData.coverArt,
             subtitle: `Curated Playlist • ${spData.tracks.length} tracks`,
-          });
+          };
+          setTopResult(spotifyPlaylistTopResult);
         }
         setStatusMsg(null);
       } catch {
+        if (searchId !== activeSearchIdRef.current || controller.signal.aborted) return;
         setStatusMsg(null);
       }
     }
 
+    if (searchId !== activeSearchIdRef.current || controller.signal.aborted) return;
+
     // 3. Search via JioSaavn catalog
     try {
-      const data = await JioSaavnApi.searchGlobal(searchTerm);
-      if (!topResult) setTopResult(data.topQuery);
-      if (songs.length === 0) setSongs(data.songs);
+      const data = await JioSaavnApi.searchGlobal(trimmed, controller.signal);
+      if (searchId !== activeSearchIdRef.current || controller.signal.aborted) return;
+
+      // ponytail: Preserve Spotify playlist top result if present; otherwise update JioSaavn top result
+      setTopResult(spotifyPlaylistTopResult || data.topQuery);
+      setSongs(data.songs);
       setAlbums(data.albums);
       setArtists(data.artists);
       setPlaylists(data.playlists);
     } catch {
-      if (songs.length === 0) setSongs([]);
-      if (!topResult) setTopResult(null);
+      if (searchId !== activeSearchIdRef.current || controller.signal.aborted) return;
+      if (!spotifyPlaylistTopResult) {
+        setTopResult(null);
+      }
+      setSongs([]);
+      setAlbums([]);
+      setArtists([]);
+      setPlaylists([]);
     } finally {
-      setIsLoading(false);
+      if (searchId === activeSearchIdRef.current) {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -235,13 +274,22 @@ export const SearchPage: React.FC<SearchPageProps> = ({
     if (initialQuery) {
       performSearch(initialQuery);
     } else {
+      activeSearchIdRef.current++;
+      abortControllerRef.current?.abort();
+      abortControllerRef.current = null;
       setTopResult(null);
       setSongs([]);
       setAlbums([]);
       setArtists([]);
       setPlaylists([]);
       setMatchedPlaylistResult(null);
+      setIsLoading(false);
+      setStatusMsg(null);
     }
+    return () => {
+      activeSearchIdRef.current++;
+      abortControllerRef.current?.abort();
+    };
   }, [initialQuery]);
 
   const handleStreamPlaylist = async (playlist: SpotifyCuratedPlaylist, e: React.MouseEvent) => {

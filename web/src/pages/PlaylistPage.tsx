@@ -17,6 +17,7 @@ import {
   BookmarkCheck,
 } from 'lucide-react';
 import { formatTime } from '../utils/formatters';
+import { APP_ICONS, handleImageFallback } from '../utils/assets';
 
 interface PlaylistPageProps {
   playlistId: string;
@@ -253,12 +254,10 @@ export const PlaylistPage: React.FC<PlaylistPageProps> = ({
         <div className="relative shrink-0 flex items-center justify-center">
           <div className="relative aspect-square w-48 sm:w-56 md:w-64 rounded-[28px] overflow-hidden shadow-2xl bg-black z-10 border border-white/15">
             <img
-              src={playlist.image || '/favicon.svg'}
+              src={playlist.image || APP_ICONS.favicon}
               alt={playlist.name}
               className="w-full h-full object-cover"
-              onError={(e) => {
-                (e.target as HTMLImageElement).src = '/favicon.svg';
-              }}
+              onError={handleImageFallback}
             />
           </div>
         </div>

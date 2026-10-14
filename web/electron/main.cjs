@@ -32,9 +32,10 @@ function setupAutoUpdater() {
   });
 
   autoUpdater.on('error', (err) => {
+    console.warn('[AutoUpdater] Check error:', err?.message || err);
     mainWindow?.webContents.send('updater-event', {
       status: 'error',
-      error: err == null ? 'unknown' : (err.stack || err.message || err.toString()),
+      error: err?.message || 'Update check failed.',
     });
   });
 
@@ -118,6 +119,19 @@ function createWindow() {
     mainWindow.webContents.send('maximize-change', false);
   });
 
+  // Handle window close: hide to tray unless explicitly quitting
+  mainWindow.on('close', (event) => {
+    if (!app.isQuitting) {
+      event.preventDefault();
+      mainWindow.hide();
+      return false;
+    }
+  });
+
+  mainWindow.on('closed', () => {
+    mainWindow = null;
+  });
+
   // Load URL
   if (isDev && process.env.VITE_DEV_SERVER_URL) {
     mainWindow.loadURL(process.env.VITE_DEV_SERVER_URL);
@@ -146,6 +160,7 @@ function createTray() {
         label: 'Show Vynce',
         click: () => {
           if (mainWindow) {
+            if (mainWindow.isMinimized()) mainWindow.restore();
             mainWindow.show();
             mainWindow.focus();
           }
@@ -194,7 +209,9 @@ function createTray() {
         if (mainWindow.isVisible()) {
           mainWindow.focus();
         } else {
+          if (mainWindow.isMinimized()) mainWindow.restore();
           mainWindow.show();
+          mainWindow.focus();
         }
       }
     });
@@ -222,6 +239,11 @@ ipcMain.handle('window-close', () => {
   if (mainWindow) mainWindow.close();
 });
 
+ipcMain.handle('app-quit', () => {
+  app.isQuitting = true;
+  app.quit();
+});
+
 ipcMain.handle('is-maximized', () => {
   return mainWindow ? mainWindow.isMaximized() : false;
 });
@@ -234,6 +256,67 @@ ipcMain.handle('get-app-version', () => {
   return app.getVersion();
 });
 
+// IPC Spotify Embed Proxy for Desktop (Bypasses browser CORS completely with strict input validation)
+ipcMain.handle('fetch-spotify-embed', async (_event, resourcePath) => {
+  if (typeof resourcePath !== 'string') return null;
+  const clean = resourcePath.trim();
+  // Strictly validate resource type and Spotify alphanumeric ID: e.g. "playlist/37i9dQZF1DXcBWIGoYBM5M" or "track/4cOdK2wGLETKBW3PvgPWqT"
+  const match = clean.match(/^(?:(playlist|track|album|artist)\/)?([a-zA-Z0-9]+)$/);
+  if (!match) {
+    console.warn('[Spotify] Blocked invalid embed resource path:', clean);
+    return null;
+  }
+  const type = match[1] || 'playlist';
+  const id = match[2];
+  try {
+    const res = await fetch(`https://open.spotify.com/embed/${type}/${id}`, {
+      headers: {
+        'User-Agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9',
+      },
+      signal: typeof AbortSignal?.timeout === 'function' ? AbortSignal.timeout(10000) : undefined,
+    });
+    if (!res.ok) return null;
+    return await res.text();
+  } catch (err) {
+    console.warn('[Spotify] Embed fetch error in main:', err?.message || err);
+    return null;
+  }
+});
+
+// IPC JioSaavn Direct API for Desktop (Bypasses browser CORS and supplies required headers)
+ipcMain.handle('fetch-jiosaavn-direct', async (_event, queryOrPath) => {
+  if (typeof queryOrPath !== 'string') return null;
+  // Clean query: strip leading "/api.php?" or "api.php?" or "?"
+  const cleaned = queryOrPath.replace(/^\/?(?:api\.php)?\??/, '').trim();
+  // Strictly validate query string: allow safe query characters only, max 2048 chars
+  if (!cleaned || cleaned.length > 2048 || !/^[a-zA-Z0-9_.\-=%&,]+$/.test(cleaned)) {
+    console.warn('[JioSaavn] Blocked invalid query string in main IPC:', queryOrPath);
+    return null;
+  }
+
+  const targetUrl = `https://www.jiosaavn.com/api.php?${cleaned}`;
+  try {
+    const res = await fetch(targetUrl, {
+      headers: {
+        'Referer': 'https://www.jiosaavn.com/',
+        'User-Agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'application/json, text/plain, */*',
+      },
+      signal: typeof AbortSignal?.timeout === 'function' ? AbortSignal.timeout(10000) : undefined,
+    });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch (err) {
+    console.warn('[JioSaavn] Direct fetch error in main:', err?.message || err);
+    return null;
+  }
+});
+
+
 // IPC Auto-Updater Controls
 ipcMain.handle('check-for-updates', async () => {
   if (isDev) {
@@ -241,9 +324,41 @@ ipcMain.handle('check-for-updates', async () => {
   }
   try {
     const result = await autoUpdater.checkForUpdates();
-    return { status: 'success', result };
+    if (!result || !result.updateInfo) {
+      return { status: 'not-available', message: `Vynce v${app.getVersion()} is up to date.` };
+    }
+
+    const latestVersion = result.updateInfo.version;
+    const currentVersion = app.getVersion();
+    if (latestVersion && latestVersion !== currentVersion) {
+      return { status: 'available', updateInfo: result.updateInfo, version: latestVersion };
+    }
+
+    return { status: 'not-available', message: `Vynce v${currentVersion} is up to date.` };
   } catch (err) {
-    return { status: 'error', error: err.message };
+    console.warn('[AutoUpdater] IPC check error:', err?.message || err);
+    const msg = String(err?.message || '');
+
+    if (msg.includes('404') || msg.includes('latest.yml') || msg.includes('Cannot find')) {
+      return {
+        status: 'error',
+        error: 'Update manifest (latest.yml) not found on GitHub Releases (HTTP 404).',
+      };
+    }
+
+    if (
+      msg.includes('ENOTFOUND') ||
+      msg.includes('ETIMEDOUT') ||
+      msg.includes('net::ERR_INTERNET_DISCONNECTED') ||
+      msg.includes('ERR_NAME_NOT_RESOLVED')
+    ) {
+      return {
+        status: 'error',
+        error: 'Unable to reach update server. Check your internet connection.',
+      };
+    }
+
+    return { status: 'error', error: msg || 'Could not reach update server.' };
   }
 });
 
@@ -275,10 +390,25 @@ app.whenReady().then(() => {
   }
 
   app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.show();
+      mainWindow.focus();
+    } else if (BrowserWindow.getAllWindows().length === 0) {
       createWindow();
     }
   });
+});
+
+app.on('before-quit', () => {
+  app.isQuitting = true;
+});
+
+app.on('will-quit', () => {
+  if (tray) {
+    tray.destroy();
+    tray = null;
+  }
 });
 
 app.on('window-all-closed', () => {

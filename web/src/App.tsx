@@ -7,6 +7,7 @@ import { AlbumPage } from './pages/AlbumPage';
 import { ArtistPage } from './pages/ArtistPage';
 import { PlaylistPage } from './pages/PlaylistPage';
 import { LikedSongsPage } from './pages/LikedSongsPage';
+import { DownloadedSongsPage } from './pages/DownloadedSongsPage';
 import { LibraryPage } from './pages/LibraryPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { EqualizerPage } from './pages/EqualizerPage';
@@ -15,7 +16,8 @@ export type CurrentView =
   | { type: 'tab'; tab: NavTab }
   | { type: 'album'; albumId: string }
   | { type: 'artist'; artistId: string }
-  | { type: 'playlist'; playlistId: string };
+  | { type: 'playlist'; playlistId: string }
+  | { type: 'downloads' };
 
 export function App() {
   const [currentView, setCurrentView] = useState<CurrentView>({ type: 'tab', tab: 'home' });
@@ -46,6 +48,10 @@ export function App() {
 
   const handleSelectPlaylist = (playlistId: string) => {
     setCurrentView({ type: 'playlist', playlistId });
+  };
+
+  const handleSelectDownloads = () => {
+    setCurrentView({ type: 'downloads' });
   };
 
   const handleBackToTab = () => {
@@ -96,6 +102,14 @@ export function App() {
           onSelectPlaylist={handleSelectPlaylist}
           onSelectAlbum={handleSelectAlbum}
           onNavigateToLiked={() => handleTabChange('liked')}
+          onNavigateToDownloads={handleSelectDownloads}
+        />
+      )}
+
+      {currentView.type === 'downloads' && (
+        <DownloadedSongsPage
+          onBack={handleBackToTab}
+          onNavigateToExplore={() => handleTabChange('songs')}
         />
       )}
 

@@ -20,8 +20,11 @@ import {
   VolumeX,
   Moon,
   PictureInPicture2,
+  Download,
 } from 'lucide-react';
 import { AddToPlaylistModal } from '../modals/AddToPlaylistModal';
+import { APP_ICONS, handleImageFallback } from '../../utils/assets';
+import { downloadSongFile } from '../../utils/songDownloader';
 
 import { NavTab } from '../layout/Sidebar';
 
@@ -80,12 +83,10 @@ export const BottomPlayer: React.FC<BottomPlayerProps> = ({ onTabChange }) => {
             className="relative w-12 h-12 rounded-2xl overflow-hidden bg-white/5 border border-white/10 shrink-0 cursor-pointer group shadow-md"
           >
             <img
-              src={currentSong.image || '/favicon.svg'}
+              src={currentSong.image || APP_ICONS.favicon}
               alt={currentSong.name}
               className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-              onError={(e) => {
-                (e.target as HTMLImageElement).src = '/favicon.svg';
-              }}
+              onError={handleImageFallback}
             />
             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
               <Maximize2 className="w-4 h-4 text-white" />
@@ -120,6 +121,18 @@ export const BottomPlayer: React.FC<BottomPlayerProps> = ({ onTabChange }) => {
             title="Add to Playlist"
           >
             <ListPlus className="w-4 h-4" />
+          </button>
+
+          <button
+            onClick={async () => {
+              if (currentSong) {
+                await downloadSongFile(currentSong);
+              }
+            }}
+            className="p-2 rounded-full hover:bg-white/8 text-[#6B6A7A] hover:text-white transition-colors hidden sm:flex shrink-0"
+            title="Download 320kbps MP3"
+          >
+            <Download className="w-4 h-4" />
           </button>
 
           <button

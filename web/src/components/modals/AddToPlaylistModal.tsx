@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { useLibraryStore } from '../../stores/libraryStore';
 import { Song } from '../../types/music';
+import { APP_ICONS, handleImageFallback } from '../../utils/assets';
 
 interface AddToPlaylistModalProps {
   isOpen: boolean;
@@ -139,12 +140,10 @@ export const AddToPlaylistModal: React.FC<AddToPlaylistModalProps> = ({
         <div className="flex items-center gap-3 px-5 py-3 bg-white/[0.02] border-b border-white/5">
           <div className="w-11 h-11 rounded-xl overflow-hidden bg-white/5 border border-white/10 shrink-0">
             <img
-              src={song.image || '/favicon.svg'}
+              src={song.image || APP_ICONS.favicon}
               alt={song.name}
               className="w-full h-full object-cover"
-              onError={(e) => {
-                (e.target as HTMLImageElement).src = '/favicon.svg';
-              }}
+              onError={handleImageFallback}
             />
           </div>
           <div className="flex flex-col min-w-0 flex-1">
@@ -245,9 +244,7 @@ export const AddToPlaylistModal: React.FC<AddToPlaylistModalProps> = ({
                           src={pl.coverArt}
                           alt={pl.name}
                           className="w-full h-full object-cover"
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).src = '/favicon.svg';
-                          }}
+                          onError={handleImageFallback}
                         />
                       ) : (
                         <Music className="w-4 h-4 text-[#6B6A7A]" />

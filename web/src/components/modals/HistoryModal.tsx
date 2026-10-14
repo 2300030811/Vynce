@@ -13,6 +13,7 @@ import { useLibraryStore } from '../../stores/libraryStore';
 import { usePlayerStore } from '../../stores/playerStore';
 import { formatTime } from '../../utils/formatters';
 import { Song } from '../../types/music';
+import { APP_ICONS, handleImageFallback } from '../../utils/assets';
 
 interface HistoryModalProps {
   isOpen: boolean;
@@ -147,12 +148,10 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({ isOpen, onClose }) =
                 <div className="flex items-center gap-3 min-w-0">
                   <div className="relative w-11 h-11 rounded-xl overflow-hidden shrink-0 bg-white/5 border border-white/10">
                     <img
-                      src={entry.song.image || '/favicon.svg'}
+                      src={entry.song.image || APP_ICONS.favicon}
                       alt={entry.song.name}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).src = '/favicon.svg';
-                      }}
+                      onError={handleImageFallback}
                     />
                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
                       <Play className="w-4 h-4 text-white fill-current" />

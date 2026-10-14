@@ -6,6 +6,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   minimize: () => ipcRenderer.invoke('window-minimize'),
   maximize: () => ipcRenderer.invoke('window-maximize'),
   close: () => ipcRenderer.invoke('window-close'),
+  quit: () => ipcRenderer.invoke('app-quit'),
   isMaximized: () => ipcRenderer.invoke('is-maximized'),
   getAppVersion: () => ipcRenderer.invoke('get-app-version'),
   checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
@@ -32,4 +33,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
       ipcRenderer.removeListener('updater-event', subscription);
     };
   },
+  fetchSpotifyEmbed: (resourcePath) => ipcRenderer.invoke('fetch-spotify-embed', resourcePath),
+  fetchJioSaavnDirect: (queryString) => ipcRenderer.invoke('fetch-jiosaavn-direct', queryString),
 });
+

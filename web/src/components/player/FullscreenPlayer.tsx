@@ -22,10 +22,13 @@ import {
   X,
   PictureInPicture2,
   Users,
+  Download,
 } from 'lucide-react';
 import { AddToPlaylistModal } from '../modals/AddToPlaylistModal';
 import { ListenTogetherModal } from '../modals/ListenTogetherModal';
 import { useListenTogetherStore } from '../../stores/listenTogetherStore';
+import { downloadSongFile } from '../../utils/songDownloader';
+import { APP_ICONS, handleImageFallback } from '../../utils/assets';
 
 import { NavTab } from '../layout/Sidebar';
 
@@ -65,6 +68,7 @@ export const FullscreenPlayer: React.FC<FullscreenPlayerProps> = ({ onTabChange 
   const [dragProgressTime, setDragProgressTime] = useState<number | null>(null);
   const [isAddToPlaylistOpen, setIsAddToPlaylistOpen] = useState(false);
   const [isListenTogetherOpen, setIsListenTogetherOpen] = useState(false);
+  const [downloadToast, setDownloadToast] = useState<string | null>(null);
   const { roomCode } = useListenTogetherStore();
   const progressBarRef = useRef<HTMLDivElement | null>(null);
 
@@ -263,12 +267,10 @@ export const FullscreenPlayer: React.FC<FullscreenPlayerProps> = ({ onTabChange 
             <div className="flex flex-col items-center md:items-start gap-4 max-w-sm md:max-w-md w-full shrink-0">
               <div className="relative aspect-square w-52 sm:w-64 md:w-80 lg:w-92 rounded-[36px] overflow-hidden shadow-[0_25px_60px_rgba(0,0,0,0.85)] border border-white/10 bg-[var(--vynce-surface-container)] group">
                 <img
-                  src={currentSong.image || '/favicon.svg'}
+                  src={currentSong.image || APP_ICONS.favicon}
                   alt={currentSong.name}
                   className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).src = '/favicon.svg';
-                  }}
+                  onError={handleImageFallback}
                 />
               </div>
 
@@ -283,6 +285,23 @@ export const FullscreenPlayer: React.FC<FullscreenPlayerProps> = ({ onTabChange 
                 </div>
 
                 <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    onClick={() => {
+                      if (currentSong) {
+                        downloadSongFile(currentSong, (_st, msg) => {
+                          if (msg) {
+                            setDownloadToast(msg);
+                            setTimeout(() => setDownloadToast(null), 2500);
+                          }
+                        });
+                      }
+                    }}
+                    className="w-11 h-11 rounded-full flex items-center justify-center transition-transform active:scale-90 bg-white/[0.06] text-[#E8E6F0] hover:bg-white/[0.12] hover:text-white"
+                    title="Download 320kbps MP3"
+                  >
+                    <Download className="w-5 h-5" />
+                  </button>
+
                   <button
                     onClick={() => setIsAddToPlaylistOpen(true)}
                     className="w-11 h-11 rounded-full flex items-center justify-center transition-transform active:scale-90 bg-white/[0.06] text-[#E8E6F0] hover:bg-white/[0.12] hover:text-white"
@@ -304,6 +323,11 @@ export const FullscreenPlayer: React.FC<FullscreenPlayerProps> = ({ onTabChange 
                   </button>
                 </div>
               </div>
+              {downloadToast && (
+                <div className="mt-2 text-xs font-bold text-[var(--vynce-primary)] bg-white/5 border border-white/10 px-3 py-1.5 rounded-xl animate-in fade-in">
+                  {downloadToast}
+                </div>
+              )}
             </div>
 
             {/* Right: Live Synced Lyrics (Clean Minimal View without bulky header box in Player mode) */}
