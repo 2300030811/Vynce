@@ -31,7 +31,7 @@ async function runTests() {
   const workflowPath = path.resolve(rootDir, '.github/workflows/desktop-build.yml');
 
   const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
-  const workflowContent = fs.readFileSync(workflowPath, 'utf8');
+  const workflowContent = fs.readFileSync(workflowPath, 'utf8').replace(/\r\n/g, '\n');
 
   // ── TEST 1: Packaging Tool and Windows Targets ────────────────────
   await test('1. package.json configures electron-builder with nsis and portable x64 targets', () => {
@@ -169,9 +169,9 @@ async function runTests() {
   // ══════════════════════════════════════════════════════════════════
 
   const releaseWorkflowPath = path.resolve(rootDir, '.github/workflows/release.yml');
-  const releaseWorkflowContent = fs.readFileSync(releaseWorkflowPath, 'utf8');
+  const releaseWorkflowContent = fs.readFileSync(releaseWorkflowPath, 'utf8').replace(/\r\n/g, '\n');
   const desktopWorkflowPath = path.resolve(rootDir, '.github/workflows/desktop-build.yml');
-  const desktopWorkflowContent = fs.readFileSync(desktopWorkflowPath, 'utf8');
+  const desktopWorkflowContent = fs.readFileSync(desktopWorkflowPath, 'utf8').replace(/\r\n/g, '\n');
   const validatorScriptPath = path.resolve(rootDir, '.github/scripts/validate_release_assets.py');
 
   assert.ok(fs.existsSync(validatorScriptPath), 'Production validator script must exist at .github/scripts/validate_release_assets.py');
@@ -896,7 +896,7 @@ async function runTests() {
 
   // ── TEST 49: Beta Workflow Architecture: desktop-build.yml mandates completeness and isolated staging ──
   await test('49. Beta Workflow Architecture: desktop-build.yml mandates all 3 platforms, isolated staging, and upload error check', () => {
-    const desktopYml = fs.readFileSync(path.resolve(rootDir, '.github/workflows/desktop-build.yml'), 'utf8');
+    const desktopYml = fs.readFileSync(path.resolve(rootDir, '.github/workflows/desktop-build.yml'), 'utf8').replace(/\r\n/g, '\n');
 
     // 1. Upload requires files to be present
     assert.ok(desktopYml.includes('if-no-files-found: error'), 'Desktop build artifact upload must fail on missing files');
