@@ -39,12 +39,9 @@ import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.MoreHoriz
-import androidx.compose.material.icons.rounded.Remove
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -107,7 +104,6 @@ import com.vynce.app.extensions.isPowerSaver
 import com.vynce.app.ui.component.button.IconButton
 import com.vynce.app.ui.component.shimmer.ShimmerHost
 import com.vynce.app.ui.component.shimmer.TextPlaceholder
-import com.vynce.app.ui.dialog.CounterDialog
 import com.vynce.app.ui.menu.LyricsMenu
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.Lifecycle
@@ -145,7 +141,7 @@ fun Lyrics(
     val lyricsClickable by rememberPreference(LyricClickable, true)
     val lyricsFancy by rememberPreference(LyricKaraokeEnable, false)
     val lyricsUpdateSpeed by rememberEnumPreference(LyricUpdateSpeed, Speed.MEDIUM)
-    val (lyricOffset, onLyricOffsetChange) = rememberPreference(LyricOffsetKey, 0L)
+    val lyricOffset by rememberPreference(LyricOffsetKey, 0L)
 
     val mediaMetadata by playerConnection.mediaMetadata.collectAsState()
 
@@ -216,27 +212,6 @@ fun Lyrics(
         mutableStateOf(false)
     }
     var currentPos by remember { mutableLongStateOf(0L) }
-    var showLyricOffsetDialog by remember {
-        mutableStateOf(false)
-    }
-
-    if (showLyricOffsetDialog) {
-        CounterDialog(
-            title = stringResource(R.string.lyrics_offset),
-            description = stringResource(R.string.lyrics_offset_desc),
-            initialValue = lyricOffset.toInt(),
-            upperBound = 10000,
-            lowerBound = -10000,
-            unitDisplay = "ms",
-            onDismiss = { showLyricOffsetDialog = false },
-            onConfirm = {
-                onLyricOffsetChange(it.toLong())
-                showLyricOffsetDialog = false
-            },
-            onReset = { onLyricOffsetChange(0L) },
-            onCancel = { showLyricOffsetDialog = false },
-        )
-    }
 
 
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -515,60 +490,6 @@ fun Lyrics(
                         contentDescription = null,
                         tint = textColor
                     )
-                }
-            }
-        }
-
-        if (isSynced && lyricsModel != null && lyricsModel != uninitializedLyric && lines.isNotEmpty()) {
-            Box(
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(bottom = 16.dp)
-                    .background(
-                        color = MaterialTheme.colorScheme.surfaceColorAtElevation(4.dp).copy(alpha = 0.8f),
-                        shape = MaterialTheme.shapes.medium
-                    )
-                    .padding(horizontal = 8.dp, vertical = 4.dp)
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(4.dp)
-                ) {
-                    val adjustOffset: (Long) -> Unit = { delta ->
-                        onLyricOffsetChange((lyricOffset + delta).coerceIn(-10000L, 10000L))
-                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                    }
-
-                    IconButton(
-                        onClick = { adjustOffset(-50) },
-                        onLongClick = { adjustOffset(-500) }
-                    ) {
-                        Icon(
-                            imageVector = Icons.Rounded.Remove,
-                            contentDescription = null,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-
-                    Text(
-                        text = "${if (lyricOffset > 0) "+" else ""}${lyricOffset}ms",
-                        style = MaterialTheme.typography.labelLarge,
-                        modifier = Modifier
-                            .padding(horizontal = 8.dp)
-                            .clickable { showLyricOffsetDialog = true },
-                        color = MaterialTheme.colorScheme.primary
-                    )
-
-                    IconButton(
-                        onClick = { adjustOffset(50) },
-                        onLongClick = { adjustOffset(500) }
-                    ) {
-                        Icon(
-                            imageVector = Icons.Rounded.Add,
-                            contentDescription = null,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
                 }
             }
         }

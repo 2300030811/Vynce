@@ -110,6 +110,9 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x ./gradlew
 
+      - name: Run Android Unit Tests
+        run: ./gradlew testCoreReleaseUnitTest
+
       - name: Decode keystore
         env:
           SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
@@ -180,13 +183,115 @@ jobs:
             web/release-desktop/latest*.yml
           if-no-files-found: error
 
-  publish-stable-release:
-    name: Publish Coordinated Stable Release (Single Owner)
-    needs: [validate-release, build-android, build-desktop-windows]
+  build-desktop-linux:
+    name: Build Linux Desktop & Test
+    needs: [validate-release]
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install Linux Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libarchive-tools fuse libfuse2
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install PyYAML
+        run: pip install pyyaml==6.0.2
+
+      - name: Install NPM Dependencies
+        working-directory: ./web
+        run: npm ci
+
+      - name: Build Web Application
+        working-directory: ./web
+        run: npm run build
+
+      - name: Run Regression Tests
+        working-directory: ./web
+        run: npm test
+
+      - name: Build Desktop Binaries (Linux)
+        working-directory: ./web
+        run: npx electron-builder --linux --publish never
+
+      - name: Upload Linux Desktop Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: vynce-release-desktop-linux
+          path: |
+            web/release-desktop/*.AppImage
+            web/release-desktop/*.deb
+            web/release-desktop/*.blockmap
+            web/release-desktop/latest-linux*.yml
+          if-no-files-found: error
+
+  build-desktop-macos:
+    name: Build macOS Desktop & Test
+    needs: [validate-release]
+    runs-on: macos-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install PyYAML
+        run: pip install pyyaml==6.0.2
+
+      - name: Install NPM Dependencies
+        working-directory: ./web
+        run: npm ci
+
+      - name: Build Web Application
+        working-directory: ./web
+        run: npm run build
+
+      - name: Run Regression Tests
+        working-directory: ./web
+        run: npm test
+
+      - name: Build Desktop Binaries (macOS)
+        working-directory: ./web
+        run: npx electron-builder --mac --publish never
+
+      - name: Upload macOS Desktop Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: vynce-release-desktop-macos
+          path: |
+            web/release-desktop/*.dmg
+            web/release-desktop/*.zip
+            web/release-desktop/*.blockmap
+            web/release-desktop/latest-mac*.yml
+          if-no-files-found: error
+
+  validate-assembled-release:
+    name: Collect & Validate Multiplatform Assets
+    needs: [validate-release, build-android, build-desktop-windows, build-desktop-linux, build-desktop-macos]
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -214,13 +319,89 @@ jobs:
           name: vynce-release-desktop-windows
           path: ./release-assets
 
+      - name: Download Linux Desktop Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: vynce-release-desktop-linux
+          path: ./release-assets
+
+      - name: Download macOS Desktop Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: vynce-release-desktop-macos
+          path: ./release-assets
+
       - name: Verify Completeness of All Required Release Artifacts
         env:
           TARGET_VER: ${{ needs.validate-release.outputs.version }}
         run: |
-          echo "Checking collected release assets for version $TARGET_VER:"
+          echo "Checking collected multiplatform release assets for version $TARGET_VER:"
           ls -lh ./release-assets
-          python3 .github/scripts/validate_release_assets.py --version "$TARGET_VER" --assets-dir "./release-assets" --require-apk
+          python3 .github/scripts/validate_release_assets.py --version "$TARGET_VER" --assets-dir "./release-assets" --platform all --require-apk --require-all-apks
+
+      - name: Generate Cryptographic SHA-256 Checksums Manifest
+        working-directory: ./release-assets
+        run: |
+          set -euo pipefail
+          echo "Generating SHA256SUMS.txt for all verified release assets..."
+          rm -f ./SHA256SUMS.txt
+          TMP_MANIFEST="$(mktemp)"
+          sha256sum * > "$TMP_MANIFEST"
+          if grep -E "[[:space:]]+SHA256SUMS\.txt$" "$TMP_MANIFEST"; then
+            echo "FATAL: Checksum manifest contains an entry for SHA256SUMS.txt itself!" >&2
+            rm -f "$TMP_MANIFEST"
+            exit 1
+          fi
+          mv "$TMP_MANIFEST" ./SHA256SUMS.txt
+          echo "Generated SHA-256 checksums:"
+          cat SHA256SUMS.txt
+
+      - name: Upload Validated Release Bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: vynce-release-assets-validated
+          path: ./release-assets/
+          if-no-files-found: error
+
+  publish-stable-release:
+    name: Publish Coordinated Stable Release (Single Owner)
+    needs: [validate-release, validate-assembled-release]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    # Strictly enforce: ONLY an explicit stable tag push (vX.Y.Z) can trigger publication.
+    # Manual workflow_dispatch, branch pushes, prerelease tags (-beta, -rc, -alpha), and desktop-v* tags can NEVER publish.
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && !contains(github.ref, '-beta') && !contains(github.ref, '-rc') && !contains(github.ref, '-alpha') && !startsWith(github.ref, 'refs/tags/desktop-v')
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Enforce Stable Tag Publication Gate (Zero-Bypass Safety Check)
+        run: |
+          echo "Verifying publisher execution conditions..."
+          if [ "${{ github.event_name }}" != "push" ]; then
+            echo "FATAL: Publication is strictly forbidden on event '${{ github.event_name }}'. Releases can ONLY be published via stable tag push."
+            exit 1
+          fi
+          REF="${{ github.ref }}"
+          if [[ ! "$REF" =~ ^refs/tags/v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "FATAL: Ref '$REF' is not an official stable release tag (must match ^refs/tags/v[0-9]+\.[0-9]+\.[0-9]+$)."
+            exit 1
+          fi
+          TAG_VER="${REF#refs/tags/v}"
+          EXPECTED_VER="${{ needs.validate-release.outputs.version }}"
+          if [ "$TAG_VER" != "$EXPECTED_VER" ]; then
+            echo "FATAL: Tag version '$TAG_VER' does not match validated release version '$EXPECTED_VER'!"
+            exit 1
+          fi
+          echo "Confirmed: Publishing stable release $TAG_VER for ref $REF."
+
+      - name: Download Validated Release Assets Bundle
+        uses: actions/download-artifact@v4
+        with:
+          name: vynce-release-assets-validated
+          path: ./release-assets
 
       - name: Publish Coordinated GitHub Release
         uses: softprops/action-gh-release@v2
@@ -234,26 +415,50 @@ jobs:
             ## Vynce v${{ needs.validate-release.outputs.version }}
 
             ### 📱 Android
-            - **Download:** `app-core-release.apk`
-            - Compatible with Android 7.0+ (Nougat and above).
-            - Enable *"Install from unknown sources"* if prompted.
+            Choose the package best suited for your device:
+            - **Universal APK (Recommended for all devices):** [`Vynce-${{ needs.validate-release.outputs.version }}-core-universal-release-91.apk`](https://github.com/2300030811/Vynce/releases/download/v${{ needs.validate-release.outputs.version }}/Vynce-${{ needs.validate-release.outputs.version }}-core-universal-release-91.apk)
+              - Contains all CPU architectures (arm64-v8a, armeabi-v7a, x86_64, x86). Works on any phone, tablet, or emulator running Android 7.0+ (Nougat and above).
+            - **ARM64 (Modern phones & tablets):** [`Vynce-${{ needs.validate-release.outputs.version }}-core-arm64-v8a-release-91.apk`](https://github.com/2300030811/Vynce/releases/download/v${{ needs.validate-release.outputs.version }}/Vynce-${{ needs.validate-release.outputs.version }}-core-arm64-v8a-release-91.apk)
+              - Optimized smaller download for 64-bit ARM devices.
+            - **ARMv7 (Older phones & 32-bit devices):** [`Vynce-${{ needs.validate-release.outputs.version }}-core-armeabi-v7a-release-91.apk`](https://github.com/2300030811/Vynce/releases/download/v${{ needs.validate-release.outputs.version }}/Vynce-${{ needs.validate-release.outputs.version }}-core-armeabi-v7a-release-91.apk)
+            - **x86_64 (64-bit Emulators & ChromeOS):** [`Vynce-${{ needs.validate-release.outputs.version }}-core-x86_64-release-91.apk`](https://github.com/2300030811/Vynce/releases/download/v${{ needs.validate-release.outputs.version }}/Vynce-${{ needs.validate-release.outputs.version }}-core-x86_64-release-91.apk)
+            - **x86 (32-bit Emulators):** [`Vynce-${{ needs.validate-release.outputs.version }}-core-x86-release-91.apk`](https://github.com/2300030811/Vynce/releases/download/v${{ needs.validate-release.outputs.version }}/Vynce-${{ needs.validate-release.outputs.version }}-core-x86-release-91.apk)
+            - *Installation:* If prompted by Android, enable *"Install unknown apps"* for your browser/file manager.
 
             ### 🖥️ Windows Desktop
-            - **Installer (Recommended):** `Vynce Setup ${{ needs.validate-release.outputs.version }}.exe`
-              - Full Start Menu integration and clean uninstaller in Windows Settings.
-            - **Portable:** `Vynce ${{ needs.validate-release.outputs.version }}.exe`
-              - Single self-contained file; no installation required.
+            - **Installer (Recommended):** [`Vynce Setup ${{ needs.validate-release.outputs.version }}.exe`](https://github.com/2300030811/Vynce/releases/download/v${{ needs.validate-release.outputs.version }}/Vynce%20Setup%20${{ needs.validate-release.outputs.version }}.exe)
+              - Setup wizard with Start Menu integration, desktop shortcut, and clean Windows uninstaller.
+            - **Portable:** [`Vynce ${{ needs.validate-release.outputs.version }}.exe`](https://github.com/2300030811/Vynce/releases/download/v${{ needs.validate-release.outputs.version }}/Vynce%20${{ needs.validate-release.outputs.version }}.exe)
+              - Single standalone executable; runs anywhere without installation.
             - Supports Windows 10 & 11 (64-bit / x64).
+            > **Windows Defender SmartScreen Notice:** Because Vynce is an open-source project without a costly commercial certificate, Windows may show *"Windows protected your PC"*. Click **More info** -> **Run anyway** on first launch.
 
-            > **Windows Defender SmartScreen:** Because Vynce is a community open-source project without a commercial EV certificate, click **More info** -> **Run anyway** on first launch.
+            ### 🐧 Linux Desktop
+            - **AppImage (Universal):** [`Vynce-${{ needs.validate-release.outputs.version }}.AppImage`](https://github.com/2300030811/Vynce/releases/download/v${{ needs.validate-release.outputs.version }}/Vynce-${{ needs.validate-release.outputs.version }}.AppImage)
+              - Single executable package. Make executable (`chmod +x Vynce-*.AppImage`) and run directly on Ubuntu, Fedora, Arch, and Debian.
+            - **Debian / Ubuntu (.deb):** [`vynce_${{ needs.validate-release.outputs.version }}_amd64.deb`](https://github.com/2300030811/Vynce/releases/download/v${{ needs.validate-release.outputs.version }}/vynce_${{ needs.validate-release.outputs.version }}_amd64.deb)
+              - Standard package installer. Install via `sudo dpkg -i vynce_*.deb` or double-click to install via Software Center.
+
+            ### 🍎 macOS Desktop
+            - **Disk Image (DMG):** [`Vynce-${{ needs.validate-release.outputs.version }}.dmg`](https://github.com/2300030811/Vynce/releases/download/v${{ needs.validate-release.outputs.version }}/Vynce-${{ needs.validate-release.outputs.version }}.dmg)
+              - Mount the DMG and drag Vynce to your Applications folder. Built for Intel (x64) and Apple Silicon (arm64) architectures (separate architecture packages).
+            - **ZIP Archive:** [`Vynce-${{ needs.validate-release.outputs.version }}-mac.zip`](https://github.com/2300030811/Vynce/releases/download/v${{ needs.validate-release.outputs.version }}/Vynce-${{ needs.validate-release.outputs.version }}-mac.zip)
+            > **macOS Gatekeeper Notice:** If macOS warns that the developer cannot be verified, right-click (or Control-click) `Vynce.app`, select **Open**, and click **Open** in the confirmation prompt.
 
             ---
-            *This coordinated release contains synchronized packages for both Android and Windows desktop with full auto-update manifest verification.*
+            ### 🔒 Verification & Checksums
+            Updater manifests (`latest*.yml`) and differential blockmaps (`*.blockmap`) are included in this release to power automatic updates on supported desktop platforms.
+            Verify the cryptographic integrity of any downloaded file against the attached [`SHA256SUMS.txt`](https://github.com/2300030811/Vynce/releases/download/v${{ needs.validate-release.outputs.version }}/SHA256SUMS.txt) manifest.
           files: |
             ./release-assets/*.apk
             ./release-assets/*.exe
+            ./release-assets/*.AppImage
+            ./release-assets/*.deb
+            ./release-assets/*.dmg
+            ./release-assets/*.zip
             ./release-assets/*.blockmap
             ./release-assets/latest*.yml
+            ./release-assets/SHA256SUMS.txt
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

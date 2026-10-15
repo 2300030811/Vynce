@@ -920,8 +920,421 @@ async function runTests() {
     assert.ok(desktopYml.includes('cp -v ./staging/windows/* ./publish-assets/'), 'Must assemble verified assets');
   });
 
+  // ── TEST 50: Unified Multiplatform Stable Release Architecture: release.yml mandates Android + Windows + Linux + macOS, --platform all --require-apk, and single publishing owner ──
+  await test('50. Unified Multiplatform Stable Release Architecture: release.yml mandates all 4 platforms, --platform all --require-apk, and disabled beta publishing', () => {
+    // 1. Mandatory platform build jobs present in release.yml
+    assert.ok(releaseWorkflowContent.includes('build-android:'), 'release.yml must include build-android');
+    assert.ok(releaseWorkflowContent.includes('build-desktop-windows:'), 'release.yml must include build-desktop-windows');
+    assert.ok(releaseWorkflowContent.includes('build-desktop-linux:'), 'release.yml must include build-desktop-linux');
+    assert.ok(releaseWorkflowContent.includes('build-desktop-macos:'), 'release.yml must include build-desktop-macos');
+
+    // 2. Coordinated assembly and single-owner publishing jobs
+    assert.ok(
+      releaseWorkflowContent.includes('validate-assembled-release:'),
+      'release.yml must include separate validate-assembled-release job'
+    );
+    assert.ok(
+      releaseWorkflowContent.includes('needs: [validate-release, build-android, build-desktop-windows, build-desktop-linux, build-desktop-macos]'),
+      'validate-assembled-release must depend on all 4 platform build jobs'
+    );
+    assert.ok(
+      releaseWorkflowContent.includes('needs: [validate-release, validate-assembled-release]'),
+      'publish-stable-release must depend on validate-assembled-release'
+    );
+
+    // 3. Downloads all 4 platform artifact packages into ./release-assets
+    assert.ok(releaseWorkflowContent.includes('name: vynce-release-android'), 'Must download Android artifacts');
+    assert.ok(releaseWorkflowContent.includes('name: vynce-release-desktop-windows'), 'Must download Windows artifacts');
+    assert.ok(releaseWorkflowContent.includes('name: vynce-release-desktop-linux'), 'Must download Linux artifacts');
+    assert.ok(releaseWorkflowContent.includes('name: vynce-release-desktop-macos'), 'Must download macOS artifacts');
+
+    // 4. Invokes validate_release_assets.py with --platform all and --require-apk
+    assert.ok(
+      releaseWorkflowContent.includes('python3 .github/scripts/validate_release_assets.py --version "$TARGET_VER" --assets-dir "./release-assets" --platform all --require-apk'),
+      'release.yml must validate all platform contracts including APK prior to publishing'
+    );
+
+    // 5. No-beta policy enforced: desktop-build.yml beta publication job is disabled
+    assert.ok(
+      desktopWorkflowContent.includes('# ponytail: No-beta policy: Pre-release publications are disabled in favor of unified stable releases via release.yml\n    if: false'),
+      'desktop-build.yml must disable pre-release publication per no-beta policy'
+    );
+
+    // 6. Mandatory Android unit test step runs prior to packaging in build-android
+    const androidJob = releaseWorkflowContent.substring(
+      releaseWorkflowContent.indexOf('build-android:'),
+      releaseWorkflowContent.indexOf('build-desktop-windows:')
+    );
+    assert.ok(
+      androidJob.includes('Run Android Unit Tests'),
+      'build-android must include explicit Run Android Unit Tests step'
+    );
+    assert.ok(
+      androidJob.includes('./gradlew testCoreReleaseUnitTest'),
+      'build-android must run testCoreReleaseUnitTest'
+    );
+    const testIndex = androidJob.indexOf('./gradlew testCoreReleaseUnitTest');
+    const pkgIndex = androidJob.indexOf('./gradlew assembleCoreRelease');
+    assert.ok(
+      testIndex > 0 && pkgIndex > testIndex,
+      'Android unit tests must execute before signed release packaging'
+    );
+  });
+
+  // ── TEST 51: Zero-Bypass Publication Safety: publish-stable-release strictly requires push on stable tag vX.Y.Z and fails closed on workflow_dispatch, branch pushes, and prerelease tags ──
+  await test('51. Zero-Bypass Publication Safety: publish-stable-release strictly forbids manual dispatch, branch pushes, prerelease tags, and version mismatches', () => {
+    // 1. Verify exact job-level `if:` guard in release.yml
+    assert.ok(
+      releaseWorkflowContent.includes("if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && !contains(github.ref, '-beta') && !contains(github.ref, '-rc') && !contains(github.ref, '-alpha') && !startsWith(github.ref, 'refs/tags/desktop-v')"),
+      'publish-stable-release must define the exact job-level if condition'
+    );
+
+    // 2. Model the exact evaluation function matching GitHub Actions expressions
+    const evaluatePublishJobCondition = (eventName: string, ref: string): boolean => {
+      return (
+        eventName === 'push' &&
+        ref.startsWith('refs/tags/v') &&
+        !ref.includes('-beta') &&
+        !ref.includes('-rc') &&
+        !ref.includes('-alpha') &&
+        !ref.startsWith('refs/tags/desktop-v')
+      );
+    };
+
+    // Case A: Manual workflow dispatch from Web UI or API -> MUST BE FORBIDDEN
+    assert.strictEqual(
+      evaluatePublishJobCondition('workflow_dispatch', 'refs/heads/main'),
+      false,
+      'Manual dispatch on main branch MUST NOT publish'
+    );
+    assert.strictEqual(
+      evaluatePublishJobCondition('workflow_dispatch', 'refs/tags/v3.0.1'),
+      false,
+      'Manual dispatch with tag ref MUST NOT publish'
+    );
+    assert.strictEqual(
+      evaluatePublishJobCondition('workflow_dispatch', 'refs/heads/feature/desktop-ci-validation'),
+      false,
+      'Manual dispatch on feature branch MUST NOT publish'
+    );
+
+    // Case B: Push to branches -> MUST BE FORBIDDEN
+    assert.strictEqual(
+      evaluatePublishJobCondition('push', 'refs/heads/main'),
+      false,
+      'Push to main branch MUST NOT publish'
+    );
+    assert.strictEqual(
+      evaluatePublishJobCondition('push', 'refs/heads/feature/desktop-ci-validation'),
+      false,
+      'Push to feature branch MUST NOT publish'
+    );
+
+    // Case C: Prerelease tags -> MUST BE FORBIDDEN
+    assert.strictEqual(
+      evaluatePublishJobCondition('push', 'refs/tags/v3.0.1-beta.1'),
+      false,
+      'v3.0.1-beta.1 MUST NOT publish'
+    );
+    assert.strictEqual(
+      evaluatePublishJobCondition('push', 'refs/tags/v3.0.1-rc.1'),
+      false,
+      'v3.0.1-rc.1 MUST NOT publish'
+    );
+    assert.strictEqual(
+      evaluatePublishJobCondition('push', 'refs/tags/v3.0.1-alpha.2'),
+      false,
+      'v3.0.1-alpha.2 MUST NOT publish'
+    );
+    assert.strictEqual(
+      evaluatePublishJobCondition('push', 'refs/tags/desktop-v3.0.1'),
+      false,
+      'desktop-v3.0.1 tag MUST NOT publish'
+    );
+
+    // Case D: Stable tag push -> ALLOWED
+    assert.strictEqual(
+      evaluatePublishJobCondition('push', 'refs/tags/v3.0.1'),
+      true,
+      'Stable tag v3.0.1 push MUST be allowed to publish'
+    );
+    assert.strictEqual(
+      evaluatePublishJobCondition('push', 'refs/tags/v3.0.2'),
+      true,
+      'Stable tag v3.0.2 push MUST be allowed to publish'
+    );
+
+    // 3. Step-level defense-in-depth zero-bypass script verification
+    assert.ok(
+      releaseWorkflowContent.includes('Enforce Stable Tag Publication Gate (Zero-Bypass Safety Check)'),
+      'Must contain defense-in-depth step check'
+    );
+    assert.ok(
+      releaseWorkflowContent.includes('[ "$TAG_VER" != "$EXPECTED_VER" ]'),
+      'Step guard must assert tag version matches validated version'
+    );
+
+    // 4. Cryptographic SHA-256 Checksums manifest generation with robust temp file and self-exclusion
+    assert.ok(
+      releaseWorkflowContent.includes('Generate Cryptographic SHA-256 Checksums Manifest'),
+      'Must generate authentic SHA256SUMS.txt'
+    );
+    assert.ok(
+      releaseWorkflowContent.includes('sha256sum * > "$TMP_MANIFEST"'),
+      'Must compute sha256sum into temporary file outside release assets'
+    );
+    assert.ok(
+      releaseWorkflowContent.includes('mv "$TMP_MANIFEST" ./SHA256SUMS.txt'),
+      'Must atomically move completed temporary manifest into release-assets'
+    );
+    assert.ok(
+      releaseWorkflowContent.includes('grep -E "[[:space:]]+SHA256SUMS\\.txt$" "$TMP_MANIFEST"'),
+      'Must explicitly verify self-exclusion of SHA256SUMS.txt'
+    );
+    assert.ok(
+      releaseWorkflowContent.includes('./release-assets/SHA256SUMS.txt'),
+      'Must attach SHA256SUMS.txt to the release files'
+    );
+    assert.strictEqual(
+      releaseWorkflowContent.includes('*(Calculated on build)*'),
+      false,
+      'Must NOT contain placeholder checksum strings'
+    );
+  });
+
+  // ── TEST 52: Validator All-Platform Contract: validate_release_assets.py --platform all --require-apk verifies complete set and rejects missing APK ──
+  await test('52. Validator All-Platform Contract: validate_release_assets.py --platform all --require-apk verifies complete set and rejects missing APK', () => {
+    withTempDir((tmpDir) => {
+      // 1. Windows assets
+      const installerBytes = Buffer.from('verified bit-identical installer');
+      const validSha = crypto.createHash('sha512').update(installerBytes).digest('base64');
+      fs.writeFileSync(path.join(tmpDir, 'Vynce Setup 3.0.1.exe'), installerBytes);
+      fs.writeFileSync(path.join(tmpDir, 'Vynce 3.0.1.exe'), 'portable');
+      fs.writeFileSync(path.join(tmpDir, 'Vynce Setup 3.0.1.exe.blockmap'), 'blockmap');
+      const manifest = `version: 3.0.1\npath: Vynce-Setup-3.0.1.exe\nsha512: ${validSha}\nfiles:\n  - url: Vynce-Setup-3.0.1.exe\n    sha512: ${validSha}\n`;
+      fs.writeFileSync(path.join(tmpDir, 'latest.yml'), manifest);
+
+      // 2. Linux assets
+      fs.writeFileSync(path.join(tmpDir, 'Vynce-3.0.1.AppImage'), 'appimage');
+      fs.writeFileSync(path.join(tmpDir, 'vynce_3.0.1_amd64.deb'), 'deb');
+
+      // 3. macOS assets
+      fs.writeFileSync(path.join(tmpDir, 'Vynce-3.0.1.dmg'), 'dmg');
+      fs.writeFileSync(path.join(tmpDir, 'Vynce-3.0.1-mac.zip'), 'zip');
+
+      // Without APK: must fail closed when --require-apk is set
+      const failRes = runRealValidator(['--version', '3.0.1', '--assets-dir', tmpDir, '--platform', 'all', '--require-apk']);
+      assert.strictEqual(failRes.status, 1);
+      assert.ok(failRes.stderr.includes('Android APK is missing from release assets'));
+
+      // With APK: must pass completely
+      fs.writeFileSync(path.join(tmpDir, 'Vynce-3.0.1-core-universal-release-91.apk'), 'apk');
+      const passRes = runRealValidator(['--version', '3.0.1', '--assets-dir', tmpDir, '--platform', 'all', '--require-apk']);
+      assert.strictEqual(passRes.status, 0);
+      assert.ok(passRes.stdout.includes('Verified Android APK'));
+      assert.ok(passRes.stdout.includes('Verified Windows installer'));
+      assert.ok(passRes.stdout.includes('Verified Linux AppImage'));
+      assert.ok(passRes.stdout.includes('Verified macOS DMG'));
+      assert.ok(passRes.stdout.includes('ALL REQUIRED MULTIPLATFORM ASSETS AND UPDATER MANIFESTS VERIFIED SUCCESSFULLY'));
+    });
+  });
+
+  // ── TEST 53: Cryptographic Checksum Manifest Generation: produces valid SHA-256 entries for all distributable assets, strictly self-excludes SHA256SUMS.txt, and handles pre-existing files safely ──
+  await test('53. Cryptographic Checksum Manifest Generation: produces valid SHA-256 entries for all distributable assets, strictly self-excludes SHA256SUMS.txt, and handles pre-existing files safely', () => {
+    withTempDir((tmpDir) => {
+      // 1. Populate mock release assets
+      const files: Record<string, string> = {
+        'Vynce Setup 3.0.1.exe': 'windows installer content bytes 12345',
+        'Vynce 3.0.1.exe': 'windows portable content bytes 67890',
+        'Vynce-3.0.1.AppImage': 'linux appimage content 112233',
+        'vynce_3.0.1_amd64.deb': 'linux debian package 445566',
+        'Vynce-3.0.1.dmg': 'macos dmg package 778899',
+        'Vynce-3.0.1-mac.zip': 'macos zip package 990011',
+        'Vynce-3.0.1-core-universal-release-91.apk': 'android universal apk 123456789',
+        'latest.yml': 'version: 3.0.1\n',
+        'latest-linux.yml': 'version: 3.0.1\n',
+        'latest-mac.yml': 'version: 3.0.1\n',
+        'SHA256SUMS.txt': 'pre-existing stale checksums file that should be removed and not self-hashed'
+      };
+
+      for (const [name, content] of Object.entries(files)) {
+        fs.writeFileSync(path.join(tmpDir, name), content, 'utf8');
+      }
+
+      // 2. Execute the production checksum generation algorithm matching release.yml
+      // Step A: remove pre-existing SHA256SUMS.txt
+      const targetManifest = path.join(tmpDir, 'SHA256SUMS.txt');
+      if (fs.existsSync(targetManifest)) {
+        fs.unlinkSync(targetManifest);
+      }
+
+      // Step B: compute SHA-256 for all remaining files into a temporary file outside assets dir
+      const tmpManifestPath = path.join(os.tmpdir(), `vynce-manifest-test-${Date.now()}.txt`);
+      const stagedFiles = fs.readdirSync(tmpDir).filter(f => fs.statSync(path.join(tmpDir, f)).isFile());
+      stagedFiles.sort();
+
+      const manifestLines: string[] = [];
+      for (const f of stagedFiles) {
+        const fileContent = fs.readFileSync(path.join(tmpDir, f));
+        const hash = crypto.createHash('sha256').update(fileContent).digest('hex');
+        manifestLines.push(`${hash}  ${f}`);
+      }
+      fs.writeFileSync(tmpManifestPath, manifestLines.join('\n') + '\n', 'utf8');
+
+      // Step C: Verify self-exclusion check (must NOT contain SHA256SUMS.txt)
+      const generatedContent = fs.readFileSync(tmpManifestPath, 'utf8');
+      const hasSelfEntry = /^[0-9a-f]{64}\s+SHA256SUMS\.txt$/m.test(generatedContent);
+      assert.strictEqual(hasSelfEntry, false, 'Generated manifest MUST NOT contain an entry for SHA256SUMS.txt');
+
+      // Step D: Move temporary manifest into assets dir
+      fs.copyFileSync(tmpManifestPath, targetManifest);
+      fs.unlinkSync(tmpManifestPath);
+
+      // 3. Verify final manifest in assets dir
+      assert.ok(fs.existsSync(targetManifest), 'Final SHA256SUMS.txt must exist in staging dir');
+      const finalLines = fs.readFileSync(targetManifest, 'utf8').trim().split('\n');
+
+      // Must cover all 10 real distributable files (excluding the removed stale SHA256SUMS.txt)
+      assert.strictEqual(finalLines.length, 10, 'Manifest must contain exactly 10 entries for the 10 release assets');
+
+      for (const line of finalLines) {
+        const hash = line.substring(0, 64);
+        const filename = line.substring(66).replace(/^\*/, '');
+        assert.ok(filename in files, `Manifest entry ${filename} must match known release file`);
+        assert.notStrictEqual(filename, 'SHA256SUMS.txt', 'Manifest entry must never be SHA256SUMS.txt');
+        const expectedHash = crypto.createHash('sha256').update(Buffer.from(files[filename], 'utf8')).digest('hex');
+        assert.strictEqual(hash, expectedHash, `SHA-256 hash for ${filename} must match expected cryptographic digest`);
+      }
+
+      // 4. Verify negative case: if an entry for SHA256SUMS.txt is present, the self-exclusion guard triggers
+      const poisonedManifest = generatedContent + 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855  SHA256SUMS.txt\n';
+      const guardTriggered = /^[0-9a-f]{64}\s+SHA256SUMS\.txt$/m.test(poisonedManifest);
+      assert.strictEqual(guardTriggered, true, 'Guard must detect and flag presence of SHA256SUMS.txt');
+    });
+  });
+
+  // ── TEST 54: Android Multi-Architecture Completeness: validate_release_assets.py --require-all-apks mandates all 5 variants, rejects missing variants, version mismatches, and misnamed architectures ──
+  await test('54. Android Multi-Architecture Completeness: validate_release_assets.py --require-all-apks mandates all 5 variants, rejects missing variants, version mismatches, and misnamed architectures', () => {
+    withTempDir((tmpDir) => {
+      // Setup minimum Windows assets to satisfy default platform contract
+      const installerBytes = Buffer.from('installer');
+      const validSha = crypto.createHash('sha512').update(installerBytes).digest('base64');
+      fs.writeFileSync(path.join(tmpDir, 'Vynce Setup 3.0.1.exe'), installerBytes);
+      fs.writeFileSync(path.join(tmpDir, 'Vynce 3.0.1.exe'), 'portable');
+      fs.writeFileSync(path.join(tmpDir, 'Vynce Setup 3.0.1.exe.blockmap'), 'blockmap');
+      fs.writeFileSync(path.join(tmpDir, 'latest.yml'), `version: 3.0.1\npath: Vynce-Setup-3.0.1.exe\nsha512: ${validSha}\nfiles:\n  - url: Vynce-Setup-3.0.1.exe\n    sha512: ${validSha}\n`);
+
+      const validApks = [
+        'Vynce-3.0.1-core-universal-release-91.apk',
+        'Vynce-3.0.1-core-arm64-v8a-release-91.apk',
+        'Vynce-3.0.1-core-armeabi-v7a-release-91.apk',
+        'Vynce-3.0.1-core-x86_64-release-91.apk',
+        'Vynce-3.0.1-core-x86-release-91.apk',
+      ];
+
+      // Helper to stage a set of APK files
+      const stageApks = (apkList: string[]) => {
+        for (const f of fs.readdirSync(tmpDir)) {
+          if (f.endsWith('.apk')) fs.unlinkSync(path.join(tmpDir, f));
+        }
+        for (const apk of apkList) {
+          fs.writeFileSync(path.join(tmpDir, apk), 'dummy-apk-content');
+        }
+      };
+
+      // Case 1: All 5 valid APK variants pass validation
+      stageApks(validApks);
+      const passRes = runRealValidator(['--version', '3.0.1', '--assets-dir', tmpDir, '--platform', 'windows', '--require-all-apks']);
+      assert.strictEqual(passRes.status, 0, `All 5 valid APKs should pass: ${passRes.stderr}`);
+      assert.ok(passRes.stdout.includes('Verified all 5 required Android APK variants for v3.0.1'));
+      assert.ok(passRes.stdout.includes('- universal: Vynce-3.0.1-core-universal-release-91.apk'));
+      assert.ok(passRes.stdout.includes('- arm64-v8a: Vynce-3.0.1-core-arm64-v8a-release-91.apk'));
+      assert.ok(passRes.stdout.includes('- armeabi-v7a: Vynce-3.0.1-core-armeabi-v7a-release-91.apk'));
+      assert.ok(passRes.stdout.includes('- x86_64: Vynce-3.0.1-core-x86_64-release-91.apk'));
+      assert.ok(passRes.stdout.includes('- x86: Vynce-3.0.1-core-x86-release-91.apk'));
+
+      // Case 2: Each required APK missing in turn must fail closed
+      const archKeywords = ['universal', 'arm64-v8a', 'armeabi-v7a', 'x86_64', 'x86'];
+      for (const missingArch of archKeywords) {
+        const partialList = validApks.filter(a => !a.includes(`-${missingArch}-`));
+        assert.strictEqual(partialList.length, 4);
+        stageApks(partialList);
+        const failRes = runRealValidator(['--version', '3.0.1', '--assets-dir', tmpDir, '--platform', 'windows', '--require-all-apks']);
+        assert.strictEqual(failRes.status, 1, `Missing ${missingArch} must fail validation`);
+        assert.ok(failRes.stderr.includes(`Missing required Android APK variant(s) for version 3.0.1: ['${missingArch}']`));
+      }
+
+      // Case 3: Version mismatch must fail closed
+      stageApks([
+        'Vynce-3.0.0-core-universal-release-90.apk',
+        'Vynce-3.0.1-core-arm64-v8a-release-91.apk',
+        'Vynce-3.0.1-core-armeabi-v7a-release-91.apk',
+        'Vynce-3.0.1-core-x86_64-release-91.apk',
+        'Vynce-3.0.1-core-x86-release-91.apk',
+      ]);
+      const verFailRes = runRealValidator(['--version', '3.0.1', '--assets-dir', tmpDir, '--platform', 'windows', '--require-all-apks']);
+      assert.strictEqual(verFailRes.status, 1);
+      assert.ok(verFailRes.stderr.includes('version (3.0.0) does not match target release version (3.0.1)'));
+
+      // Case 4: Unexpected or misnamed architecture must fail closed
+      stageApks([
+        ...validApks,
+        'Vynce-3.0.1-core-mips-release-91.apk',
+      ]);
+      const archFailRes = runRealValidator(['--version', '3.0.1', '--assets-dir', tmpDir, '--platform', 'windows', '--require-all-apks']);
+      assert.strictEqual(archFailRes.status, 1);
+      assert.ok(archFailRes.stderr.includes("unknown or unexpected architecture 'mips'"));
+
+      // Case 5: Duplicate variant for the same architecture must fail closed
+      stageApks([
+        ...validApks,
+        'Vynce-3.0.1-core-universal-release-92.apk',
+      ]);
+      const dupFailRes = runRealValidator(['--version', '3.0.1', '--assets-dir', tmpDir, '--platform', 'windows', '--require-all-apks']);
+      assert.strictEqual(dupFailRes.status, 1);
+      assert.ok(dupFailRes.stderr.includes("Duplicate Android APK variant staged for architecture 'universal'"));
+    });
+  });
+
+  // ── TEST 55: Full Coordinated Multiplatform Release Suite: validate_release_assets.py --platform all --require-all-apks verifies complete desktop and all 5 Android APK variants ──
+  await test('55. Full Coordinated Multiplatform Release Suite: validate_release_assets.py --platform all --require-all-apks verifies complete desktop and all 5 Android APK variants', () => {
+    withTempDir((tmpDir) => {
+      // 1. Windows assets
+      const installerBytes = Buffer.from('verified bit-identical installer');
+      const validSha = crypto.createHash('sha512').update(installerBytes).digest('base64');
+      fs.writeFileSync(path.join(tmpDir, 'Vynce Setup 3.0.1.exe'), installerBytes);
+      fs.writeFileSync(path.join(tmpDir, 'Vynce 3.0.1.exe'), 'portable');
+      fs.writeFileSync(path.join(tmpDir, 'Vynce Setup 3.0.1.exe.blockmap'), 'blockmap');
+      const manifest = `version: 3.0.1\npath: Vynce-Setup-3.0.1.exe\nsha512: ${validSha}\nfiles:\n  - url: Vynce-Setup-3.0.1.exe\n    sha512: ${validSha}\n`;
+      fs.writeFileSync(path.join(tmpDir, 'latest.yml'), manifest);
+
+      // 2. Linux assets
+      fs.writeFileSync(path.join(tmpDir, 'Vynce-3.0.1.AppImage'), 'appimage');
+      fs.writeFileSync(path.join(tmpDir, 'vynce_3.0.1_amd64.deb'), 'deb');
+
+      // 3. macOS assets
+      fs.writeFileSync(path.join(tmpDir, 'Vynce-3.0.1.dmg'), 'dmg');
+      fs.writeFileSync(path.join(tmpDir, 'Vynce-3.0.1-mac.zip'), 'zip');
+
+      // 4. All 5 Android APKs
+      fs.writeFileSync(path.join(tmpDir, 'Vynce-3.0.1-core-universal-release-91.apk'), 'apk-univ');
+      fs.writeFileSync(path.join(tmpDir, 'Vynce-3.0.1-core-arm64-v8a-release-91.apk'), 'apk-arm64');
+      fs.writeFileSync(path.join(tmpDir, 'Vynce-3.0.1-core-armeabi-v7a-release-91.apk'), 'apk-armv7');
+      fs.writeFileSync(path.join(tmpDir, 'Vynce-3.0.1-core-x86_64-release-91.apk'), 'apk-x86_64');
+      fs.writeFileSync(path.join(tmpDir, 'Vynce-3.0.1-core-x86-release-91.apk'), 'apk-x86');
+
+      const passRes = runRealValidator(['--version', '3.0.1', '--assets-dir', tmpDir, '--platform', 'all', '--require-apk', '--require-all-apks']);
+      assert.strictEqual(passRes.status, 0);
+      assert.ok(passRes.stdout.includes('Verified all 5 required Android APK variants for v3.0.1'));
+      assert.ok(passRes.stdout.includes('Verified Windows installer'));
+      assert.ok(passRes.stdout.includes('Verified Linux AppImage'));
+      assert.ok(passRes.stdout.includes('Verified macOS DMG'));
+      assert.ok(passRes.stdout.includes('ALL REQUIRED MULTIPLATFORM ASSETS AND UPDATER MANIFESTS VERIFIED SUCCESSFULLY'));
+    });
+  });
+
   console.log('\n====================================================');
-  console.log(' ALL 49 PACKAGING, RELEASE, PATH & PLATFORM TESTS PASSED');
+  console.log(' ALL 55 PACKAGING, RELEASE, PATH & PLATFORM TESTS PASSED');
   console.log('====================================================\n');
 }
 

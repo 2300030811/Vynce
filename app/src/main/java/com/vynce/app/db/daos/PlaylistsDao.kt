@@ -57,6 +57,9 @@ interface PlaylistsDao {
     """)
     fun playlistByBrowseId(browseId: String): Flow<Playlist?>
 
+    @Query("SELECT * FROM playlist WHERE browseId = :browseId LIMIT 1")
+    fun findPlaylistByBrowseId(browseId: String): PlaylistEntity?
+
     @Transaction
     @Query("""
         SELECT 

@@ -186,7 +186,7 @@ fun LibrarySongsScreen(
     val headerContent = @Composable {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(16.dp)
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
         ) {
             SortHeader(
                 sortType = sortType,

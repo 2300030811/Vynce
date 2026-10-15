@@ -40,9 +40,13 @@ import coil3.compose.AsyncImage
 import com.vynce.app.LocalPlayerConnection
 import com.vynce.app.R
 import com.vynce.app.ui.theme.VyncePurple
+import com.vynce.app.utils.listentogether.EmbeddedRoomServer
 import com.vynce.app.utils.listentogether.ListenTogetherParticipant
 import com.vynce.app.utils.listentogether.ListenTogetherSession
 import com.vynce.app.utils.listentogether.ListenTogetherSync
+
+import com.vynce.app.utils.listentogether.DiscoveredRoom
+import com.vynce.app.utils.listentogether.NsdRoomDiscovery
 
 @Composable
 fun ListenTogetherDialog(
@@ -56,6 +60,7 @@ fun ListenTogetherDialog(
     val isHost by ListenTogetherSync.isHost.collectAsState()
     val syncMessage by ListenTogetherSync.message.collectAsState()
     val syncedDisplayName by ListenTogetherSync.displayName.collectAsState()
+    val discoveredRooms by NsdRoomDiscovery.discoveredRooms.collectAsState()
 
     var displayName by rememberSaveable { mutableStateOf(syncedDisplayName) }
     var joinCode by rememberSaveable { mutableStateOf("") }
@@ -63,6 +68,20 @@ fun ListenTogetherDialog(
 
     LaunchedEffect(syncedDisplayName) {
         displayName = syncedDisplayName
+    }
+
+    LaunchedEffect(session) {
+        if (session == null) {
+            NsdRoomDiscovery.startDiscovery(context)
+        } else {
+            NsdRoomDiscovery.stopDiscovery()
+        }
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            NsdRoomDiscovery.stopDiscovery()
+        }
     }
 
     LaunchedEffect(syncMessage) {
@@ -202,6 +221,35 @@ fun ListenTogetherDialog(
 
                             Spacer(Modifier.height(14.dp))
 
+                            // Local IP info for Host
+                            val localIp = remember(activeSession) { EmbeddedRoomServer.getLocalIpAddress() }
+                            if (localIp != null) {
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.6f),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Text(
+                                            text = "Direct LAN/Wi-Fi IP:",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                        Text(
+                                            text = "$localIp:8945",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            fontWeight = FontWeight.Bold,
+                                            color = VyncePurple
+                                        )
+                                    }
+                                }
+                                Spacer(Modifier.height(10.dp))
+                            }
+
                             // Action buttons: Copy & Share
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
@@ -221,7 +269,8 @@ fun ListenTogetherDialog(
                                 }
                                 Button(
                                     onClick = {
-                                        val shareText = "Listen together with me on Vynce!\nRoom Code: ${activeSession.code}\n${activeSession.joinUrl}"
+                                        val ipInfo = if (localIp != null) "\nDirect IP: $localIp:8945" else ""
+                                        val shareText = "Listen together with me on Vynce!\nRoom Code: ${activeSession.code}$ipInfo"
                                         val sendIntent = Intent().apply {
                                             action = Intent.ACTION_SEND
                                             putExtra(Intent.EXTRA_TEXT, shareText)
@@ -336,7 +385,7 @@ fun ListenTogetherDialog(
                             Text("Start a New Room", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyLarge)
                             Spacer(Modifier.height(2.dp))
                             Text(
-                                text = "Stream your current queue to friends in real time.",
+                                text = "Stream your current queue to friends in real time over Wi-Fi, Hotspot, or LAN.",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -366,6 +415,79 @@ fun ListenTogetherDialog(
                         }
                     }
 
+                    // Nearby discovered rooms card (if any rooms found on local Wi-Fi)
+                    AnimatedVisibility(visible = discoveredRooms.isNotEmpty()) {
+                        Surface(
+                            shape = RoundedCornerShape(16.dp),
+                            color = VyncePurple.copy(alpha = 0.08f),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, VyncePurple.copy(alpha = 0.35f)),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(modifier = Modifier.padding(14.dp)) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(8.dp)
+                                            .clip(CircleShape)
+                                            .background(Color(0xFF22C55E))
+                                    )
+                                    Text(
+                                        text = "Nearby Rooms Found (${discoveredRooms.size})",
+                                        fontWeight = FontWeight.Bold,
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        color = VyncePurple
+                                    )
+                                }
+                                Spacer(Modifier.height(8.dp))
+                                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    discoveredRooms.forEach { room ->
+                                        Surface(
+                                            shape = RoundedCornerShape(10.dp),
+                                            color = MaterialTheme.colorScheme.surface,
+                                            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                                            modifier = Modifier.fillMaxWidth()
+                                        ) {
+                                            Row(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.SpaceBetween
+                                            ) {
+                                                Column(modifier = Modifier.weight(1f)) {
+                                                    Text(
+                                                        text = room.hostName,
+                                                        style = MaterialTheme.typography.bodyMedium,
+                                                        fontWeight = FontWeight.SemiBold
+                                                    )
+                                                    Text(
+                                                        text = "Code: ${room.roomCode} • ${room.hostIp}",
+                                                        style = MaterialTheme.typography.bodySmall,
+                                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                    )
+                                                }
+                                                Button(
+                                                    onClick = {
+                                                        ListenTogetherSync.setDisplayName(displayName)
+                                                        ListenTogetherSync.joinSession(room.roomCode)
+                                                    },
+                                                    colors = ButtonDefaults.buttonColors(containerColor = VyncePurple),
+                                                    shape = RoundedCornerShape(8.dp),
+                                                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)
+                                                ) {
+                                                    Text("Join", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
                     // Join existing room card
                     Surface(
                         shape = RoundedCornerShape(16.dp),
@@ -374,6 +496,12 @@ fun ListenTogetherDialog(
                     ) {
                         Column(modifier = Modifier.padding(14.dp)) {
                             Text("Join Friend's Room", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyLarge)
+                            Spacer(Modifier.height(4.dp))
+                            Text(
+                                text = "Enter 8-digit Room Code or Direct IP (e.g. C0A8012D or 192.168.1.50)",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                             Spacer(Modifier.height(8.dp))
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
@@ -382,8 +510,8 @@ fun ListenTogetherDialog(
                             ) {
                                 OutlinedTextField(
                                     value = joinCode,
-                                    onValueChange = { joinCode = it.uppercase().take(8) },
-                                    placeholder = { Text("CODE") },
+                                    onValueChange = { joinCode = it.take(30) },
+                                    placeholder = { Text("CODE or IP") },
                                     singleLine = true,
                                     shape = RoundedCornerShape(10.dp),
                                     modifier = Modifier.weight(1f)

@@ -100,6 +100,7 @@ import com.vynce.app.ui.dialog.AddToQueueDialog
 import com.vynce.app.ui.dialog.ArtistDialog
 import com.vynce.app.ui.dialog.DetailsDialog
 import com.vynce.app.utils.rememberPreference
+import com.vynce.app.utils.urlEncode
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -499,7 +500,9 @@ fun PlayerMenu(
                 icon = R.drawable.album,
                 title = R.string.view_album
             ) {
-                navController.navigate("album/${mediaMetadata.album.id}")
+                val encodedId = mediaMetadata.album.id.urlEncode()
+                val encodedTitle = mediaMetadata.album.title.urlEncode()
+                navController.navigate("album/$encodedId?title=$encodedTitle")
                 playerBottomSheetState.collapseSoft()
                 onDismiss()
             }
@@ -509,17 +512,33 @@ fun PlayerMenu(
             icon = Icons.Rounded.Share,
             title = R.string.share
         ) {
+            val shareUrl = when {
+                mediaMetadata.id.startsWith("soundcloud:") -> "https://soundcloud.com"
+                mediaMetadata.id.startsWith("bandcamp:") -> mediaMetadata.id.removePrefix("bandcamp:")
+                mediaMetadata.id.startsWith("saavn:") -> "https://www.jiosaavn.com/song/${mediaMetadata.id.substringAfter("saavn:")}"
+                else -> ""
+            }
+
+            val artists = mediaMetadata.artists.takeIf { it.isNotEmpty() }?.joinToString(", ") { it.name } ?: "Unknown Artist"
+            val shareText = buildString {
+                append("\"${mediaMetadata.title}\" by $artists")
+                if (mediaMetadata.album?.title?.isNotBlank() == true) {
+                    append("\nAlbum: ${mediaMetadata.album.title}")
+                }
+                if (shareUrl.isNotBlank()) {
+                    append("\nListen here: $shareUrl")
+                }
+                append("\n\nShared via Vynce")
+            }
+
             val intent = Intent().apply {
                 action = Intent.ACTION_SEND
                 type = "text/plain"
-                val shareUrl = if (mediaMetadata.id.startsWith("saavn:")) {
-                    "https://www.jiosaavn.com/song/${mediaMetadata.id.substringAfter("saavn:")}"
-                } else {
-                    "Music shared via Vynce"
-                }
-                putExtra(Intent.EXTRA_TEXT, shareUrl)
+                putExtra(Intent.EXTRA_SUBJECT, mediaMetadata.title)
+                putExtra(Intent.EXTRA_TITLE, mediaMetadata.title)
+                putExtra(Intent.EXTRA_TEXT, shareText)
             }
-            context.startActivity(Intent.createChooser(intent, null))
+            context.startActivity(Intent.createChooser(intent, "Share track via"))
             onDismiss()
         }
         GridMenuItem(
@@ -546,14 +565,8 @@ fun PlayerMenu(
             icon = Icons.Rounded.Equalizer,
             title = R.string.equalizer
         ) {
-            val intent = Intent(AudioEffect.ACTION_DISPLAY_AUDIO_EFFECT_CONTROL_PANEL).apply {
-                putExtra(AudioEffect.EXTRA_AUDIO_SESSION, playerConnection.player.audioSessionId)
-                putExtra(AudioEffect.EXTRA_PACKAGE_NAME, context.packageName)
-                putExtra(AudioEffect.EXTRA_CONTENT_TYPE, AudioEffect.CONTENT_TYPE_MUSIC)
-            }
-            if (intent.resolveActivity(context.packageManager) != null) {
-                activityResultLauncher.launch(intent)
-            }
+            navController.navigate("equalizer")
+            playerBottomSheetState.collapseSoft()
             onDismiss()
         }
         GridMenuItem(
@@ -644,6 +657,20 @@ fun PitchTempoDialog(
     AlertDialog(
         properties = DialogProperties(usePlatformDefaultWidth = false),
         onDismissRequest = onDismiss,
+        icon = {
+            Icon(
+                imageVector = Icons.Rounded.Tune,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary
+            )
+        },
+        title = {
+            Text(
+                text = "Speed & Pitch Tuning",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+            )
+        },
         dismissButton = {
             TextButton(
                 onClick = {
@@ -663,28 +690,239 @@ fun PitchTempoDialog(
             }
         },
         text = {
-            Column {
-                ValueAdjuster(
-                    icon = Icons.Rounded.SlowMotionVideo,
-                    currentValue = tempo,
-                    values = (0..35).map { round((0.25f + it * 0.05f) * 100) / 100 },
-                    onValueUpdate = {
-                        tempo = it
-                        updatePlaybackParameters()
-                    },
-                    valueText = { "x$it" },
-                    modifier = Modifier.padding(bottom = 12.dp)
-                )
-                ValueAdjuster(
-                    icon = Icons.Rounded.Tune,
-                    currentValue = transposeValue,
-                    values = (-12..12).toList(),
-                    onValueUpdate = {
-                        transposeValue = it
-                        updatePlaybackParameters()
-                    },
-                    valueText = { "${if (it > 0) "+" else ""}$it" }
-                )
+            Column(
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                // 1. Playback Speed (Tempo) Card
+                androidx.compose.material3.Surface(
+                    shape = RoundedCornerShape(16.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(14.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Rounded.SlowMotionVideo,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Text(
+                                    text = "Playback Speed",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold
+                                )
+                            }
+                            androidx.compose.material3.Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                            ) {
+                                Text(
+                                    text = when {
+                                        tempo == 1.0f -> "1.00x (Normal)"
+                                        tempo > 1.0f -> String.format(java.util.Locale.US, "%.2fx (Faster)", tempo)
+                                        else -> String.format(java.util.Locale.US, "%.2fx (Slower)", tempo)
+                                    },
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                )
+                            }
+                        }
+
+                        // Stepper row
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceEvenly,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            IconButton(
+                                enabled = tempo > 0.25f,
+                                onClick = {
+                                    tempo = (round((tempo - 0.05f) * 100) / 100).coerceAtLeast(0.25f)
+                                    updatePlaybackParameters()
+                                }
+                            ) {
+                                Icon(Icons.Rounded.RemoveCircleOutline, contentDescription = "Decrease Speed")
+                            }
+
+                            Text(
+                                text = String.format(java.util.Locale.US, "%.2fx", tempo),
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.width(70.dp)
+                            )
+
+                            IconButton(
+                                enabled = tempo < 2.0f,
+                                onClick = {
+                                    tempo = (round((tempo + 0.05f) * 100) / 100).coerceAtMost(2.0f)
+                                    updatePlaybackParameters()
+                                }
+                            ) {
+                                Icon(Icons.Rounded.AddCircleOutline, contentDescription = "Increase Speed")
+                            }
+                        }
+
+                        // Preset chips
+                        FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalArrangement = Arrangement.spacedBy(6.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            listOf(0.5f, 0.75f, 1.0f, 1.25f, 1.5f, 2.0f).forEach { preset ->
+                                val isSelected = (round(tempo * 100) == round(preset * 100))
+                                androidx.compose.material3.Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .clickable {
+                                            tempo = preset
+                                            updatePlaybackParameters()
+                                        }
+                                ) {
+                                    Text(
+                                        text = "${preset}x",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = if (isSelected) androidx.compose.ui.text.font.FontWeight.Bold else androidx.compose.ui.text.font.FontWeight.Normal,
+                                        color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // 2. Pitch Shifting Card
+                androidx.compose.material3.Surface(
+                    shape = RoundedCornerShape(16.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(14.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Rounded.Tune,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Text(
+                                    text = "Pitch / Key Shift",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold
+                                )
+                            }
+                            androidx.compose.material3.Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                            ) {
+                                Text(
+                                    text = when {
+                                        transposeValue == 0 -> "0 st (Original)"
+                                        transposeValue > 0 -> "+$transposeValue st (Higher)"
+                                        else -> "$transposeValue st (Lower)"
+                                    },
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                )
+                            }
+                        }
+
+                        // Stepper row
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceEvenly,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            IconButton(
+                                enabled = transposeValue > -12,
+                                onClick = {
+                                    transposeValue = (transposeValue - 1).coerceAtLeast(-12)
+                                    updatePlaybackParameters()
+                                }
+                            ) {
+                                Icon(Icons.Rounded.RemoveCircleOutline, contentDescription = "Lower Pitch")
+                            }
+
+                            Text(
+                                text = "${if (transposeValue > 0) "+" else ""}$transposeValue st",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.width(70.dp)
+                            )
+
+                            IconButton(
+                                enabled = transposeValue < 12,
+                                onClick = {
+                                    transposeValue = (transposeValue + 1).coerceAtMost(12)
+                                    updatePlaybackParameters()
+                                }
+                            ) {
+                                Icon(Icons.Rounded.AddCircleOutline, contentDescription = "Raise Pitch")
+                            }
+                        }
+
+                        // Preset chips
+                        FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalArrangement = Arrangement.spacedBy(6.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            listOf(-2 to "-2 st", -1 to "-1 st", 0 to "Original (0)", 1 to "+1 st", 2 to "+2 st").forEach { (preset, label) ->
+                                val isSelected = transposeValue == preset
+                                androidx.compose.material3.Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .clickable {
+                                            transposeValue = preset
+                                            updatePlaybackParameters()
+                                        }
+                                ) {
+                                    Text(
+                                        text = label,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = if (isSelected) androidx.compose.ui.text.font.FontWeight.Bold else androidx.compose.ui.text.font.FontWeight.Normal,
+                                        color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     )

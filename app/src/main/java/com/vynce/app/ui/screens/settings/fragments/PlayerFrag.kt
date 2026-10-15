@@ -4,12 +4,16 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.VolumeUp
 import androidx.compose.material.icons.rounded.Autorenew
 import androidx.compose.material.icons.rounded.ClearAll
+import androidx.compose.material.icons.rounded.Equalizer
 import androidx.compose.material.icons.rounded.FastForward
 import androidx.compose.material.icons.rounded.GraphicEq
 import androidx.compose.material.icons.rounded.SkipNext
 import androidx.compose.material.icons.rounded.Sync
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.rounded.Waves
+import androidx.navigation.NavController
+import com.vynce.app.constants.EqualizerEnabledKey
+import com.vynce.app.constants.EqualizerPresetKey
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -71,11 +75,6 @@ fun PlayerGeneralFrag() {
 }
 
 @Composable
-fun PlayerServiceFrag() {
-
-}
-
-@Composable
 fun AudioQualityFrag() {
     val (audioQuality, onAudioQualityChange) = rememberEnumPreference(
         key = AudioQualityKey,
@@ -99,7 +98,19 @@ fun AudioQualityFrag() {
 }
 
 @Composable
-fun AudioEffectsFrag() {
+fun AudioEffectsFrag(navController: NavController? = null) {
+    val (isEqEnabled) = rememberPreference(EqualizerEnabledKey, defaultValue = true)
+    val (eqPreset) = rememberPreference(EqualizerPresetKey, defaultValue = "Flat")
+
+    PreferenceEntry(
+        title = { Text(stringResource(R.string.equalizer)) },
+        description = if (isEqEnabled) "DSP Active • $eqPreset" else "Bypassed",
+        icon = { Icon(Icons.Rounded.Equalizer, null) },
+        onClick = {
+            navController?.navigate("equalizer")
+        }
+    )
+
     val (skipSilence, onSkipSilenceChange) = rememberPreference(key = SkipSilenceKey, defaultValue = false)
 
     val (audioNormalization, onAudioNormalizationChange) = rememberPreference(

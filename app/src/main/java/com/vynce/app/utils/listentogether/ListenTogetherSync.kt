@@ -4,6 +4,8 @@ import android.content.Context
 import com.vynce.app.data.spotify.SpotifyResolver
 import com.vynce.app.playback.PlayerConnection
 import com.vynce.app.playback.queues.ListQueue
+import com.vynce.app.utils.ProxyHelper
+import com.vynce.app.utils.dataStore
 import com.vynce.app.utils.toSaavnMediaMetadata
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -16,11 +18,12 @@ import kotlinx.coroutines.launch
 import kotlin.math.abs
 
 object ListenTogetherSync {
-    private const val SYNC_MS = 280L
-    private const val CONTROLLER_PUBLISH_MS = 500L
+    private const val ACTIVE_SYNC_MS = 400L
+    private const val STABLE_SYNC_MS = 1000L
+    private const val CONTROLLER_PUBLISH_MS = 600L
     private const val SEEK_TOLERANCE_MS = 750L
     private const val USER_SEEK_TOLERANCE_MS = 1800L
-    private const val APPLY_GRACE_MS = 900L
+    private const val APPLY_GRACE_MS = 1200L
 
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     private var syncJob: Job? = null
@@ -29,6 +32,7 @@ object ListenTogetherSync {
     private var lastAppliedVersion = 0L
     private var lastControllerPublishAt = 0L
     private var suppressLocalPublishUntil = 0L
+    private var consecutiveFailures = 0
 
     private val _session = MutableStateFlow<ListenTogetherSession?>(null)
     val session = _session.asStateFlow()
@@ -48,6 +52,8 @@ object ListenTogetherSync {
     ) {
         appContext = context.applicationContext
         playerConnection = connection
+        ListenTogetherClient.proxy = ProxyHelper.getProxy(context.applicationContext.dataStore)
+
         val saved = ListenTogetherStore.load(context.applicationContext)
         if (saved != null && _session.value == null) {
             _displayName.value = saved.displayName
@@ -61,7 +67,6 @@ object ListenTogetherSync {
                     restartSync()
                 }.onFailure {
                     ListenTogetherStore.clear(context.applicationContext)
-                    _message.value = it.message
                 }
             }
         } else if (_session.value != null) {
@@ -84,6 +89,7 @@ object ListenTogetherSync {
         scope.launch {
             runCatching {
                 ListenTogetherClient.createSession(
+                    context = context,
                     displayName = _displayName.value,
                     state =
                         ListenTogetherPlaybackState(
@@ -138,6 +144,10 @@ object ListenTogetherSync {
             if (context != null) ListenTogetherStore.clear(context)
             _session.value = null
             _isHost.value = false
+            lastAppliedVersion = 0L
+            lastControllerPublishAt = 0L
+            suppressLocalPublishUntil = 0L
+            consecutiveFailures = 0
             _message.value = "Left room"
             syncJob?.cancel()
         }
@@ -146,12 +156,19 @@ object ListenTogetherSync {
     private fun restartSync() {
         syncJob?.cancel()
         val connection = playerConnection ?: return
+        consecutiveFailures = 0
         syncJob =
             scope.launch {
                 while (true) {
                     val activeSession = _session.value ?: break
-                    syncOnce(connection, activeSession)
-                    delay(SYNC_MS)
+                    val isChanging = syncOnce(connection, activeSession)
+                    val isPlaying = connection.player.playWhenReady
+                    val nextDelay = when {
+                        isChanging -> 350L
+                        isPlaying -> 1000L
+                        else -> 2000L
+                    }
+                    delay(nextDelay)
                 }
             }
     }
@@ -159,36 +176,44 @@ object ListenTogetherSync {
     private suspend fun syncOnce(
         connection: PlayerConnection,
         session: ListenTogetherSession,
-    ) {
+    ): Boolean {
+        var isDynamic = false
         runCatching {
-            ListenTogetherClient.getSession(session.code)
+            ListenTogetherClient.getSession(session.code, session.participantId)
         }.onSuccess { remoteSession ->
+            consecutiveFailures = 0
             val keptSession = remoteSession.copy(participantId = session.participantId)
             _session.value = keptSession
             val remoteState = remoteSession.state ?: return@onSuccess
             val now = System.currentTimeMillis()
-            val isController = remoteSession.controllerId == session.participantId
+            val isController = remoteSession.controllerId == session.participantId || _isHost.value
 
             if (remoteSession.stateVersion > lastAppliedVersion) {
                 applyRemoteState(connection, remoteSession)
                 lastAppliedVersion = remoteSession.stateVersion
-                return@onSuccess
+                isDynamic = true
+                return isDynamic
             }
 
             if (isController && now - lastControllerPublishAt >= CONTROLLER_PUBLISH_MS) {
                 publishLocalState(connection, keptSession)
                 lastControllerPublishAt = now
-                return@onSuccess
+                return isDynamic
             }
 
-            if (now > suppressLocalPublishUntil && localUserChangedPlayback(connection, remoteSession)) {
+            if (isController && now > suppressLocalPublishUntil && localUserChangedPlayback(connection, remoteSession)) {
                 publishLocalState(connection, keptSession)
+                isDynamic = true
             } else if (!isController) {
                 softCorrectPosition(connection, remoteSession)
             }
         }.onFailure {
-            _message.value = it.message
+            consecutiveFailures++
+            if (consecutiveFailures == 5) {
+                _message.value = "Connection lost. Reconnecting to room..."
+            }
         }
+        return isDynamic
     }
 
     private fun localUserChangedPlayback(
@@ -226,7 +251,7 @@ object ListenTogetherSync {
             lastAppliedVersion = it.stateVersion
             lastControllerPublishAt = System.currentTimeMillis()
         }.onFailure {
-            _message.value = it.message
+            // Suppress minor transient error
         }
     }
 
@@ -239,12 +264,14 @@ object ListenTogetherSync {
 
         val currentId = connection.player.currentMediaItem?.mediaId
         if (currentId != remoteState.songId) {
-            // Attempt to resolve lossless JioSaavn song or fallback to generic metadata
-            val resolvedSong = SpotifyResolver.resolveToSaavn(
-                trackName = remoteState.title,
-                artistName = remoteState.artists.firstOrNull() ?: ""
-            )
-            val metadata = resolvedSong?.toSaavnMediaMetadata() ?: remoteState.toMediaMetadata()
+            val metadata = if (remoteState.songId.startsWith("saavn:") || remoteState.songId.startsWith("file:") || remoteState.songId.startsWith("content:")) {
+                remoteState.toMediaMetadata()
+            } else {
+                SpotifyResolver.resolveToSaavn(
+                    trackName = remoteState.title,
+                    artistName = remoteState.artists.firstOrNull() ?: ""
+                )?.toSaavnMediaMetadata() ?: remoteState.toMediaMetadata()
+            }
 
             connection.playQueue(
                 ListQueue(

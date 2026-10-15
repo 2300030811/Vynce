@@ -169,6 +169,7 @@ import com.vynce.app.utils.coilCoroutine
 import com.vynce.app.utils.makeTimeString
 import com.vynce.app.utils.rememberEnumPreference
 import com.vynce.app.utils.rememberPreference
+import com.vynce.app.utils.urlEncode
 import androidx.compose.ui.draw.blur
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -743,8 +744,11 @@ fun ControlsContent(
                                     initialDelayMillis = 3000
                                 )
                                 .clickable(enabled = mediaMetadata?.album != null) {
-                                    navController.navigate("album/${mediaMetadata?.album!!.id}")
-                                    playerSheetState.collapseSoft()
+                                    val album = mediaMetadata?.album
+                                    if (album != null) {
+                                        navController.navigate("album/${album.id.urlEncode()}?title=${album.title.urlEncode()}")
+                                        playerSheetState.collapseSoft()
+                                    }
                                 }
                         )
 

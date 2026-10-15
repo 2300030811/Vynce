@@ -76,8 +76,9 @@ fun UpdateDialog(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    var downloadState by remember { mutableStateOf(UpdateDownloadState.IDLE) }
-    var downloadProgress by remember { mutableFloatStateOf(0f) }
+    val initialCachedApk = remember { AppUpdateChecker.getCachedApk(context, updateInfo.newVersion) }
+    var downloadState by remember { mutableStateOf(if (initialCachedApk != null) UpdateDownloadState.COMPLETED else UpdateDownloadState.IDLE) }
+    var downloadProgress by remember { mutableFloatStateOf(if (initialCachedApk != null) 1f else 0f) }
 
     BasicAlertDialog(
         onDismissRequest = {

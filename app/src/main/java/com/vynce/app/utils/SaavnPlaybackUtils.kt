@@ -39,9 +39,12 @@ fun SaavnSong.toSaavnMediaMetadata(): MediaMetadata {
             }
             else -> {
                 this@toSaavnMediaMetadata.album.takeIf { it.isNotEmpty() }?.let { albumName ->
+                    val cleanAlbum = albumName.decodeHtml()
+                    val realId = this@toSaavnMediaMetadata.albumId.takeIf { it.isNotBlank() }
+                    val finalAlbumId = realId ?: "saavn_album:$cleanAlbum"
                     MediaMetadata.Album(
-                        id = "saavn_album:${albumName.hashCode()}",
-                        title = albumName.decodeHtml()
+                        id = finalAlbumId,
+                        title = cleanAlbum
                     )
                 }
             }
@@ -54,12 +57,16 @@ fun SaavnSong.toSaavnMediaMetadata(): MediaMetadata {
                 .replace(Regex("\\s*\\([^)]*\\)"), "")
                 .replace(Regex("\\s*\\[[^]]*\\]"), "")
                 .trim(),
-            artists = this@toSaavnMediaMetadata.artistNames().split(", ").map { name ->
-                MediaMetadata.Artist(
-                    id = null,
-                    name = name.trim().decodeHtml()
-                )
-            },
+            artists = this@toSaavnMediaMetadata.artistNames()
+                .split(Regex("[,&/]"))
+                .map { it.trim().decodeHtml() }
+                .filter { it.isNotBlank() }
+                .map { name ->
+                    MediaMetadata.Artist(
+                        id = "saavn_artist:$name",
+                        name = name
+                    )
+                },
             duration = this@toSaavnMediaMetadata.duration.toIntOrNull() ?: -1,
             thumbnailUrl = this@toSaavnMediaMetadata.thumbnailUrl()?.replace("http://", "https://"),
             album = albumMetadata,

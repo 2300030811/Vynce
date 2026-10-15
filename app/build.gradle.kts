@@ -43,8 +43,8 @@ android {
         applicationId = "com.vynce.app"
         minSdk = 24
         targetSdk = 36
-        versionCode = 90
-        versionName = "3.0.0"
+        versionCode = 91
+        versionName = "3.0.1"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         manifestPlaceholders["appAuthRedirectScheme"] = "com.vynce.app"
         
@@ -295,6 +295,9 @@ dependencies {
     // sdk24 support
     // Support for N is officially unsupported even it the app should still work. Leave this outside of the version catalog.
     implementation("androidx.webkit:webkit:1.14.0")
+
+    testImplementation(libs.junit)
+    testImplementation("org.json:json:20240303")
 }
 
 afterEvaluate {

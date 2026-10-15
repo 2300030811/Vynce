@@ -34,6 +34,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
@@ -53,11 +54,21 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.toMutableStateList
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.material.icons.rounded.FolderOff
+import androidx.compose.material.icons.rounded.SearchOff
+import androidx.compose.material.icons.rounded.Sync
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -240,36 +251,45 @@ fun FolderScreen(
     }
 
     LaunchedEffect(sortType, sortDescending, currDir) {
-        val tempList = currDir.files.map { it }.toMutableList()
-        // sort songs
-        tempList.sortBy {
-            when (sortType) {
-                FolderSongSortType.CREATE_DATE -> numberToAlpha(it.song.inLibrary?.toEpochSecond(ZoneOffset.UTC) ?: -1L)
-                FolderSongSortType.MODIFIED_DATE -> numberToAlpha(it.song.getDateModifiedLong() ?: -1L)
-                FolderSongSortType.RELEASE_DATE -> numberToAlpha(it.song.getDateLong() ?: -1L)
-                FolderSongSortType.NAME -> it.song.title.lowercase()
-                FolderSongSortType.ARTIST -> it.artists.joinToString { artist -> artist.name }.lowercase()
-                FolderSongSortType.PLAY_COUNT -> numberToAlpha((it.playCount?.fastSumBy { it.count })?.toLong() ?: 0L)
-                FolderSongSortType.TRACK_NUMBER -> numberToAlpha(it.song.trackNumber?.toLong() ?: Long.MAX_VALUE)
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+            val tempList = currDir.files.map { it }.toMutableList()
+            // sort songs
+            tempList.sortBy {
+                when (sortType) {
+                    FolderSongSortType.CREATE_DATE -> numberToAlpha(it.song.inLibrary?.toEpochSecond(ZoneOffset.UTC) ?: -1L)
+                    FolderSongSortType.MODIFIED_DATE -> numberToAlpha(it.song.getDateModifiedLong() ?: -1L)
+                    FolderSongSortType.RELEASE_DATE -> numberToAlpha(it.song.getDateLong() ?: -1L)
+                    FolderSongSortType.NAME -> it.song.title.lowercase()
+                    FolderSongSortType.ARTIST -> it.artists.joinToString { artist -> artist.name }.lowercase()
+                    FolderSongSortType.PLAY_COUNT -> numberToAlpha((it.playCount?.fastSumBy { it.count })?.toLong() ?: 0L)
+                    FolderSongSortType.TRACK_NUMBER -> numberToAlpha(it.song.trackNumber?.toLong() ?: Long.MAX_VALUE)
+                }
+            }
+            // sort folders
+            val newSubdirs: ArrayList<DirectoryTree> = ArrayList()
+            newSubdirs.addAll(currDir.subdirs.sortedBy { it.currentDir.lowercase() }) // only sort by name
+
+            if (sortDescending) {
+                newSubdirs.reverse()
+                currDir.subdirs.apply {
+                    clear()
+                    addAll(newSubdirs)
+                }
+                tempList.reverse()
+            }
+
+            val distinctSongs = tempList.distinctBy { it.id }
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                mutableSongs.apply {
+                    clear()
+                    addAll(distinctSongs)
+                }
             }
         }
-        // sort folders
-        val newSubdirs: ArrayList<DirectoryTree> = ArrayList()
-        newSubdirs.addAll(currDir.subdirs.sortedBy { it.currentDir.lowercase() }) // only sort by name
+    }
 
-        if (sortDescending) {
-            newSubdirs.reverse()
-            currDir.subdirs.apply {
-                clear()
-                addAll(newSubdirs)
-            }
-            tempList.reverse()
-        }
-
-        mutableSongs.apply {
-            clear()
-            mutableSongs.addAll(tempList.distinctBy { it.id })
-        }
+    val subdirsList = remember(currDir, flatSubfolders) {
+        if (flatSubfolders) currDir.getFlattenedSubdirs() else currDir.subdirs
     }
 
     Box(
@@ -320,7 +340,7 @@ fun FolderScreen(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 16.dp)
+                                .padding(start = 16.dp, end = 12.dp, top = 4.dp, bottom = 4.dp)
                         ) {
                             // search
                             IconButton(
@@ -330,7 +350,7 @@ fun FolderScreen(
                             ) {
                                 Icon(
                                     Icons.Rounded.Search,
-                                    contentDescription = null
+                                    contentDescription = stringResource(R.string.search)
                                 )
                             }
                             if (isSearching) {
@@ -340,11 +360,11 @@ fun FolderScreen(
                                     placeholder = {
                                         Text(
                                             text = stringResource(R.string.search),
-                                            style = MaterialTheme.typography.titleLarge
+                                            style = MaterialTheme.typography.titleMedium
                                         )
                                     },
                                     singleLine = true,
-                                    textStyle = MaterialTheme.typography.titleLarge,
+                                    textStyle = MaterialTheme.typography.titleMedium,
                                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                                     colors = TextFieldDefaults.colors(
                                         focusedContainerColor = Color.Transparent,
@@ -354,40 +374,49 @@ fun FolderScreen(
                                         disabledIndicatorColor = Color.Transparent,
                                     ),
                                     modifier = Modifier
-                                        .fillMaxWidth()
+                                        .weight(1f)
                                         .focusRequester(focusRequester)
                                 )
                             } else {
-                                 // scanner icon and title
-                                 Row(
-                                     verticalAlignment = Alignment.CenterVertically,
-                                     modifier = Modifier
-                                         .clip(RoundedCornerShape(8.dp))
-                                         .combinedClickable(
-                                             onClick = {
-                                                 coroutineScope.launch {
-                                                     triggerMediaScan(context, database, coroutineScope, playerConnection, snackbarHostState)
-                                                 }
-                                             },
-                                             onLongClick = {
-                                                 coroutineScope.launch {
-                                                     triggerMediaScan(context, database, coroutineScope, playerConnection, snackbarHostState, fullRescan = true)
-                                                 }
-                                             }
-                                         )
-                                         .padding(horizontal = 8.dp, vertical = 6.dp)
-                                 ) {
-                                     Icon(
-                                         imageVector = Icons.Rounded.SdCard,
-                                         contentDescription = stringResource(R.string.scanner_local_title)
-                                     )
-                                     Spacer(modifier = Modifier.width(6.dp))
-                                     Text(
-                                         text = stringResource(R.string.scanner_local_title),
-                                         style = MaterialTheme.typography.titleMedium,
-                                         fontWeight = FontWeight.SemiBold
-                                     )
-                                 }
+                                // Scanner pill with clear icon and label
+                                Surface(
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = MaterialTheme.colorScheme.surfaceColorAtElevation(2.dp),
+                                    tonalElevation = 2.dp,
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .combinedClickable(
+                                            onClick = {
+                                                coroutineScope.launch {
+                                                    triggerMediaScan(context, database, coroutineScope, playerConnection, snackbarHostState)
+                                                }
+                                            },
+                                            onLongClick = {
+                                                coroutineScope.launch {
+                                                    triggerMediaScan(context, database, coroutineScope, playerConnection, snackbarHostState, fullRescan = true)
+                                                }
+                                            }
+                                        )
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Rounded.Sync,
+                                            contentDescription = stringResource(R.string.scanner_local_title),
+                                            tint = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                        Text(
+                                            text = stringResource(R.string.scanner_local_title),
+                                            style = MaterialTheme.typography.labelMedium,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                    }
+                                }
                             }
 
                             if (!isSearching) {
@@ -480,7 +509,7 @@ fun FolderScreen(
 
                 // all subdirectories listed here
                 itemsIndexed(
-                    items = if (flatSubfolders) currDir.getFlattenedSubdirs() else currDir.subdirs,
+                    items = subdirsList,
                     key = { _, item -> item.uid },
                     contentType = { _, _ -> CONTENT_TYPE_FOLDER }
                 ) { index, folder ->
@@ -525,10 +554,88 @@ fun FolderScreen(
             }
             if (currDir.isSkeleton) return@LazyColumn
 
+            val currentSongs = if (isSearching) filteredSongs else mutableSongs
+            if (currDir.subdirs.isEmpty() && currentSongs.isEmpty()) {
+                item(key = "empty_folder_state") {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 32.dp, vertical = 64.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Surface(
+                            shape = CircleShape,
+                            color = MaterialTheme.colorScheme.surfaceColorAtElevation(4.dp),
+                            tonalElevation = 4.dp,
+                            modifier = Modifier.size(80.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = if (isSearching) Icons.Rounded.SearchOff else Icons.Rounded.FolderOff,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(36.dp)
+                                )
+                            }
+                        }
+
+                        Spacer(Modifier.height(20.dp))
+
+                        Text(
+                            text = if (isSearching) "No matches found" else "No local audio files",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            textAlign = TextAlign.Center
+                        )
+
+                        Spacer(Modifier.height(8.dp))
+
+                        Text(
+                            text = if (isSearching) {
+                                "Try searching for a different song or folder name."
+                            } else {
+                                "Scan your device storage to automatically index music folders, albums, and tracks for offline playback."
+                            },
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center
+                        )
+
+                        if (!isSearching) {
+                            Spacer(Modifier.height(24.dp))
+
+                            FilledTonalButton(
+                                onClick = {
+                                    coroutineScope.launch {
+                                        triggerMediaScan(context, database, coroutineScope, playerConnection, snackbarHostState)
+                                    }
+                                },
+                                shape = RoundedCornerShape(14.dp),
+                                contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Rounded.Sync,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(Modifier.width(8.dp))
+                                Text(
+                                    text = "Scan Storage",
+                                    style = MaterialTheme.typography.labelLarge,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
             // all songs get listed here
             val thumbnailSize = (ListThumbnailSize.value * density.density).roundToInt()
             itemsIndexed(
-                items = if (isSearching) filteredSongs else mutableSongs,
+                items = currentSongs,
                 key = { _, item -> item.id },
                 contentType = { _, _ -> CONTENT_TYPE_SONG }
             ) { index, song ->

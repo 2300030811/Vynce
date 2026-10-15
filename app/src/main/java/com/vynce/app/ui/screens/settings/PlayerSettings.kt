@@ -9,7 +9,6 @@
 
 package com.vynce.app.ui.screens.settings
 
-import androidx.compose.runtime.remember
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -30,6 +29,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -38,10 +38,10 @@ import androidx.navigation.NavController
 import com.vynce.app.R
 import com.vynce.app.constants.AudioDecoderKey
 import com.vynce.app.constants.ENABLE_FFMETADATAEX
+import com.vynce.app.constants.EnableRemoteControlKey
 import com.vynce.app.constants.KeepAliveKey
 import com.vynce.app.constants.PersistentQueueKey
 import com.vynce.app.constants.StopMusicOnTaskClearKey
-import com.vynce.app.constants.EnableRemoteControlKey
 import com.vynce.app.constants.TopBarInsets
 import com.vynce.app.playback.RemoteControlServer
 import com.vynce.app.ui.component.ColumnWithContentPadding
@@ -115,7 +115,7 @@ fun PlayerSettings(
         ElevatedCard(
             modifier = Modifier.fillMaxWidth()
         ) {
-            AudioEffectsFrag()
+            AudioEffectsFrag(navController)
         }
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -192,7 +192,6 @@ fun PlayerSettings(
         Spacer(Modifier.height(96.dp))
     }
 
-
     TopAppBar(
         title = { Text(stringResource(R.string.player_and_audio)) },
         navigationIcon = {
@@ -210,4 +209,3 @@ fun PlayerSettings(
         scrollBehavior = scrollBehavior
     )
 }
-

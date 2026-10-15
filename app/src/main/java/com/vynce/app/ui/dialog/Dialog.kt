@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
@@ -38,6 +39,10 @@ import androidx.compose.material.icons.outlined.Error
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material3.AlertDialog
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import coil3.compose.AsyncImage
+import com.vynce.app.LocalPlayerConnection
 import androidx.compose.material3.AlertDialogDefaults
 import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -513,7 +518,24 @@ fun DetailsDialog(
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     val snackbarHostState = LocalSnackbarHostState.current
-    val copiedText = stringResource(R.string.copied)
+    val playerConnection = com.vynce.app.LocalPlayerConnection.current
+    val liveAudioFormat = playerConnection?.player?.audioFormat
+
+    fun copyToClipboard(label: String, value: String) {
+        val clipData = ClipData.newPlainText(label, AnnotatedString(value))
+        clipboardManager.nativeClipboard.setPrimaryClip(clipData)
+        coroutineScope.launch {
+            val job = launch {
+                snackbarHostState.showSnackbar(
+                    message = "Copied $label",
+                    withDismissAction = true,
+                    duration = SnackbarDuration.Indefinite
+                )
+            }
+            delay(SNACKBAR_VERY_SHORT)
+            job.cancel()
+        }
+    }
 
     AlertDialog(
         properties = DialogProperties(usePlatformDefaultWidth = false),
@@ -521,7 +543,15 @@ fun DetailsDialog(
         icon = {
             Icon(
                 imageVector = Icons.Rounded.Info,
-                contentDescription = null
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary
+            )
+        },
+        title = {
+            Text(
+                text = stringResource(R.string.details),
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold
             )
         },
         confirmButton = {
@@ -535,102 +565,234 @@ fun DetailsDialog(
             Column(
                 modifier = Modifier
                     .sizeIn(minWidth = 280.dp, maxWidth = 560.dp)
-                    .verticalScroll(rememberScrollState())
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                val details = mutableListOf(
-                    stringResource(R.string.song_title) to mediaMetadata.title,
-                    stringResource(R.string.song_artists) to mediaMetadata.artists?.joinToString { it.name },
-                    stringResource(R.string.media_id) to mediaMetadata.id,
-                    stringResource(R.string.play_count) to currentPlayCount.toString()
-                )
-
-                if (!mediaMetadata.isLocal) {
-                    details.add("Itag" to currentFormat?.itag?.toString())
-                } else {
-                    mediaMetadata.trackNumber?.let {
-                        details.add(stringResource(R.string.track_number) to it.toString())
-                    }
-                    mediaMetadata.discNumber?.let {
-                        details.add(stringResource(R.string.disc_number) to it.toString())
-                    }
-                    details.add(stringResource(R.string.sort_by_date_released) to mediaMetadata.getDateString())
-                    details.add(stringResource(R.string.sort_by_date_modified) to mediaMetadata.getDateModifiedString())
-                }
-
-                details.addAll(
-                    mutableListOf(
-                        stringResource(R.string.mime_type) to currentFormat?.mimeType,
-                        stringResource(R.string.codecs) to currentFormat?.codecs,
-                        stringResource(R.string.bitrate) to currentFormat?.bitrate?.let { "${it / 1000} Kbps" },
-                        stringResource(R.string.sample_rate) to currentFormat?.sampleRate?.let { "$it Hz" },
-                        stringResource(R.string.bits_per_sample) to (currentFormat?.bitsPerSample?.toString()
-                            ?: stringResource(R.string.unknown)),
-                    )
-                )
-
-                if (!mediaMetadata.isLocal) {
-                    details.add(stringResource(R.string.loudness) to currentFormat?.loudnessDb?.let { "$it dB" })
-                }
-
-                details.addAll(
-                    mutableListOf(
-                        stringResource(R.string.file_size) to currentFormat?.contentLength?.let {
-                            if (mediaMetadata.isLocal && mediaMetadata.localPath != null && File(mediaMetadata.localPath).exists()) {
-                                Formatter.formatShortFileSize(
-                                    context,
-                                    File(mediaMetadata.localPath).length() * (1024 / 1000)
-                                )
-                            } else {
-                                Formatter.formatShortFileSize(context, it)
-                            }
-                        }
-                    ))
-
-                if (mediaMetadata.isLocal) {
-                    details.add(stringResource(R.string.file_path) to mediaMetadata.localPath)
-                }
-
-                currentFormat?.extraComment?.let {
-                    details.add(stringResource(R.string.extra_details) to it)
-                }
-
-                details.forEach { (label, text) ->
-                    val displayText = text ?: stringResource(R.string.unknown)
-                    Text(
-                        text = label,
-                        style = MaterialTheme.typography.labelMedium
-                    )
-                    Text(
-                        text = displayText,
-                        style = MaterialTheme.typography.titleMedium,
-                        modifier = Modifier.clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null,
-                            onClick = {
-                                val clipData = ClipData.newPlainText(label, AnnotatedString(displayText))
-                                clipboardManager.nativeClipboard.setPrimaryClip(clipData)
-
-                                coroutineScope.launch {
-                                    val job = launch {
-                                        snackbarHostState.showSnackbar(
-                                            message = copiedText,
-                                            withDismissAction = true,
-                                            duration = SnackbarDuration.Indefinite
-                                        )
-                                    }
-                                    delay(SNACKBAR_VERY_SHORT)
-                                    job.cancel()
+                // 1. Header with Artwork Thumbnail & Basic Info
+                Surface(
+                    shape = RoundedCornerShape(16.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        if (mediaMetadata.thumbnailUrl != null) {
+                            AsyncImage(
+                                model = mediaMetadata.thumbnailUrl,
+                                contentDescription = null,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier
+                                    .size(56.dp)
+                                    .clip(RoundedCornerShape(10.dp))
+                            )
+                        } else {
+                            Surface(
+                                shape = RoundedCornerShape(10.dp),
+                                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
+                                modifier = Modifier.size(56.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Info,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
                                 }
                             }
-                        )
+                        }
+
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = mediaMetadata.title,
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            val artistText = mediaMetadata.artists.takeIf { it.isNotEmpty() }?.joinToString(", ") { it.name }
+                            if (!artistText.isNullOrBlank()) {
+                                Text(
+                                    text = artistText,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                            if (mediaMetadata.album?.title?.isNotBlank() == true) {
+                                Text(
+                                    text = mediaMetadata.album.title,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // 2. Track Metadata Card
+                val trackDetails = mutableListOf<Pair<String, String>>()
+                trackDetails.add(stringResource(R.string.media_id) to mediaMetadata.id)
+                if (mediaMetadata.duration > 0) {
+                    trackDetails.add("Duration" to com.vynce.app.utils.makeTimeString((mediaMetadata.duration * 1000).toLong()))
+                }
+                if (mediaMetadata.isLocal) {
+                    mediaMetadata.trackNumber?.let { trackDetails.add(stringResource(R.string.track_number) to it.toString()) }
+                    mediaMetadata.discNumber?.let { trackDetails.add(stringResource(R.string.disc_number) to it.toString()) }
+                    mediaMetadata.getDateString()?.let { trackDetails.add(stringResource(R.string.sort_by_date_released) to it) }
+                    mediaMetadata.getDateModifiedString()?.let { trackDetails.add(stringResource(R.string.sort_by_date_modified) to it) }
+                    mediaMetadata.localPath?.let { trackDetails.add(stringResource(R.string.file_path) to it) }
+                }
+
+                DetailSectionCard(
+                    title = "Track Information",
+                    items = trackDetails,
+                    onItemClick = { label, value -> copyToClipboard(label, value) }
+                )
+
+                // 3. Playback Stats Card
+                if (currentPlayCount != null && currentPlayCount > 0) {
+                    DetailSectionCard(
+                        title = "Listening Stats",
+                        items = listOf(stringResource(R.string.play_count) to "$currentPlayCount plays"),
+                        onItemClick = { label, value -> copyToClipboard(label, value) }
                     )
-                    Spacer(Modifier.height(8.dp))
+                }
+
+                // 4. Audio Quality & Specifications Card
+                val audioSpecs = mutableListOf<Pair<String, String>>()
+
+                // Bitrate
+                val bitrateKbps = currentFormat?.bitrate?.let { it / 1000 }
+                    ?: liveAudioFormat?.bitrate?.takeIf { it > 0 }?.let { it / 1000 }
+                if (bitrateKbps != null && bitrateKbps > 0) {
+                    audioSpecs.add(stringResource(R.string.bitrate) to "$bitrateKbps Kbps")
+                }
+
+                // Sample Rate
+                val sampleRateHz = currentFormat?.sampleRate
+                    ?: liveAudioFormat?.sampleRate?.takeIf { it > 0 }
+                if (sampleRateHz != null && sampleRateHz > 0) {
+                    val formattedSr = if (sampleRateHz % 1000 == 0) "${sampleRateHz / 1000} kHz" else String.format(java.util.Locale.US, "%.1f kHz", sampleRateHz / 1000f)
+                    audioSpecs.add(stringResource(R.string.sample_rate) to "$formattedSr ($sampleRateHz Hz)")
+                }
+
+                // Channels
+                val channels = liveAudioFormat?.channelCount?.takeIf { it > 0 }
+                if (channels != null) {
+                    val channelLabel = when (channels) {
+                        1 -> "1 Channel (Mono)"
+                        2 -> "2 Channels (Stereo)"
+                        6 -> "5.1 Surround"
+                        8 -> "7.1 Surround"
+                        else -> "$channels Channels"
+                    }
+                    audioSpecs.add("Channels" to channelLabel)
+                }
+
+                // MIME type / Codec
+                val mime = currentFormat?.mimeType ?: liveAudioFormat?.sampleMimeType
+                val codecs = currentFormat?.codecs ?: liveAudioFormat?.codecs
+                if (!mime.isNullOrBlank()) {
+                    val friendlyCodec = when {
+                        mime.contains("mp4a", ignoreCase = true) || mime.contains("aac", ignoreCase = true) -> "AAC ($mime)"
+                        mime.contains("flac", ignoreCase = true) -> "FLAC Lossless ($mime)"
+                        mime.contains("opus", ignoreCase = true) -> "Opus ($mime)"
+                        mime.contains("vorbis", ignoreCase = true) -> "Ogg Vorbis ($mime)"
+                        mime.contains("mpeg", ignoreCase = true) || mime.contains("mp3", ignoreCase = true) -> "MP3 ($mime)"
+                        else -> mime
+                    }
+                    audioSpecs.add(stringResource(R.string.mime_type) to friendlyCodec)
+                } else if (!codecs.isNullOrBlank()) {
+                    audioSpecs.add(stringResource(R.string.codecs) to codecs)
+                }
+
+                // Bits per sample
+                currentFormat?.bitsPerSample?.takeIf { it > 0 }?.let {
+                    audioSpecs.add(stringResource(R.string.bits_per_sample) to "$it-bit")
+                }
+
+                // Loudness
+                currentFormat?.loudnessDb?.let {
+                    audioSpecs.add(stringResource(R.string.loudness) to "$it dB")
+                }
+
+                // File size
+                val fileSize = currentFormat?.contentLength?.let {
+                    if (mediaMetadata.isLocal && mediaMetadata.localPath != null && File(mediaMetadata.localPath).exists()) {
+                        Formatter.formatShortFileSize(context, File(mediaMetadata.localPath).length())
+                    } else {
+                        Formatter.formatShortFileSize(context, it)
+                    }
+                }
+                if (fileSize != null) {
+                    audioSpecs.add(stringResource(R.string.file_size) to fileSize)
+                }
+
+                if (audioSpecs.isNotEmpty()) {
+                    DetailSectionCard(
+                        title = "Audio Specifications",
+                        items = audioSpecs,
+                        onItemClick = { label, value -> copyToClipboard(label, value) }
+                    )
                 }
             }
         },
-        containerColor = MaterialTheme.colorScheme.background,
+        containerColor = MaterialTheme.colorScheme.surface,
         shape = RoundedCornerShape(DialogCornerRadius)
     )
+}
+
+@Composable
+private fun DetailSectionCard(
+    title: String,
+    items: List<Pair<String, String>>,
+    onItemClick: (label: String, value: String) -> Unit
+) {
+    Surface(
+        shape = RoundedCornerShape(14.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.Bold
+            )
+
+            items.forEach { (label, value) ->
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
+                        .clickable { onItemClick(label, value) }
+                        .padding(vertical = 2.dp)
+                ) {
+                    Text(
+                        text = label,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = value,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+            }
+        }
+    }
 }
 
 @Composable

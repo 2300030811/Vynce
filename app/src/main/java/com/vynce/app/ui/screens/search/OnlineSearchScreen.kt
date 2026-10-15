@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -171,7 +172,7 @@ fun OnlineSearchScreen(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         modifier = Modifier.padding(bottom = 12.dp)
                     ) {
-                        items(viewState.history, key = { it.query }) { history ->
+                        items(viewState.history, key = { it.id }) { history ->
                             Surface(
                                 shape = RoundedCornerShape(20.dp),
                                 color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
@@ -451,15 +452,15 @@ fun OnlineSearchScreen(
                                             )
                                             cat.badge?.let { badge ->
                                                 Surface(
-                                                    color = Color(0xFF1DB954).copy(alpha = 0.15f),
-                                                    shape = RoundedCornerShape(4.dp)
+                                                    color = VyncePurple.copy(alpha = 0.18f),
+                                                    shape = RoundedCornerShape(6.dp)
                                                 ) {
                                                     Text(
                                                         text = badge,
                                                         modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                                                         fontSize = 9.sp,
-                                                        fontWeight = FontWeight.Bold,
-                                                        color = Color(0xFF1DB954)
+                                                        fontWeight = FontWeight.ExtraBold,
+                                                        color = VyncePurple
                                                     )
                                                 }
                                             }
@@ -502,7 +503,7 @@ fun OnlineSearchScreen(
             // ── QUERY IS ACTIVE: LIVE SEARCH SUGGESTIONS & RESULTS ───────────
             items(
                 items = viewState.history,
-                key = { it.query }
+                key = { "history_${it.id}" }
             ) { history ->
                 SuggestionItem(
                     query = history.query,
@@ -528,10 +529,10 @@ fun OnlineSearchScreen(
                 )
             }
 
-            items(
+            itemsIndexed(
                 items = viewState.suggestions,
-                key = { it }
-            ) { querySuggestion ->
+                key = { index, querySuggestion -> "suggestion_${index}_$querySuggestion" }
+            ) { _, querySuggestion ->
                 val decodedQuery = querySuggestion.decodeHtml()
                 SuggestionItem(
                     query = decodedQuery,
@@ -560,7 +561,7 @@ fun OnlineSearchScreen(
 
             items(
                 items = viewState.items,
-                key = { it.id }
+                key = { "song_${it.id}" }
             ) { item ->
                 val content: @Composable () -> Unit = {
                     SaavnSongListItem(
@@ -662,7 +663,7 @@ fun CuratedMixCard(
                         )
                 )
                 Surface(
-                    color = Color.Black.copy(alpha = 0.65f),
+                    color = Color.Black.copy(alpha = 0.7f),
                     shape = RoundedCornerShape(6.dp),
                     modifier = Modifier
                         .align(Alignment.TopStart)
@@ -672,7 +673,7 @@ fun CuratedMixCard(
                         text = playlist.category.uppercase(),
                         fontSize = 9.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFF1DB954),
+                        color = VyncePurple,
                         modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                     )
                 }
@@ -693,7 +694,11 @@ fun CuratedMixCard(
                     )
                 }
             }
-            Column(modifier = Modifier.padding(10.dp)) {
+            Column(
+                modifier = Modifier
+                    .padding(10.dp)
+                    .fillMaxWidth()
+            ) {
                 Text(
                     text = playlist.name,
                     style = MaterialTheme.typography.titleSmall,
@@ -706,8 +711,10 @@ fun CuratedMixCard(
                     text = playlist.subtitle,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    maxLines = 2,
+                    minLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    lineHeight = 16.sp
                 )
             }
         }

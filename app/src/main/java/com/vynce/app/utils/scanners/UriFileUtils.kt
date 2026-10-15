@@ -29,62 +29,63 @@ fun uriListFromString(str: String): List<Uri> {
 }
 
 fun fileFromUri(context: Context, uri: Uri): File? {
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-        if (!DocumentsContract.isTreeUri(uri)) return null
-        if (uri.authority != "com.android.externalstorage.documents") return null
+    if (uri.scheme == "file") {
+        return uri.path?.let { File(it) }
+    }
 
-        val treeDocId = DocumentsContract.getDocumentId(uri)
-        val rootId: String
-        val relativePath: String
-
-        if (treeDocId.contains(":")) {
-            val parts = treeDocId.split(":", limit = 2)
-            rootId = parts[0]
-            relativePath = parts[1]
-        } else {
-            rootId = treeDocId
-            relativePath = ""
+    if (uri.authority == "com.android.externalstorage.documents") {
+        val docId = try {
+            if (DocumentsContract.isDocumentUri(context, uri)) {
+                DocumentsContract.getDocumentId(uri)
+            } else if (DocumentsContract.isTreeUri(uri)) {
+                DocumentsContract.getTreeDocumentId(uri)
+            } else {
+                DocumentsContract.getDocumentId(uri)
+            }
+        } catch (_: Exception) {
+            uri.lastPathSegment ?: ""
         }
 
-        val storageManager = context.getSystemService(Context.STORAGE_SERVICE) as StorageManager
+        val parts = docId.split(":", limit = 2)
+        if (parts.size >= 2) {
+            val rootId = parts[0]
+            val relativePath = parts[1]
 
-        val rootDir = if (rootId.equals("primary", ignoreCase = true)) {
-            storageManager.primaryStorageVolume.directory
-        } else {
-            storageManager.storageVolumes.firstOrNull {
-                it.uuid != null && it.uuid.equals(rootId, ignoreCase = true)
-            }?.directory
-        }
+            val storageManager = context.getSystemService(Context.STORAGE_SERVICE) as StorageManager
 
-        return rootDir?.let { if (relativePath.isEmpty()) it else File(it, relativePath) }
-    } else {
-        if (!DocumentsContract.isDocumentUri(context, uri)) return null
-
-        if (uri.authority != "com.android.externalstorage.documents") return null
-
-        val docId = DocumentsContract.getDocumentId(uri)
-        val parts = docId.split(":")
-
-        if (parts.size < 2) return null
-
-        val type = parts[0]
-        val relativePath = parts[1]
-
-        val rootDir = when (type.lowercase()) {
-            "primary" -> Environment.getExternalStorageDirectory()
-            else -> {
-                // Try to handle secondary storage
-                val secondaryStorage = "/storage/$type"
-                if (File(secondaryStorage).exists()) {
-                    File(secondaryStorage)
+            val rootDir = if (rootId.equals("primary", ignoreCase = true)) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                    storageManager.primaryStorageVolume.directory
                 } else {
-                    null
+                    Environment.getExternalStorageDirectory()
+                }
+            } else {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                    storageManager.storageVolumes.firstOrNull {
+                        it.uuid != null && it.uuid.equals(rootId, ignoreCase = true)
+                    }?.directory
+                } else {
+                    val secondaryStorage = "/storage/$rootId"
+                    if (File(secondaryStorage).exists()) {
+                        File(secondaryStorage)
+                    } else {
+                        null
+                    }
                 }
             }
-        }
 
-        return rootDir?.let { File(it, relativePath) }
+            return rootDir?.let { if (relativePath.isEmpty()) it else File(it, relativePath) }
+        }
     }
+
+    // Direct filesystem path fallback
+    val rawPath = uri.path
+    if (rawPath != null) {
+        val directFile = File(rawPath)
+        if (directFile.exists()) return directFile
+    }
+
+    return null
 }
 
 fun absoluteFilePathFromUri(context: Context, uri: Uri): String? {

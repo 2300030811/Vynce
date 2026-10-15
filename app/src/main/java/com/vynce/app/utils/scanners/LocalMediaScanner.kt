@@ -1006,6 +1006,10 @@ class LocalMediaScanner(scannerImpl: ScannerImpl) {
     }
 
     private suspend fun disableSongsByPath(newSongs: List<String>, database: MusicDatabase) {
+        if (newSongs.isEmpty()) {
+            Log.w(TAG, "Skipping disableSongsByPath: newSongs is empty, keeping existing library intact")
+            return
+        }
         Log.i(TAG, "Start finalize (disableSongsByPath) job. Number of valid songs: ${newSongs.size}")
         // get list of all local songs in db
         database.disableInvalidLocalSongs() // make sure path is existing
@@ -1013,16 +1017,17 @@ class LocalMediaScanner(scannerImpl: ScannerImpl) {
         // Use a HashSet for O(1) lookup performance
         val newPathsSet = newSongs.toHashSet()
         database.runInTransaction {
-            // disable if not in directory anymore
+            // disable if not in directory anymore AND file no longer exists on disk
             for (song in allSongs) {
                 val path = song.song.localPath ?: continue
 
-                // new songs is all songs that are known to be valid
-                // delete all songs in the DB that do not match a path
                 if (!newPathsSet.contains(path)) {
-                    if (SCANNER_DEBUG)
-                        Log.v(TAG, "Disabling song $path")
-                    disableLocalSong(song.song.id)
+                    val file = File(path)
+                    if (!file.exists()) {
+                        if (SCANNER_DEBUG)
+                            Log.v(TAG, "File no longer exists on disk, disabling song $path")
+                        database.disableLocalSong(song.song.id)
+                    }
                 }
             }
         }
@@ -1030,6 +1035,10 @@ class LocalMediaScanner(scannerImpl: ScannerImpl) {
     }
 
     private suspend fun disableSongs(newSongs: List<Song>, database: MusicDatabase) {
+        if (newSongs.isEmpty()) {
+            Log.w(TAG, "Skipping disableSongs: newSongs is empty, keeping existing library intact")
+            return
+        }
         Log.i(TAG, "Start finalize (disableSongs) job. Number of valid songs: ${newSongs.size}")
 
         // get list of all local songs in db
@@ -1039,16 +1048,17 @@ class LocalMediaScanner(scannerImpl: ScannerImpl) {
         val newPathsSet = newSongs.mapNotNull { it.song.localPath }.toHashSet()
 
         database.runInTransaction {
-            // disable if not in directory anymore
+            // disable if not in directory anymore AND file no longer exists on disk
             for (song in allSongs) {
                 val path = song.song.localPath ?: continue
 
-                // new songs is all songs that are known to be valid
-                // delete all songs in the DB that do not match a path
                 if (!newPathsSet.contains(path)) {
-                    if (SCANNER_DEBUG)
-                        Log.v(TAG, "Disabling song $path")
-                    database.disableLocalSong(song.song.id)
+                    val file = File(path)
+                    if (!file.exists()) {
+                        if (SCANNER_DEBUG)
+                            Log.v(TAG, "File no longer exists on disk, disabling song $path")
+                        database.disableLocalSong(song.song.id)
+                    }
                 }
             }
         }

@@ -3,6 +3,7 @@ package com.vynce.app.utils
 import android.util.Log
 import android.util.LruCache
 import androidx.media3.common.util.UnstableApi
+import com.vynce.app.constants.AudioQuality
 import com.vynce.jiosaavn.JioSaavn
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
@@ -22,9 +23,10 @@ class SaavnStreamResolver @Inject constructor() {
      * This method blocks the calling thread, so it MUST NOT be called from the Main thread.
      * It is designed to be used within ExoPlayer's ResolvingDataSource resolver.
      */
-    fun resolve(saavnId: String): String? {
+    fun resolve(saavnId: String, quality: AudioQuality = AudioQuality.AUTO): String? {
+        val cacheKey = "$saavnId:${quality.name}"
         val cached = synchronized(streamUrlCache) {
-            streamUrlCache.get(saavnId)
+            streamUrlCache.get(cacheKey)
         }
         if (cached != null) {
             val age = android.os.SystemClock.elapsedRealtime() - cached.resolvedAt
@@ -32,7 +34,7 @@ class SaavnStreamResolver @Inject constructor() {
                 return cached.url
             } else {
                 synchronized(streamUrlCache) {
-                    streamUrlCache.remove(saavnId)
+                    streamUrlCache.remove(cacheKey)
                 }
             }
         }
@@ -42,12 +44,12 @@ class SaavnStreamResolver @Inject constructor() {
             // Using runBlocking is necessary to bridge the gap between ExoPlayer's 
             // synchronous API and JioSaavn's asynchronous API.
             val song = runBlocking(Dispatchers.IO) {
-                JioSaavn.getSong(saavnId)
+                JioSaavn.getSong(saavnId, quality)
             }
             val streamUrl = with(JioSaavn) { song?.streamUrl() }
             if (streamUrl != null) {
                 synchronized(streamUrlCache) {
-                    streamUrlCache.put(saavnId, CachedUrl(streamUrl, android.os.SystemClock.elapsedRealtime()))
+                    streamUrlCache.put(cacheKey, CachedUrl(streamUrl, android.os.SystemClock.elapsedRealtime()))
                 }
             }
             streamUrl
@@ -58,10 +60,13 @@ class SaavnStreamResolver @Inject constructor() {
     }
 
     /**
-     * Invalidates a cached stream URL for a given Saavn ID.
+     * Invalidates cached stream URLs for a given Saavn ID.
      */
     fun invalidate(saavnId: String) {
         synchronized(streamUrlCache) {
+            for (q in AudioQuality.entries) {
+                streamUrlCache.remove("$saavnId:${q.name}")
+            }
             streamUrlCache.remove(saavnId)
         }
     }

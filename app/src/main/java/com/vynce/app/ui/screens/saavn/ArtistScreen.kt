@@ -61,7 +61,38 @@ fun ArtistScreen(
         artistWikiImage = null
 
         try {
-            val (info, songList, albumList) = JioSaavn.getArtistDetail(artistId)
+            val cleanQuery = artistId
+                .removePrefix("saavn_artist:")
+                .removePrefix("unknown_")
+                .trim()
+
+            var (info, songList, albumList) = if (cleanQuery.all { it.isDigit() } && cleanQuery.isNotEmpty()) {
+                JioSaavn.getArtistDetail(cleanQuery)
+            } else {
+                val searchResults = JioSaavn.searchArtists(cleanQuery)
+                if (searchResults.isNotEmpty()) {
+                    val resolvedId = searchResults.first().id
+                    JioSaavn.getArtistDetail(resolvedId)
+                } else {
+                    Triple(SaavnArtistInfo(id = cleanQuery, name = cleanQuery), emptyList(), emptyList())
+                }
+            }
+
+            // Fallback: If songs list is empty, search songs for this artist so user can listen to their tracks
+            if (songList.isEmpty() && (info.name.isNotBlank() || cleanQuery.isNotBlank())) {
+                val queryName = if (info.name.isNotBlank()) info.name else cleanQuery
+                val searchedSongs = JioSaavn.searchSongs(queryName)
+                if (searchedSongs.isNotEmpty()) {
+                    songList = searchedSongs
+                    if (info.name.isBlank()) {
+                        info = info.copy(name = queryName)
+                    }
+                    if (info.image.isBlank()) {
+                        info = info.copy(image = searchedSongs.firstOrNull()?.image ?: "")
+                    }
+                }
+            }
+
             artistInfo = info
             songs = songList
             albums = albumList

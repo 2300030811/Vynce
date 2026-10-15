@@ -75,7 +75,7 @@ fun HomeScreen(
     // ponytail: Expand top app bar / search bar whenever user is at top of home screen to avoid blank space gap
     val isAtTop by remember {
         derivedStateOf {
-            lazyListState.firstVisibleItemIndex == 0 && lazyListState.firstVisibleItemScrollOffset == 0
+            !lazyListState.isScrollInProgress && lazyListState.firstVisibleItemIndex == 0 && lazyListState.firstVisibleItemScrollOffset == 0
         }
     }
 
@@ -198,63 +198,57 @@ fun HomeScreen(
                 )
             ) {
 
-                // ── GREETING ────────────────────────────────────
+                // ── HEADER & INSIGHTS ────────────────────────────
                 item(key = "greeting", contentType = "greeting") {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 4.dp),
+                            .padding(start = 20.dp, end = 16.dp, top = 6.dp, bottom = 8.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
-                            Text(greeting(), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-                            Spacer(Modifier.height(4.dp))
-                            
-                            val subtitle = if (state.continueListening.isNotEmpty()) {
-                                "▶ Resume ${state.continueListening.first().title}"
-                            } else if (state.totalPlayCount > 0) {
-                                "Ready to vibe with ${state.totalPlayCount} songs today?"
-                            } else {
-                                stringResource(R.string.ready_to_vibe_today)
-                            }
-                            
-                            val subtitleModifier = if (state.continueListening.isNotEmpty()) {
-                                Modifier
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .clickable {
-                                        val first = state.continueListening.first()
-                                        playStatsSong(first.songId, first.title, first.artist, first.thumbnail)
-                                    }
-                                    .padding(vertical = 4.dp, horizontal = 8.dp)
-                                    .offset(x = (-8).dp)
-                            } else {
-                                Modifier
-                            }
-                            
-                            val subtitleColor = if (state.continueListening.isNotEmpty()) {
-                                MaterialTheme.colorScheme.primary
-                            } else {
-                                MaterialTheme.colorScheme.onSurfaceVariant
-                            }
-
-                            Row(modifier = subtitleModifier, verticalAlignment = Alignment.CenterVertically) {
-                                Text(
-                                    text = subtitle, 
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    color = subtitleColor
-                                )
-                            }
+                            Text(
+                                text = greeting(),
+                                style = MaterialTheme.typography.headlineMedium.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    letterSpacing = (-0.5).sp
+                                ),
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Spacer(Modifier.height(2.dp))
+                            Text(
+                                text = sessionSubtitle(state.todayPlayCount),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
 
-                        IconButton(
-                            onClick = { navController.navigate(Screens.Stats.route) }
+                        Surface(
+                            onClick = { navController.navigate(Screens.Stats.route) },
+                            shape = RoundedCornerShape(14.dp),
+                            color = MaterialTheme.colorScheme.surfaceColorAtElevation(3.dp),
+                            tonalElevation = 2.dp,
+                            modifier = Modifier.padding(start = 12.dp)
                         ) {
-                            Icon(
-                                imageVector = Icons.Rounded.BarChart,
-                                contentDescription = "Detailed Insights & Stats",
-                                tint = MaterialTheme.colorScheme.primary
-                            )
+                            Row(
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Rounded.BarChart,
+                                    contentDescription = "Detailed Insights",
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Text(
+                                    text = "Insights",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
                         }
                     }
                 }
@@ -512,11 +506,27 @@ fun AiDialogWrapper(
 fun greeting(): String {
     val hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
     return when {
-        hour < 5  -> "Good Night, Late Owl 👋"
-        hour < 12 -> "Good Morning 👋"
-        hour < 17 -> "Good Afternoon 👋"
-        hour < 21 -> "Good Evening 👋"
-        else      -> "Good Night 👋"
+        hour < 5  -> "Night Session"
+        hour < 12 -> "Morning Flow"
+        hour < 17 -> "Afternoon Rhythm"
+        hour < 21 -> "Evening Session"
+        else      -> "Night Session"
+    }
+}
+
+fun sessionSubtitle(todayPlays: Int): String {
+    if (todayPlays > 0) {
+        val songWord = if (todayPlays == 1) "song" else "songs"
+        return "$todayPlays $songWord played today"
+    }
+    
+    val hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
+    return when {
+        hour < 5  -> "Late night vibes and soothing sounds"
+        hour < 12 -> "Ready for your morning soundtrack?"
+        hour < 17 -> "Soundtrack for your afternoon"
+        hour < 21 -> "Unwind with your favorite tracks"
+        else      -> "Late night vibes and soothing sounds"
     }
 }
 
@@ -646,13 +656,28 @@ fun ArtistCircleCard(artist: com.vynce.jiosaavn.SaavnArtist, onClick: () -> Unit
 @Composable
 fun QuickActionCard(icon: ImageVector, label: String, contentColor: Color, modifier: Modifier = Modifier, onClick: () -> Unit) {
     Surface(
-        onClick = onClick, modifier = modifier.height(64.dp),
-        shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surfaceColorAtElevation(2.dp), tonalElevation = 2.dp
+        onClick = onClick,
+        modifier = modifier.height(54.dp),
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surfaceColorAtElevation(2.dp),
+        tonalElevation = 2.dp
     ) {
-        Column(Modifier.fillMaxSize().padding(8.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-            Icon(icon, null, Modifier.size(22.dp), tint = contentColor)
-            Spacer(Modifier.height(4.dp))
-            Text(label, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, maxLines = 1)
+        Column(
+            Modifier
+                .fillMaxSize()
+                .padding(vertical = 6.dp, horizontal = 4.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Icon(icon, contentDescription = label, Modifier.size(20.dp), tint = contentColor)
+            Spacer(Modifier.height(3.dp))
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1
+            )
         }
     }
 }

@@ -48,6 +48,7 @@ import com.vynce.app.models.MediaMetadata
 import com.vynce.app.playback.ExoDownloadService
 import com.vynce.app.playback.queues.ListQueue
 import com.vynce.app.ui.component.button.IconButton
+import com.vynce.app.utils.urlEncode
 import com.vynce.app.ui.component.items.ListItem
 import com.vynce.app.ui.dialog.AddToPlaylistDialog
 import com.vynce.app.ui.dialog.AddToQueueDialog
@@ -216,24 +217,49 @@ fun SaavnSongMenu(
             }
         }
         mediaMetadata.album?.let { album ->
-            GridMenuItem(
-                icon = Icons.Rounded.Album,
-                title = R.string.view_album
-            ) {
-                navController.navigate("album/${album.id}")
-                onDismiss()
+            if (!album.id.startsWith("soundcloud_album:") && !album.id.startsWith("bandcamp_album:")) {
+                GridMenuItem(
+                    icon = Icons.Rounded.Album,
+                    title = R.string.view_album
+                ) {
+                    val encodedId = album.id.urlEncode()
+                    val encodedTitle = album.title.urlEncode()
+                    navController.navigate("album/$encodedId?title=$encodedTitle")
+                    onDismiss()
+                }
             }
         }
         GridMenuItem(
             icon = Icons.Rounded.Share,
             title = R.string.share
         ) {
+            val shareUrl = when {
+                song.id.startsWith("soundcloud:") -> "https://soundcloud.com"
+                song.id.startsWith("bandcamp:") -> song.id.removePrefix("bandcamp:")
+                song.id.startsWith("saavn:") -> "https://www.jiosaavn.com/song/${song.id.removePrefix("saavn:")}"
+                song.id.isNotBlank() -> "https://www.jiosaavn.com/song/${song.id}"
+                else -> ""
+            }
+            val artistText = song.primaryArtists.takeIf { it.isNotBlank() } ?: "Unknown Artist"
+            val shareText = buildString {
+                append("\"${song.name}\" by $artistText")
+                if (song.album.isNotBlank()) {
+                    append("\nAlbum: ${song.album}")
+                }
+                if (shareUrl.isNotBlank()) {
+                    append("\nListen here: $shareUrl")
+                }
+                append("\n\nShared via Vynce")
+            }
+
             val intent = Intent().apply {
                 action = Intent.ACTION_SEND
                 type = "text/plain"
-                putExtra(Intent.EXTRA_TEXT, "https://www.jiosaavn.com/song/${song.id}")
+                putExtra(Intent.EXTRA_SUBJECT, song.name)
+                putExtra(Intent.EXTRA_TITLE, song.name)
+                putExtra(Intent.EXTRA_TEXT, shareText)
             }
-            context.startActivity(Intent.createChooser(intent, null))
+            context.startActivity(Intent.createChooser(intent, "Share track via"))
             onDismiss()
         }
     }

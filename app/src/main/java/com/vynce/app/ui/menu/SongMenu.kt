@@ -71,6 +71,7 @@ import com.vynce.app.ui.dialog.TextFieldDialog
 import com.vynce.app.utils.joinByBullet
 import com.vynce.app.utils.makeTimeString
 import com.vynce.app.utils.rememberEnumPreference
+import com.vynce.app.utils.urlEncode
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -262,7 +263,9 @@ fun SongMenu(
                 title = R.string.view_album
             ) {
                 onDismiss()
-                navController.navigate("album/${song.song.albumId}")
+                val albumTitle = song.album?.title ?: song.song.albumName
+                val query = if (albumTitle != null) "?title=${albumTitle.urlEncode()}" else ""
+                navController.navigate("album/${song.song.albumId.urlEncode()}$query")
             }
         }
         if (!song.song.isLocal)
@@ -271,14 +274,32 @@ fun SongMenu(
                 title = R.string.share
             ) {
                 onDismiss()
-                val url = "https://www.jiosaavn.com/song/${song.id.removePrefix("saavn:")}"
+                val url = when {
+                    song.id.startsWith("soundcloud:") -> "https://soundcloud.com"
+                    song.id.startsWith("bandcamp:") -> song.id.removePrefix("bandcamp:")
+                    song.id.startsWith("saavn:") -> "https://www.jiosaavn.com/song/${song.id.removePrefix("saavn:")}"
+                    else -> ""
+                }
+                val artistText = song.artists.takeIf { it.isNotEmpty() }?.joinToString(", ") { it.name } ?: "Unknown Artist"
+                val shareText = buildString {
+                    append("\"${song.song.title}\" by $artistText")
+                    if (song.song.albumName?.isNotBlank() == true) {
+                        append("\nAlbum: ${song.song.albumName}")
+                    }
+                    if (url.isNotBlank()) {
+                        append("\nListen here: $url")
+                    }
+                    append("\n\nShared via Vynce")
+                }
 
                 val intent = Intent().apply {
                     action = Intent.ACTION_SEND
                     type = "text/plain"
-                    putExtra(Intent.EXTRA_TEXT, url)
+                    putExtra(Intent.EXTRA_SUBJECT, song.song.title)
+                    putExtra(Intent.EXTRA_TITLE, song.song.title)
+                    putExtra(Intent.EXTRA_TEXT, shareText)
                 }
-                context.startActivity(Intent.createChooser(intent, null))
+                context.startActivity(Intent.createChooser(intent, "Share track via"))
             }
         GridMenuItem(
             icon = Icons.Rounded.Info,

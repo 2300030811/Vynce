@@ -86,12 +86,14 @@ import com.vynce.app.constants.MediaSessionConstants.CommandToggleStartRadio
 import com.vynce.app.constants.PauseListenHistoryKey
 import com.vynce.app.constants.PersistentQueueKey
 import com.vynce.app.constants.LastFmScrobblingEnabledKey
+import com.vynce.app.constants.LastFmSessionKey
 import com.vynce.app.constants.PlayerVolumeKey
 import com.vynce.app.constants.RepeatModeKey
 import com.vynce.app.constants.SkipOnErrorKey
 import com.vynce.app.constants.SkipSilenceKey
 import com.vynce.app.constants.StopMusicOnTaskClearKey
 import com.vynce.app.constants.minPlaybackDurKey
+import com.vynce.app.utils.ProxyHelper
 import com.vynce.app.db.MusicDatabase
 import com.vynce.app.db.entities.ArtistEntity
 import com.vynce.app.db.entities.Event
@@ -153,6 +155,8 @@ import com.vynce.app.utils.LastFmScrobbler
 import com.vynce.app.utils.NetworkConnectivityObserver
 import com.vynce.app.utils.CoilBitmapLoader
 import com.vynce.app.utils.SaavnStreamResolver
+import com.vynce.app.utils.SoundCloudStreamResolver
+import com.vynce.app.utils.BandcampStreamResolver
 import com.vynce.app.playback.SleepTimer
 import com.google.common.util.concurrent.MoreExecutors
 import java.io.File
@@ -220,19 +224,29 @@ class MusicService : MediaLibraryService(),
     lateinit var saavnStreamResolver: SaavnStreamResolver
 
     @Inject
+    lateinit var soundCloudStreamResolver: SoundCloudStreamResolver
+
+    @Inject
+    lateinit var bandcampStreamResolver: BandcampStreamResolver
+
+    @Inject
     lateinit var connectivityObserver: NetworkConnectivityObserver
     val waitingForNetworkConnection = MutableStateFlow(false)
     private val isNetworkConnected = MutableStateFlow(true)
 
     lateinit var sleepTimer: SleepTimer
     lateinit var crossfadeController: CrossfadeController
+    lateinit var audioEffectManager: AudioEffectManager
 
     // Player vars
     val currentMediaMetadata = MutableStateFlow<MediaMetadata?>(null)
 
     private val currentSong = currentMediaMetadata.flatMapLatest { mediaMetadata ->
-        if (mediaMetadata?.id?.startsWith("saavn:") == true) {
-            // For JioSaavn songs, create a synthetic Song from MediaMetadata
+        if (mediaMetadata?.id?.startsWith("saavn:") == true ||
+            mediaMetadata?.id?.startsWith("soundcloud:") == true ||
+            mediaMetadata?.id?.startsWith("bandcamp:") == true
+        ) {
+            // For online streaming songs (JioSaavn, SoundCloud, Bandcamp), create a synthetic Song from MediaMetadata
             flowOf(
                 Song(
                     song = SongEntity(
@@ -350,6 +364,9 @@ class MusicService : MediaLibraryService(),
                 // misc
                 setOffloadEnabled(dataStore.get(AudioOffloadKey, false))
             }
+
+        audioEffectManager = AudioEffectManager.getInstance(this, scope)
+        audioEffectManager.attachToAudioSession(player.audioSessionId)
 
         mediaLibrarySessionCallback.apply {
             service = this@MusicService
@@ -600,7 +617,8 @@ class MusicService : MediaLibraryService(),
                     )
                     queueBoard.value.setCurrQueue(q, shouldResume)
 
-                    if (isSingleSongPlay && q != null) {
+                    val autoLoadMore = dataStore.get(AutoLoadMoreKey, true)
+                    if (isSingleSongPlay && autoLoadMore && q != null) {
                         val singleSong = items.first()
                         scope.launch(Dispatchers.IO) {
                             val similarSongs = fetchSimilarSongs(singleSong)
@@ -822,6 +840,9 @@ class MusicService : MediaLibraryService(),
                             this,
                             OkHttpDataSource.Factory(
                                 OkHttpClient.Builder()
+                                    .let { builder ->
+                                        ProxyHelper.applyProxy(builder, ProxyHelper.getProxy(dataStore))
+                                    }
                                     .build()
                             )
                         )
@@ -846,10 +867,8 @@ class MusicService : MediaLibraryService(),
                 val uri = dataSpec.uri.toString()
                 val mediaId = dataSpec.key ?: uri
 
-                // JioSaavn songs: resolve saavn:ID to actual stream URL
-                if (uri.startsWith("saavn:")) {
-                    // If the song is already fully cached in the download cache,
-                    // skip the network resolver entirely for instant offline playback.
+                // Check offline/cached downloads for online streams
+                if (uri.startsWith("saavn:") || uri.startsWith("soundcloud:") || uri.startsWith("bandcamp:")) {
                     val cachedSpans = downloadCache.getCachedSpans(mediaId)
                     val isCompleted = try {
                         val download = downloadUtil.downloadManager.downloadIndex.getDownload(mediaId)
@@ -862,17 +881,39 @@ class MusicService : MediaLibraryService(),
                         return@Factory dataSpec
                     }
 
-                    // Check the custom SAF download directory — if the file was saved
-                    // there, play it directly without hitting the network.
                     val localUri = downloadUtil.localMgr.getFilePathIfExists(mediaId)
                     if (localUri != null) {
                         Log.d(TAG, "Playing from custom download dir (offline): $mediaId")
                         return@Factory dataSpec.withUri(localUri)
                     }
+                }
 
+                // JioSaavn songs: resolve saavn:ID to actual stream URL
+                if (uri.startsWith("saavn:")) {
                     val saavnId = uri.removePrefix("saavn:")
-                    val streamUrl = saavnStreamResolver.resolve(saavnId)
+                    val quality = try {
+                        enumValueOf<AudioQuality>(dataStore.get(AudioQualityKey, AudioQuality.AUTO.name))
+                    } catch (_: Exception) { AudioQuality.AUTO }
+                    val streamUrl = saavnStreamResolver.resolve(saavnId, quality)
                         ?: throw java.io.IOException("Failed to resolve Saavn stream URL for $saavnId")
+
+                    return@Factory dataSpec.withUri(streamUrl.toUri())
+                }
+
+                // SoundCloud tracks: resolve soundcloud:ID to playable stream URL
+                if (uri.startsWith("soundcloud:")) {
+                    val soundcloudId = uri.removePrefix("soundcloud:")
+                    val streamUrl = soundCloudStreamResolver.resolve(soundcloudId)
+                        ?: throw java.io.IOException("Failed to resolve SoundCloud stream URL for $soundcloudId")
+
+                    return@Factory dataSpec.withUri(streamUrl.toUri())
+                }
+
+                // Bandcamp tracks: resolve bandcamp:URL to playable stream URL
+                if (uri.startsWith("bandcamp:")) {
+                    val bandcampUrl = uri.removePrefix("bandcamp:")
+                    val streamUrl = bandcampStreamResolver.resolve(bandcampUrl)
+                        ?: throw java.io.IOException("Failed to resolve Bandcamp stream URL for $bandcampUrl")
 
                     return@Factory dataSpec.withUri(streamUrl.toUri())
                 }
@@ -891,7 +932,8 @@ class MusicService : MediaLibraryService(),
                 dataSpec
             } catch (e: Exception) {
                 android.util.Log.e("MusicService", "Resolver error: ${dataSpec.uri}", e)
-                dataSpec
+                if (e is java.io.IOException) throw e
+                throw java.io.IOException(e)
             }
         }
     }
@@ -1031,12 +1073,15 @@ class MusicService : MediaLibraryService(),
 
         if (is403Error) {
             val mediaId = player.currentMediaItem?.mediaId
-            if (mediaId != null && mediaId.startsWith("saavn:")) {
+            if (mediaId != null && (mediaId.startsWith("saavn:") || mediaId.startsWith("soundcloud:") || mediaId.startsWith("bandcamp:"))) {
                 val retries = trackRetryCount[mediaId] ?: 0
                 if (retries < 2) {
                     trackRetryCount[mediaId] = retries + 1
-                    val cleanId = mediaId.removePrefix("saavn:")
-                    saavnStreamResolver.invalidate(cleanId)
+                    when {
+                        mediaId.startsWith("saavn:") -> saavnStreamResolver.invalidate(mediaId.removePrefix("saavn:"))
+                        mediaId.startsWith("soundcloud:") -> soundCloudStreamResolver.invalidate(mediaId.removePrefix("soundcloud:"))
+                        mediaId.startsWith("bandcamp:") -> bandcampStreamResolver.invalidate(mediaId.removePrefix("bandcamp:"))
+                    }
                     Log.w(TAG, "403 error for $mediaId. Invalidated cache, retry count: ${retries + 1}. Retrying playback.")
                     player.seekTo(player.currentMediaItemIndex, player.currentPosition)
                     player.prepare()
@@ -1115,8 +1160,10 @@ class MusicService : MediaLibraryService(),
         queueBoard.value.setCurrQueuePosIndex(player.currentMediaItemIndex)
 
         val lastFmEnabled = dataStore.get(LastFmScrobblingEnabledKey, false)
-        scrobbleManager.isEnabled = lastFmEnabled
-        if (lastFmEnabled && mediaItem != null) {
+        val lastFmSessionKey = dataStore.get(LastFmSessionKey, "")
+        lastFmScrobbler.sessionKey = lastFmSessionKey.ifBlank { null }
+        scrobbleManager.isEnabled = lastFmEnabled && !lastFmScrobbler.sessionKey.isNullOrBlank()
+        if (scrobbleManager.isEnabled && mediaItem != null) {
             val artist = mediaItem.vynceMetadata?.artists?.firstOrNull()?.name ?: "Unknown"
             val track = mediaItem.vynceMetadata?.title ?: currentSong.value?.song?.title ?: "Unknown"
             val album: String? = null
@@ -1259,6 +1306,9 @@ class MusicService : MediaLibraryService(),
 
         listeningStatsTracker.onCleared()
         crossfadeController.release()
+        if (::audioEffectManager.isInitialized) {
+            audioEffectManager.release()
+        }
         deInitQueue()
 
         player.removeListener(this@MusicService)
@@ -1271,6 +1321,12 @@ class MusicService : MediaLibraryService(),
         mediaSession.release()
         super.onDestroy()
         Log.i(TAG, "Terminated MusicService.")
+    }
+
+    override fun onAudioSessionIdChanged(audioSessionId: Int) {
+        if (::audioEffectManager.isInitialized) {
+            audioEffectManager.attachToAudioSession(audioSessionId)
+        }
     }
 
     override fun onBind(intent: Intent?) = super.onBind(intent) ?: binder

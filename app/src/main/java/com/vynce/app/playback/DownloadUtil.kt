@@ -93,6 +93,9 @@ class DownloadUtil @Inject constructor(
             .setUpstreamDataSourceFactory(
                 OkHttpDataSource.Factory(
                     OkHttpClient.Builder()
+                        .let { builder ->
+                            com.vynce.app.utils.ProxyHelper.applyProxy(builder, com.vynce.app.utils.ProxyHelper.getProxy(context.dataStore))
+                        }
                         .build()
                 )
             )
@@ -105,7 +108,7 @@ class DownloadUtil @Inject constructor(
 
         if (mediaId.startsWith("saavn:")) {
             val saavnId = mediaId.removePrefix("saavn:")
-            val streamUrl = saavnStreamResolver.resolve(saavnId)
+            val streamUrl = saavnStreamResolver.resolve(saavnId, audioQuality)
                 ?: throw java.io.IOException("Failed to resolve Saavn stream URL for $saavnId")
             
             return@Factory dataSpec.withUri(streamUrl.toUri())

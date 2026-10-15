@@ -1,5 +1,7 @@
 package com.vynce.app.ui.navigation
 
+import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.FastOutLinearInEasing
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -44,6 +46,7 @@ import com.vynce.app.ui.screens.settings.*
 import com.vynce.app.ui.screens.settings.AboutScreen
 import com.vynce.app.ui.screens.settings.AttributionScreen
 import com.vynce.app.ui.screens.SetupWizard
+import com.vynce.app.ui.screens.EqualizerScreen
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -76,10 +79,14 @@ fun VynceNavHost(
                 it.route == initialState.destination.route
             }
 
-            if (currentRouteIndex == -1 || currentRouteIndex > previousRouteIndex)
-                slideInHorizontally(animationSpec = tween(300, easing = FastOutSlowInEasing)) { it / 6 } + fadeIn(tween(300, easing = FastOutSlowInEasing))
-            else
-                slideInHorizontally(animationSpec = tween(300, easing = FastOutSlowInEasing)) { -it / 6 } + fadeIn(tween(300, easing = FastOutSlowInEasing))
+            if (currentRouteIndex != -1 && previousRouteIndex != -1) {
+                // Top-level tab switch: Instant fluid crossfade without layout thrashing
+                fadeIn(animationSpec = tween(140, easing = LinearOutSlowInEasing))
+            } else if (currentRouteIndex == -1 || currentRouteIndex > previousRouteIndex) {
+                slideInHorizontally(animationSpec = tween(240, easing = FastOutSlowInEasing)) { it / 6 } + fadeIn(tween(240, easing = FastOutSlowInEasing))
+            } else {
+                slideInHorizontally(animationSpec = tween(240, easing = FastOutSlowInEasing)) { -it / 6 } + fadeIn(tween(240, easing = FastOutSlowInEasing))
+            }
         },
         exitTransition = {
             val currentRouteIndex = navigationItems.indexOfFirst {
@@ -89,10 +96,14 @@ fun VynceNavHost(
                 it.route == targetState.destination.route
             }
 
-            if (targetRouteIndex == -1 || targetRouteIndex > currentRouteIndex)
-                slideOutHorizontally(animationSpec = tween(300, easing = FastOutSlowInEasing)) { -it / 6 } + fadeOut(tween(300, easing = FastOutSlowInEasing))
-            else
-                slideOutHorizontally(animationSpec = tween(300, easing = FastOutSlowInEasing)) { it / 6 } + fadeOut(tween(300, easing = FastOutSlowInEasing))
+            if (currentRouteIndex != -1 && targetRouteIndex != -1) {
+                // Top-level tab switch: Immediate clean exit
+                fadeOut(animationSpec = tween(90, easing = FastOutLinearInEasing))
+            } else if (targetRouteIndex == -1 || targetRouteIndex > currentRouteIndex) {
+                slideOutHorizontally(animationSpec = tween(240, easing = FastOutSlowInEasing)) { -it / 6 } + fadeOut(tween(240, easing = FastOutSlowInEasing))
+            } else {
+                slideOutHorizontally(animationSpec = tween(240, easing = FastOutSlowInEasing)) { it / 6 } + fadeOut(tween(240, easing = FastOutSlowInEasing))
+            }
         },
         popEnterTransition = {
             val currentRouteIndex = navigationItems.indexOfFirst {
@@ -102,10 +113,13 @@ fun VynceNavHost(
                 it.route == initialState.destination.route
             }
 
-            if (previousRouteIndex != -1 && previousRouteIndex < currentRouteIndex)
-                slideInHorizontally(animationSpec = tween(300, easing = FastOutSlowInEasing)) { it / 6 } + fadeIn(tween(300, easing = FastOutSlowInEasing))
-            else
-                slideInHorizontally(animationSpec = tween(300, easing = FastOutSlowInEasing)) { -it / 6 } + fadeIn(tween(300, easing = FastOutSlowInEasing))
+            if (currentRouteIndex != -1 && previousRouteIndex != -1) {
+                fadeIn(animationSpec = tween(140, easing = LinearOutSlowInEasing))
+            } else if (previousRouteIndex != -1 && previousRouteIndex < currentRouteIndex) {
+                slideInHorizontally(animationSpec = tween(240, easing = FastOutSlowInEasing)) { it / 6 } + fadeIn(tween(240, easing = FastOutSlowInEasing))
+            } else {
+                slideInHorizontally(animationSpec = tween(240, easing = FastOutSlowInEasing)) { -it / 6 } + fadeIn(tween(240, easing = FastOutSlowInEasing))
+            }
         },
         popExitTransition = {
             val currentRouteIndex = navigationItems.indexOfFirst {
@@ -115,10 +129,13 @@ fun VynceNavHost(
                 it.route == targetState.destination.route
             }
 
-            if (currentRouteIndex != -1 && currentRouteIndex < targetRouteIndex)
-                slideOutHorizontally(animationSpec = tween(300, easing = FastOutSlowInEasing)) { -it / 6 } + fadeOut(tween(300, easing = FastOutSlowInEasing))
-            else
-                slideOutHorizontally(animationSpec = tween(300, easing = FastOutSlowInEasing)) { it / 6 } + fadeOut(tween(300, easing = FastOutSlowInEasing))
+            if (currentRouteIndex != -1 && targetRouteIndex != -1) {
+                fadeOut(animationSpec = tween(90, easing = FastOutLinearInEasing))
+            } else if (currentRouteIndex != -1 && currentRouteIndex < targetRouteIndex) {
+                slideOutHorizontally(animationSpec = tween(240, easing = FastOutSlowInEasing)) { -it / 6 } + fadeOut(tween(240, easing = FastOutSlowInEasing))
+            } else {
+                slideOutHorizontally(animationSpec = tween(240, easing = FastOutSlowInEasing)) { it / 6 } + fadeOut(tween(240, easing = FastOutSlowInEasing))
+            }
         },
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection)
     )
@@ -249,9 +266,29 @@ fun VynceNavHost(
             SetupWizard(navController)
         }
 
-        composable("album/{albumId}") { backStack ->
+        composable("equalizer") {
+            EqualizerScreen(navController)
+        }
+
+        composable(
+            route = "album/{albumId}?title={title}",
+            arguments = listOf(
+                navArgument("albumId") { type = NavType.StringType },
+                navArgument("title") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                }
+            )
+        ) { backStack ->
             val albumId = backStack.arguments?.getString("albumId") ?: return@composable
-            AlbumScreen(albumId = albumId, navController = navController, playerConnection = playerConnection)
+            val albumTitle = backStack.arguments?.getString("title")
+            AlbumScreen(
+                albumId = albumId,
+                albumTitle = albumTitle,
+                navController = navController,
+                playerConnection = playerConnection
+            )
         }
         composable("artist/{artistId}") { backStack ->
             val artistId = backStack.arguments?.getString("artistId") ?: return@composable

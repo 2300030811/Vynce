@@ -59,6 +59,7 @@ data class HomeState(
     val listeningStreakDays: Int = 0,
     val activeDays: Int = 0,
     val totalPlayCount: Int = 0,
+    val todayPlayCount: Int = 0,
     val uniqueSongs: Int = 0,
     val totalListeningMs: Long = 0L,
     val topSongs: List<PlaybackStatsRepository.SongPlaybackSummary> = emptyList(),
@@ -94,6 +95,10 @@ class HomeViewModel @Inject constructor(
                         range = StatsTimeRange.ALL,
                         songs = songs
                     )
+                    val todaySummary = playbackStatsRepository.loadSummary(
+                        range = StatsTimeRange.DAY,
+                        songs = songs
+                    )
                     val recentHistory = playbackStatsRepository.loadPlaybackHistory(20)
                     val recentSongIds = recentHistory.map { it.songId }.toSet()
                     val rediscoverSongs = playbackStatsRepository.getRediscoverSongs(
@@ -119,6 +124,7 @@ class HomeViewModel @Inject constructor(
                             listeningStreakDays = summary.longestStreakDays,
                             activeDays = summary.activeDays,
                             totalPlayCount = summary.totalPlayCount,
+                            todayPlayCount = todaySummary.totalPlayCount,
                             uniqueSongs = summary.uniqueSongs,
                             totalListeningMs = summary.totalDurationMs,
                             topStatsArtists = summary.topArtists,

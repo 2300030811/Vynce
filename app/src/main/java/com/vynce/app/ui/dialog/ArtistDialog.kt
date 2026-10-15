@@ -3,11 +3,16 @@ package com.vynce.app.ui.dialog
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -38,32 +43,37 @@ fun ArtistDialog(
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
+                    .fillParentMaxWidth()
                     .height(ListItemHeight)
+                    .clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
                     .clickable {
-                        navController.navigate("artist/${artist.id}")
+                        navController.navigate("artist/${artist.id ?: artist.name}")
                         onDismiss()
                     }
-                    .padding(horizontal = 12.dp),
+                    .padding(horizontal = 16.dp),
             ) {
-                Box(
-                    contentAlignment = Alignment.CenterStart,
-                    modifier = Modifier
-                        .fillParentMaxWidth()
-                        .height(ListItemHeight)
-                        .clickable {
-                            navController.navigate("artist/${artist.id}")
-                            onDismiss()
-                        }
-                        .padding(horizontal = 24.dp),
+                Surface(
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
+                    modifier = Modifier.size(ListThumbnailSize)
                 ) {
-                    Text(
-                        text = artist.name,
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
+                    Box(contentAlignment = Alignment.Center) {
+                        Text(
+                            text = artist.name.trim().firstOrNull()?.uppercaseChar()?.toString() ?: "A",
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
                 }
+                Spacer(Modifier.width(16.dp))
+                Text(
+                    text = artist.name,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f)
+                )
             }
         }
     }

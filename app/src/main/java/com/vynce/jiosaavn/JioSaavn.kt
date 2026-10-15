@@ -17,6 +17,7 @@ data class SaavnSong(
     val name: String = "",
     val primaryArtists: String = "",
     val album: String = "",
+    val albumId: String = "",
     val image: String = "",
     val downloadUrl: String = "",
     val duration: String = "0",
@@ -163,6 +164,8 @@ object JioSaavn {
                             id = obj["id"]?.jsonPrimitive?.content ?: "",
                             name = (obj["title"]?.jsonPrimitive?.content ?: "").decodeHtml(),
                             primaryArtists = (obj["subtitle"]?.jsonPrimitive?.content ?: "").decodeHtml(),
+                            album = (obj["more_info"]?.jsonObject?.get("album")?.jsonPrimitive?.content ?: "").decodeHtml(),
+                            albumId = obj["more_info"]?.jsonObject?.get("album_id")?.jsonPrimitive?.content ?: "",
                             image = (obj["image"]?.jsonPrimitive?.content ?: "").replace("http://", "https://").replace("150x150", "500x500")
                         ))
                         "playlist" -> playlists.add(SaavnPlaylistInfo(
@@ -294,7 +297,43 @@ object JioSaavn {
         return null
     }
 
-    private fun parseSong(song: JsonObject): SaavnSong {
+    private fun JsonElement?.extractDownloadUrl(quality: com.vynce.app.constants.AudioQuality = com.vynce.app.constants.AudioQuality.AUTO): String {
+        if (this == null) return ""
+        if (this is JsonPrimitive && this.booleanOrNull != null) return ""
+        val fromArray = try {
+            val arr = this.jsonArray
+            if (arr.isNotEmpty()) {
+                val list = arr.mapNotNull { el ->
+                    try {
+                        val obj = el.jsonObject
+                        val q = obj["quality"]?.jsonPrimitive?.content ?: ""
+                        val u = (obj["url"] ?: obj["link"])?.jsonPrimitive?.content ?: ""
+                        if (u.isNotBlank() && u != "false" && u != "null") q to u.replace("http://", "https://") else null
+                    } catch (_: Exception) { null }
+                }
+                if (list.isNotEmpty()) {
+                    when (quality) {
+                        com.vynce.app.constants.AudioQuality.LOW -> list.find { it.first.contains("96") || it.first.contains("48") }?.second ?: list.first().second
+                        com.vynce.app.constants.AudioQuality.HIGH -> list.find { it.first.contains("320") }?.second ?: list.last().second
+                        com.vynce.app.constants.AudioQuality.AUTO -> list.find { it.first.contains("320") }?.second ?: list.last().second
+                    }
+                } else null
+            } else null
+        } catch (_: Exception) { null }
+        val fromPrimitive = if (fromArray == null) {
+            try { this.jsonPrimitive.content } catch (_: Exception) { null }
+        } else null
+        var url = (fromArray ?: fromPrimitive ?: "").trim()
+        if (url.isEmpty() || url == "false" || url == "null") return ""
+        return url.replace("http://", "https://")
+    }
+
+    private fun parseSong(song: JsonObject, quality: com.vynce.app.constants.AudioQuality = com.vynce.app.constants.AudioQuality.AUTO): SaavnSong {
+        val albumObj = song["album"]?.jsonObject
+        val parsedAlbumId = albumObj?.get("id")?.jsonPrimitive?.content
+            ?: song["album_id"]?.jsonPrimitive?.content
+            ?: song["more_info"]?.jsonObject?.get("album_id")?.jsonPrimitive?.content
+            ?: ""
         return SaavnSong(
             id = song["id"]?.jsonPrimitive?.content ?: "",
             name = (song["name"]?.jsonPrimitive?.content ?: "").decodeHtml(),
@@ -302,10 +341,11 @@ object JioSaavn {
                 ?: song["artists"]?.jsonObject?.get("primary")?.jsonArray
                     ?.joinToString(", ") { it.jsonObject["name"]?.jsonPrimitive?.content ?: "" }
                 ?: "").decodeHtml(),
-            album = (song["album"]?.jsonObject?.get("name")?.jsonPrimitive?.content
+            album = (albumObj?.get("name")?.jsonPrimitive?.content
                 ?: song["album"]?.jsonPrimitive?.content ?: "").decodeHtml(),
+            albumId = parsedAlbumId,
             image = song["image"].extractImageUrl(),
-            downloadUrl = song["downloadUrl"].extractImageUrl(), // same JSON shape as image URLs
+            downloadUrl = song["downloadUrl"].extractDownloadUrl(quality),
             duration = song["duration"]?.jsonPrimitive?.content ?: "0",
             year = song["year"]?.jsonPrimitive?.content ?: "",
             language = song["language"]?.jsonPrimitive?.content ?: ""
@@ -333,12 +373,12 @@ object JioSaavn {
         }
     }
 
-    suspend fun getSong(id: String): SaavnSong? {
+    suspend fun getSong(id: String, quality: com.vynce.app.constants.AudioQuality = com.vynce.app.constants.AudioQuality.AUTO): SaavnSong? {
         val obj = getJson("/api/songs/$id") ?: return null
         val data = obj["data"]?.jsonArray ?: obj["data"]?.jsonObject?.get("results")?.jsonArray
         return data?.firstOrNull()?.jsonObject?.let {
             try {
-                parseSong(it)
+                parseSong(it, quality)
             } catch (e: Exception) {
                 android.util.Log.e("JioSaavn", "Failed parsing getSong: ${e.message}")
                 null

@@ -72,6 +72,13 @@ val minPlaybackDurKey = intPreferencesKey("minPlaybackDur")
 val CrossfadeDurationKey = intPreferencesKey("crossfadeDuration")
 val WaveformSeekBarKey = booleanPreferencesKey("waveformSeekBar")
 
+val EqualizerEnabledKey = booleanPreferencesKey("equalizerEnabled")
+val EqualizerPresetKey = stringPreferencesKey("equalizerPreset")
+val EqualizerBandsKey = stringPreferencesKey("equalizerBands")
+val EqualizerBassBoostKey = intPreferencesKey("equalizerBassBoost")
+val EqualizerVirtualizerKey = intPreferencesKey("equalizerVirtualizer")
+val EqualizerPreampKey = intPreferencesKey("equalizerPreamp")
+
 
 /**
  * Lyrics

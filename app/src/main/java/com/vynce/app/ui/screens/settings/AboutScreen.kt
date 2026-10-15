@@ -82,6 +82,7 @@ import com.vynce.app.ui.component.button.IconLabelButton
 import com.vynce.app.ui.dialog.UpdateDialog
 import com.vynce.app.ui.utils.backToMain
 import com.vynce.app.utils.AppUpdateChecker
+import com.vynce.app.utils.dataStore
 import com.vynce.app.utils.scanners.FFmpegScanner
 import kotlinx.coroutines.launch
 
@@ -204,7 +205,8 @@ fun AboutScreen(
                             checkingForUpdates = true
                             scope.launch {
                                 try {
-                                    val info = AppUpdateChecker.checkForUpdate()
+                                    com.vynce.app.utils.AppUpdateChecker.proxy = com.vynce.app.utils.ProxyHelper.getProxy(context.dataStore)
+                                    val info = AppUpdateChecker.checkForUpdate(force = true)
                                     if (info.isUpdateAvailable) {
                                         updateInfo = info
                                         showUpdateDialog = true

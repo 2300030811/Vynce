@@ -23,6 +23,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 import java.io.FileOutputStream
+import java.net.Proxy
 import java.util.concurrent.TimeUnit
 
 /**
@@ -32,11 +33,20 @@ object AppUpdateChecker {
     private const val TAG = "AppUpdateChecker"
     private const val GITHUB_API_URL =
         "https://api.github.com/repos/2300030811/Vynce/releases/latest"
+    private const val AUTO_CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000L // 6 hours
 
-    private val client = OkHttpClient.Builder()
-        .connectTimeout(15, TimeUnit.SECONDS)
-        .readTimeout(30, TimeUnit.SECONDS)
-        .build()
+    var proxy: Proxy? = null
+    private var lastAutoCheckTimestamp = 0L
+    private var cachedUpdateInfo: UpdateInfo? = null
+
+    private val client: OkHttpClient
+        get() {
+            val builder = OkHttpClient.Builder()
+                .connectTimeout(15, TimeUnit.SECONDS)
+                .readTimeout(30, TimeUnit.SECONDS)
+            ProxyHelper.applyProxy(builder, proxy)
+            return builder.build()
+        }
 
     data class UpdateInfo(
         val isUpdateAvailable: Boolean,
@@ -49,12 +59,19 @@ object AppUpdateChecker {
 
     /**
      * Check GitHub for the latest release and compare with the installed version.
+     * When force is false, returns cached result if checked within the last 6 hours.
      */
-    suspend fun checkForUpdate(): UpdateInfo = withContext(Dispatchers.IO) {
+    suspend fun checkForUpdate(force: Boolean = false): UpdateInfo = withContext(Dispatchers.IO) {
+        val now = System.currentTimeMillis()
+        if (!force && (now - lastAutoCheckTimestamp) < AUTO_CHECK_INTERVAL_MS && cachedUpdateInfo != null) {
+            return@withContext cachedUpdateInfo ?: noUpdate()
+        }
+
         try {
             val request = Request.Builder()
                 .url(GITHUB_API_URL)
                 .header("Accept", "application/vnd.github.v3+json")
+                .header("User-Agent", "Vynce-App/${BuildConfig.VERSION_NAME}")
                 .build()
 
             val response = client.newCall(request).execute()
@@ -63,7 +80,8 @@ object AppUpdateChecker {
                 return@withContext noUpdate()
             }
 
-            val body = response.body.string()
+            val body = response.body?.string().orEmpty()
+            if (body.isBlank()) return@withContext noUpdate()
             val json = JSONObject(body)
 
             val tagName = json.optString("tag_name", "")
@@ -116,7 +134,7 @@ object AppUpdateChecker {
             val isNewer = isNewerVersion(remoteVersion, currentVersion)
             Log.i(TAG, "Current: $currentVersion, Remote: $remoteVersion, Update: $isNewer, Url: $downloadUrl")
 
-            UpdateInfo(
+            val info = UpdateInfo(
                 isUpdateAvailable = isNewer,
                 newVersion = remoteVersion,
                 currentVersion = currentVersion,
@@ -124,6 +142,9 @@ object AppUpdateChecker {
                 downloadUrl = downloadUrl,
                 publishedAt = publishedAt
             )
+            lastAutoCheckTimestamp = now
+            cachedUpdateInfo = info
+            info
         } catch (e: Exception) {
             Log.e(TAG, "Failed to check for updates", e)
             noUpdate()

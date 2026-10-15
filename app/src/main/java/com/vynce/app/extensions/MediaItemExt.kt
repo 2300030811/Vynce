@@ -13,22 +13,29 @@ import com.vynce.jiosaavn.SaavnSong
 val MediaItem.vynceMetadata: MediaMetadata?
     get() = localConfiguration?.tag as? MediaMetadata
 
-fun SaavnSong.toMediaItem() = MediaItem.Builder()
-    .setMediaId("saavn:$id")
-    .setUri("saavn:$id")
-    .setCustomCacheKey("saavn:$id")
-    .setTag(toSaavnMediaMetadata())
-    .setMediaMetadata(
-        androidx.media3.common.MediaMetadata.Builder()
-            .setTitle(name)
-            .setSubtitle(primaryArtists)
-            .setArtist(primaryArtists)
-            .setArtworkUri(image.replace("http://", "https://").toUri())
-            .setAlbumTitle(album)
-            .setMediaType(MEDIA_TYPE_MUSIC)
-            .build()
-    )
-    .build()
+fun SaavnSong.toMediaItem(): MediaItem {
+    val finalId = if (id.startsWith("soundcloud:") || id.startsWith("bandcamp:") || id.startsWith("saavn:")) {
+        id
+    } else {
+        "saavn:$id"
+    }
+    return MediaItem.Builder()
+        .setMediaId(finalId)
+        .setUri(finalId)
+        .setCustomCacheKey(finalId)
+        .setTag(toSaavnMediaMetadata())
+        .setMediaMetadata(
+            androidx.media3.common.MediaMetadata.Builder()
+                .setTitle(name)
+                .setSubtitle(primaryArtists)
+                .setArtist(primaryArtists)
+                .setArtworkUri(image.replace("http://", "https://").toUri())
+                .setAlbumTitle(album)
+                .setMediaType(MEDIA_TYPE_MUSIC)
+                .build()
+        )
+        .build()
+}
 
 /**
  * Converts a localPath to a proper URI string.

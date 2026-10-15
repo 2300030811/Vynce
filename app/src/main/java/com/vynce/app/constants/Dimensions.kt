@@ -26,7 +26,7 @@ val NavigationBarHeight = 80.dp
 val MiniPlayerHeight = 64.dp
 val MinMiniPlayerHeight = 16.dp
 val QueuePeekHeight = 48.dp
-val AppBarHeight = 64.dp
+val AppBarHeight = 58.dp
 
 val ListItemHeight = 64.dp
 val SuggestionItemHeight = 56.dp

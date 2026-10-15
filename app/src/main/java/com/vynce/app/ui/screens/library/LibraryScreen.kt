@@ -122,6 +122,7 @@ fun LibraryScreen(
     val (showLikedAndDownloadedPlaylist) = rememberPreference(ShowLikedAndDownloadedPlaylist, true)
 
     val allItems by viewModel.allItems.collectAsState()
+    val distinctItems = remember(allItems) { allItems.distinctBy { it.hashCode() } }
 
     val isSyncingRemotePlaylists by viewModel.isSyncingRemotePlaylists.collectAsState()
     val isSyncingRemoteAlbums by viewModel.isSyncingRemoteAlbums.collectAsState()
@@ -397,7 +398,7 @@ fun LibraryScreen(
                                 }
 
                                 items(
-                                    items = allItems.distinctBy { it.hashCode() },
+                                    items = distinctItems,
                                     key = { it.hashCode() },
                                     contentType = { CONTENT_TYPE_LIST }
                                 ) { item ->
@@ -513,7 +514,7 @@ fun LibraryScreen(
                                 }
 
                                 items(
-                                    items = allItems.distinctBy { it.hashCode() },
+                                    items = distinctItems,
                                     key = { it.hashCode() },
                                     contentType = { CONTENT_TYPE_LIST }
                                 ) { item ->

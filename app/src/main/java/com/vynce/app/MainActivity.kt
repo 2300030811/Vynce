@@ -345,7 +345,8 @@ class MainActivity : ComponentActivity() {
                 // Check for app updates from GitHub
                 coroutineScope.launch {
                     try {
-                        val info = AppUpdateChecker.checkForUpdate()
+                        com.vynce.app.utils.AppUpdateChecker.proxy = com.vynce.app.utils.ProxyHelper.getProxy(dataStore)
+                        val info = AppUpdateChecker.checkForUpdate(force = false)
                         if (info.isUpdateAvailable) {
                             updateInfo = info
                             showUpdateDialog = true

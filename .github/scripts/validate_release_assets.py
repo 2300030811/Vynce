@@ -11,6 +11,7 @@ import argparse
 import base64
 import hashlib
 import os
+import re
 import shutil
 import sys
 import yaml
@@ -39,6 +40,12 @@ def parse_args():
         action="store_true",
         default=False,
         help="Require an Android APK (*.apk) to be present",
+    )
+    parser.add_argument(
+        "--require-all-apks",
+        action="store_true",
+        default=False,
+        help="Require all 5 official Android core APK variants (universal, arm64-v8a, armeabi-v7a, x86_64, x86) for target version",
     )
     parser.add_argument(
         "--require-installer",
@@ -145,6 +152,89 @@ def validate_apk(assets_dir: str):
         print("FATAL: Android APK is missing from release assets! Aborting publication.", file=sys.stderr)
         sys.exit(1)
     print(f"Verified Android APK: {apk_files[0]}")
+
+
+REQUIRED_APK_ARCHITECTURES = [
+    "universal",
+    "arm64-v8a",
+    "armeabi-v7a",
+    "x86_64",
+    "x86",
+]
+
+
+def validate_all_apks(assets_dir: str, target_ver: str):
+    """
+    Validate that all five official Android core release APK variants
+    (universal, arm64-v8a, armeabi-v7a, x86_64, x86) for the target version
+    are present in the release assets directory. Rejects missing variants,
+    duplicates, version mismatches, and unrecognized architecture files.
+    """
+    apk_files = [
+        f for f in os.listdir(assets_dir)
+        if f.lower().endswith(".apk") and os.path.isfile(os.path.join(assets_dir, f))
+    ]
+    if not apk_files:
+        print("FATAL: No Android APK files found in release assets! Aborting publication.", file=sys.stderr)
+        sys.exit(1)
+
+    # 1. Path confinement & safety validation for every APK file
+    for apk in apk_files:
+        validate_safe_manifest_filename(apk, f"Android APK '{apk}'", assets_dir)
+
+    # 2. Strict filename inspection for all staged APKs
+    # Expected pattern: Vynce-<version>-core-<arch>-release-<buildCode>.apk
+    general_pattern = re.compile(
+        r"^Vynce-(?P<version>[0-9]+\.[0-9]+\.[0-9]+)-core-(?P<arch>[a-zA-Z0-9_\-]+)-release-(?P<code>[0-9]+)\.apk$"
+    )
+
+    detected_variants = {}
+    for apk in apk_files:
+        m = general_pattern.match(apk)
+        if not m:
+            print(
+                f"FATAL: Staged Android APK '{apk}' has an invalid or unexpected filename format. Expected 'Vynce-{target_ver}-core-<arch>-release-<buildCode>.apk'",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+
+        apk_ver = m.group("version")
+        if apk_ver != target_ver:
+            print(
+                f"FATAL: Staged Android APK '{apk}' version ({apk_ver}) does not match target release version ({target_ver})!",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+
+        apk_arch = m.group("arch")
+        if apk_arch not in REQUIRED_APK_ARCHITECTURES:
+            print(
+                f"FATAL: Staged Android APK '{apk}' has unknown or unexpected architecture '{apk_arch}'. Expected one of: {REQUIRED_APK_ARCHITECTURES}",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+
+        if apk_arch in detected_variants:
+            print(
+                f"FATAL: Duplicate Android APK variant staged for architecture '{apk_arch}': '{detected_variants[apk_arch]}' and '{apk}'!",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+
+        detected_variants[apk_arch] = apk
+
+    # 3. Completeness check: verify every required architecture is present
+    missing_archs = [arch for arch in REQUIRED_APK_ARCHITECTURES if arch not in detected_variants]
+    if missing_archs:
+        print(
+            f"FATAL: Missing required Android APK variant(s) for version {target_ver}: {missing_archs}! All 5 variants ({REQUIRED_APK_ARCHITECTURES}) are required.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+    print(f"Verified all 5 required Android APK variants for v{target_ver}:")
+    for arch in REQUIRED_APK_ARCHITECTURES:
+        print(f"  - {arch}: {detected_variants[arch]}")
 
 
 def find_installer(assets_dir: str, target_ver: str):
@@ -463,7 +553,9 @@ def main():
     print(f"Validating release assets for version {target_ver} (platform: {args.platform}) in: {assets_dir}")
 
     # Check APK if required
-    if args.require_apk:
+    if args.require_all_apks:
+        validate_all_apks(assets_dir, target_ver)
+    elif args.require_apk:
         validate_apk(assets_dir)
 
     # Platform: Windows

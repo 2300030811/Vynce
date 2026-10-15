@@ -50,10 +50,15 @@ class OnlineSearchSuggestionViewModel @Inject constructor(
                         database.searchHistory(queryStr)
                             .map { it.take(3) }
                             .map { history ->
+                                val historyQueries = history.map { it.query.trim().lowercase() }.toSet()
                                 SearchSuggestionViewState(
                                     history = history,
-                                    suggestions = results.map { it.name }.distinct().take(5),
-                                    items = results.take(10)
+                                    suggestions = results
+                                        .map { it.name }
+                                        .distinct()
+                                        .filterNot { it.trim().lowercase() in historyQueries }
+                                        .take(5),
+                                    items = results.distinctBy { it.id }.take(10)
                                 )
                             }
                     }

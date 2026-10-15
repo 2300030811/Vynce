@@ -169,7 +169,7 @@ fun LocalSearchScreen(
                 val thumbnailSize = (ListThumbnailSize.value * density.density).roundToInt()
                 items(
                     items = items,
-                    key = { it.id },
+                    key = { "${filter.name}_${it.id}" },
                     contentType = { CONTENT_TYPE_LIST }
                 ) { item ->
                     when (item) {
