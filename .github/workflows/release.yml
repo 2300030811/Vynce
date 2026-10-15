@@ -429,9 +429,9 @@ jobs:
             - *Installation:* If prompted by Android, enable *"Install unknown apps"* for your browser/file manager.
 
             ### 🖥️ Windows Desktop
-            - **Installer (Recommended):** [`Vynce Setup ${{ needs.validate-release.outputs.version }}.exe`](https://github.com/2300030811/Vynce/releases/download/v${{ needs.validate-release.outputs.version }}/Vynce%20Setup%20${{ needs.validate-release.outputs.version }}.exe)
+            - **Installer (Recommended):** [`Vynce-Setup-${{ needs.validate-release.outputs.version }}.exe`](https://github.com/2300030811/Vynce/releases/download/v${{ needs.validate-release.outputs.version }}/Vynce-Setup-${{ needs.validate-release.outputs.version }}.exe)
               - Setup wizard with Start Menu integration, desktop shortcut, and clean Windows uninstaller.
-            - **Portable:** [`Vynce ${{ needs.validate-release.outputs.version }}.exe`](https://github.com/2300030811/Vynce/releases/download/v${{ needs.validate-release.outputs.version }}/Vynce%20${{ needs.validate-release.outputs.version }}.exe)
+            - **Portable:** [`Vynce.${{ needs.validate-release.outputs.version }}.exe`](https://github.com/2300030811/Vynce/releases/download/v${{ needs.validate-release.outputs.version }}/Vynce.${{ needs.validate-release.outputs.version }}.exe)
               - Single standalone executable; runs anywhere without installation.
             - Supports Windows 10 & 11 (64-bit / x64).
             > **Windows Defender SmartScreen Notice:** Because Vynce is an open-source project without a costly commercial certificate, Windows may show *"Windows protected your PC"*. Click **More info** -> **Run anyway** on first launch.
@@ -439,13 +439,13 @@ jobs:
             ### 🐧 Linux Desktop
             - **AppImage (Universal):** [`Vynce-${{ needs.validate-release.outputs.version }}.AppImage`](https://github.com/2300030811/Vynce/releases/download/v${{ needs.validate-release.outputs.version }}/Vynce-${{ needs.validate-release.outputs.version }}.AppImage)
               - Single executable package. Make executable (`chmod +x Vynce-*.AppImage`) and run directly on Ubuntu, Fedora, Arch, and Debian.
-            - **Debian / Ubuntu (.deb):** [`vynce_${{ needs.validate-release.outputs.version }}_amd64.deb`](https://github.com/2300030811/Vynce/releases/download/v${{ needs.validate-release.outputs.version }}/vynce_${{ needs.validate-release.outputs.version }}_amd64.deb)
-              - Standard package installer. Install via `sudo dpkg -i vynce_*.deb` or double-click to install via Software Center.
+            - **Debian / Ubuntu (.deb):** [`vynce-web_${{ needs.validate-release.outputs.version }}_amd64.deb`](https://github.com/2300030811/Vynce/releases/download/v${{ needs.validate-release.outputs.version }}/vynce-web_${{ needs.validate-release.outputs.version }}_amd64.deb)
+              - Standard package installer. Install via `sudo dpkg -i vynce-web_*.deb` or double-click to install via Software Center.
 
             ### 🍎 macOS Desktop
-            - **Disk Image (DMG):** [`Vynce-${{ needs.validate-release.outputs.version }}.dmg`](https://github.com/2300030811/Vynce/releases/download/v${{ needs.validate-release.outputs.version }}/Vynce-${{ needs.validate-release.outputs.version }}.dmg)
-              - Mount the DMG and drag Vynce to your Applications folder. Built for Intel (x64) and Apple Silicon (arm64) architectures (separate architecture packages).
-            - **ZIP Archive:** [`Vynce-${{ needs.validate-release.outputs.version }}-mac.zip`](https://github.com/2300030811/Vynce/releases/download/v${{ needs.validate-release.outputs.version }}/Vynce-${{ needs.validate-release.outputs.version }}-mac.zip)
+            - **Disk Image (Apple Silicon):** [`Vynce-${{ needs.validate-release.outputs.version }}-arm64.dmg`](https://github.com/2300030811/Vynce/releases/download/v${{ needs.validate-release.outputs.version }}/Vynce-${{ needs.validate-release.outputs.version }}-arm64.dmg)
+            - **Disk Image (Intel):** [`Vynce-${{ needs.validate-release.outputs.version }}.dmg`](https://github.com/2300030811/Vynce/releases/download/v${{ needs.validate-release.outputs.version }}/Vynce-${{ needs.validate-release.outputs.version }}.dmg)
+            - **ZIP Archive:** [`Vynce-${{ needs.validate-release.outputs.version }}-mac.zip`](https://github.com/2300030811/Vynce/releases/download/v${{ needs.validate-release.outputs.version }}/Vynce-${{ needs.validate-release.outputs.version }}-mac.zip) (Intel) / [`Vynce-${{ needs.validate-release.outputs.version }}-arm64-mac.zip`](https://github.com/2300030811/Vynce/releases/download/v${{ needs.validate-release.outputs.version }}/Vynce-${{ needs.validate-release.outputs.version }}-arm64-mac.zip) (Apple Silicon)
             > **macOS Gatekeeper Notice:** If macOS warns that the developer cannot be verified, right-click (or Control-click) `Vynce.app`, select **Open**, and click **Open** in the confirmation prompt.
 
             ---
